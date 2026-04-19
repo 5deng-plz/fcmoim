@@ -1,0 +1,21 @@
+{
+  "name": "FC Moim",
+  "short_name": "FC Moim",
+  "description": "아마추어 풋살 동호회 다중 팀 매니지먼트 플랫폼",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#16a34a",
+  "icons": [
+    {
+      "src": "/brand/fcmoim-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/brand/fcmoim-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

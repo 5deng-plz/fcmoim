@@ -1,0 +1,37 @@
+const FACE_BY_KEY: Record<string, string> = {
+  Felix: 'https://i.pravatar.cc/300?img=12',
+  Son: 'https://i.pravatar.cc/300?img=14',
+  Lee: 'https://i.pravatar.cc/300?img=15',
+  LeeJ: 'https://i.pravatar.cc/300?img=16',
+  Kim: 'https://i.pravatar.cc/300?img=18',
+  KimY: 'https://i.pravatar.cc/300?img=19',
+  Hwang: 'https://i.pravatar.cc/300?img=20',
+  Cho: 'https://i.pravatar.cc/300?img=21',
+  Baek: 'https://i.pravatar.cc/300?img=22',
+  Jung: 'https://i.pravatar.cc/300?img=23',
+  Park: 'https://i.pravatar.cc/300?img=24',
+  Choi: 'https://i.pravatar.cc/300?img=25',
+  Kang: 'https://i.pravatar.cc/300?img=26',
+  Jo: 'https://i.pravatar.cc/300?img=27',
+  Kwon: 'https://i.pravatar.cc/300?img=28',
+  Yoon: 'https://i.pravatar.cc/300?img=29',
+  Jang: 'https://i.pravatar.cc/300?img=30',
+  Lim: 'https://i.pravatar.cc/300?img=31',
+  Han: 'https://i.pravatar.cc/300?img=32',
+  Oh: 'https://i.pravatar.cc/300?img=33',
+  손흥민: 'https://i.pravatar.cc/300?img=14',
+  이강인: 'https://i.pravatar.cc/300?img=15',
+  김민재: 'https://i.pravatar.cc/300?img=18',
+  황희찬: 'https://i.pravatar.cc/300?img=20',
+  조규성: 'https://i.pravatar.cc/300?img=21',
+  이재성: 'https://i.pravatar.cc/300?img=16',
+  백승호: 'https://i.pravatar.cc/300?img=22',
+  정우영: 'https://i.pravatar.cc/300?img=23',
+  김영권: 'https://i.pravatar.cc/300?img=19',
+  권창훈: 'https://i.pravatar.cc/300?img=28',
+  강현수: 'https://i.pravatar.cc/300?img=26',
+};
+
+export function getDemoFace(key: string) {
+  return FACE_BY_KEY[key] ?? `https://i.pravatar.cc/300?u=${encodeURIComponent(key)}`;
+}

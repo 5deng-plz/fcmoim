@@ -1,0 +1,35 @@
+runConfig:
+  cpu: 1
+  memoryMiB: 512
+  minInstances: 0
+  maxInstances: 4
+  concurrency: 80
+
+env:
+  - variable: APP_PROFILE
+    value: prod
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_PUBLIC_CONFIG
+    secret: firebase-public-config
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_SUPABASE_PUBLIC_CONFIG
+    secret: supabase-public-config
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: SUPABASE_SECRET_KEY
+    secret: supabase-secret-key
+    availability:
+      - RUNTIME
+
+  - variable: KAKAO_OAUTH_CONFIG
+    secret: kakao-oauth-config
+    availability:
+      - RUNTIME

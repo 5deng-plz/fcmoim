@@ -1,0 +1,72 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# local workspace settings
+.vscode/
+
+# local AI agent harness
+AGENT.md
+.impeccable.md
+.agents/
+.codex/
+scripts/validate-harness.mjs
+scripts/hooks/
+scripts/install-git-hooks.sh
+tests/harness-*.test.*
+
+# local design and infrastructure knowledge base
+docs/
+
+# local credentials
+*service-account*.json
+*adminsdk*.json
+google-application-credentials*.json
+application_default_credentials.json
+.runtimeconfig.json
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+!.env.local.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# supabase
+supabase/.temp/
+supabase/**/*.sql
+
+# firebase
+.firebase/

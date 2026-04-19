@@ -1,0 +1,319 @@
+'use client';
+
+import { useState } from 'react';
+import Image from 'next/image';
+import { Shirt, GripVertical } from 'lucide-react';
+import { useAppStore } from '@/stores/useAppStore';
+import { useToastStore } from '@/stores/useToastStore';
+import Modal from '@/components/ui/Modal';
+import { getDemoFace } from '@/mocks/demoMedia';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+// ─── 더미 데이터: 참석 확정 명단 ───
+interface Player {
+  id: string;
+  name: string;
+  ovr: number;
+  position: string;
+  photo: string;
+}
+
+const initialPlayers: Player[] = [
+  { id: 'p1', name: '손흥민', ovr: 72, position: 'FW', photo: 'Felix' },
+  { id: 'p2', name: '이강인', ovr: 68, position: 'MF', photo: 'Lee' },
+  { id: 'p3', name: '김민재', ovr: 70, position: 'DF', photo: 'Kim' },
+  { id: 'p4', name: '황희찬', ovr: 65, position: 'FW', photo: 'Hwang' },
+  { id: 'p5', name: '조규성', ovr: 63, position: 'FW', photo: 'Cho' },
+  { id: 'p6', name: '이재성', ovr: 66, position: 'MF', photo: 'LeeJ' },
+  { id: 'p7', name: '백승호', ovr: 61, position: 'MF', photo: 'Baek' },
+  { id: 'p8', name: '정우영', ovr: 64, position: 'DF', photo: 'Jung' },
+  { id: 'p9', name: '김영권', ovr: 67, position: 'DF', photo: 'KimY' },
+  { id: 'p10', name: '권창훈', ovr: 62, position: 'MF', photo: 'Kwon' },
+];
+
+// ─── 드래그 가능 선수 카드 ───
+function DraggablePlayerCard({ player, zone }: { player: Player; zone: string }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: player.id, data: { zone } });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`flex items-center gap-2 bg-white rounded-lg p-2 border border-gray-100 cursor-grab active:cursor-grabbing active:shadow-md active:scale-[1.02] transition-shadow ${
+        isDragging ? 'shadow-lg ring-2 ring-green-300' : ''
+      }`}
+    >
+      <GripVertical size={14} className="text-gray-300 flex-shrink-0" />
+      <Image
+        src={getDemoFace(player.photo)}
+        alt={player.name}
+        width={28}
+        height={28}
+        className="rounded-full bg-gray-100"
+        unoptimized
+      />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1">
+          <span className="text-xs font-bold text-gray-900 truncate block">{player.name}</span>
+          <span className="text-[9px] text-gray-400">{player.position}</span>
+        </div>
+        <span className="block text-[10px] text-gray-500 font-medium">OVR {player.ovr}</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── 오버레이 카드 (드래그 중 표시) ───
+function PlayerOverlay({ player }: { player: Player }) {
+  return (
+    <div className="flex items-center gap-2 bg-white rounded-lg p-2 border-2 border-green-400 shadow-xl cursor-grabbing scale-105">
+      <GripVertical size={14} className="text-green-400 flex-shrink-0" />
+      <Image
+        src={getDemoFace(player.photo)}
+        alt={player.name}
+        width={28}
+        height={28}
+        className="rounded-full bg-gray-100"
+        unoptimized
+      />
+      <span className="text-xs font-bold text-gray-900">{player.name}</span>
+    </div>
+  );
+}
+
+// ─── 메인: 드래그 앤 드롭 전술 빌더 ───
+export default function TacticsDragBuilder() {
+  const { userRole } = useAppStore();
+  const { showToast } = useToastStore();
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [tacticsCompleted, setTacticsCompleted] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const [bench, setBench] = useState<Player[]>(initialPlayers);
+  const [redTeam, setRedTeam] = useState<Player[]>([]);
+  const [blueTeam, setBlueTeam] = useState<Player[]>([]);
+
+  const isLeader = userRole === 'admin' || userRole === 'operator';
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+  );
+
+  const activePlayer = [...bench, ...redTeam, ...blueTeam].find((p) => p.id === activeId);
+
+  const findPlayerZone = (id: string): 'bench' | 'red' | 'blue' | null => {
+    if (bench.find((p) => p.id === id)) return 'bench';
+    if (redTeam.find((p) => p.id === id)) return 'red';
+    if (blueTeam.find((p) => p.id === id)) return 'blue';
+    return null;
+  };
+
+  const removeFromZone = (id: string) => {
+    setBench((prev) => prev.filter((p) => p.id !== id));
+    setRedTeam((prev) => prev.filter((p) => p.id !== id));
+    setBlueTeam((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveId(null);
+    const { active, over } = event;
+    if (!over) return;
+
+    const playerId = active.id as string;
+    const player = [...bench, ...redTeam, ...blueTeam].find((p) => p.id === playerId);
+    if (!player) return;
+
+    const targetZone = (over.data?.current as { zone?: string })?.zone;
+    const sourceZone = findPlayerZone(playerId);
+    if (sourceZone === targetZone) return;
+
+    removeFromZone(playerId);
+
+    if (targetZone === 'red') {
+      setRedTeam((prev) => [...prev, player]);
+    } else if (targetZone === 'blue') {
+      setBlueTeam((prev) => [...prev, player]);
+    } else {
+      setBench((prev) => [...prev, player]);
+    }
+  };
+
+  if (!isLeader) return null;
+
+  return (
+    <section className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-4 shadow-sm border border-orange-100 animate-fadeIn">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-bold text-gray-900 flex items-center gap-1.5">
+          🏟 전술 설정
+        </h3>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold text-gray-500 bg-white px-2 py-1 rounded-md">
+            참석 {bench.length + redTeam.length + blueTeam.length}명
+          </span>
+        </div>
+      </div>
+
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        {/* 대기 명단 */}
+        {bench.length > 0 && (
+          <div className="mb-3">
+            <p className="text-[10px] font-bold text-gray-500 mb-1.5">대기 명단</p>
+            <SortableContext items={bench.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+              <div className="grid grid-cols-2 gap-1.5">
+                {bench.map((player) => (
+                  <DraggablePlayerCard key={player.id} player={player} zone="bench" />
+                ))}
+              </div>
+            </SortableContext>
+          </div>
+        )}
+
+        {/* Red / Blue 드롭존 */}
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          {/* Red Team */}
+          <div className="bg-red-50 rounded-xl p-3 border border-red-200 min-h-[120px]">
+            <h4 className="text-[11px] font-black text-red-600 mb-2 border-b border-red-200 pb-1 flex items-center justify-between">
+              <span className="flex items-center gap-1">
+                <Shirt size={14} className="fill-red-500/20 text-red-500" /> Red
+              </span>
+              <span className="text-gray-500 font-medium">{redTeam.length}명</span>
+            </h4>
+            <SortableContext items={redTeam.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-1.5">
+                {redTeam.length === 0 && (
+                  <div className="dropzone-empty border-red-200 text-center py-4 text-[10px] text-red-400 font-medium">
+                    선수를 드래그해서 배치
+                  </div>
+                )}
+                {redTeam.map((player) => (
+                  <DraggablePlayerCard key={player.id} player={player} zone="red" />
+                ))}
+              </div>
+            </SortableContext>
+          </div>
+
+          {/* Blue Team */}
+          <div className="bg-blue-50 rounded-xl p-3 border border-blue-200 min-h-[120px]">
+            <h4 className="text-[11px] font-black text-blue-600 mb-2 border-b border-blue-200 pb-1 flex items-center justify-between">
+              <span className="flex items-center gap-1">
+                <Shirt size={14} className="fill-blue-500/20 text-blue-500" /> Blue
+              </span>
+              <span className="text-gray-500 font-medium">{blueTeam.length}명</span>
+            </h4>
+            <SortableContext items={blueTeam.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-1.5">
+                {blueTeam.length === 0 && (
+                  <div className="dropzone-empty border-blue-200 text-center py-4 text-[10px] text-blue-400 font-medium">
+                    선수를 드래그해서 배치
+                  </div>
+                )}
+                {blueTeam.map((player) => (
+                  <DraggablePlayerCard key={player.id} player={player} zone="blue" />
+                ))}
+              </div>
+            </SortableContext>
+          </div>
+        </div>
+
+        <DragOverlay>
+          {activePlayer ? <PlayerOverlay player={activePlayer} /> : null}
+        </DragOverlay>
+      </DndContext>
+
+      {/* 팁 인디케이터 */}
+      <div className="bg-white px-4 py-2 text-center shadow-sm relative z-20 mb-3 rounded-lg">
+        <div className="inline-flex items-center gap-4 bg-gray-50 px-4 py-1.5 rounded-full border border-gray-100">
+          <span className="text-xs font-bold text-gray-500">배치된 인원: {redTeam.length + blueTeam.length}명</span>
+        </div>
+      </div>
+
+      {/* 팁 인디케이터 */}
+      {tacticsCompleted ? (
+        <button disabled className="w-full bg-gray-200 text-gray-500 font-bold py-3 rounded-xl cursor-not-allowed">
+          전술 설정이 모두에게 공개되었습니다 ✅
+        </button>
+      ) : (
+        <button
+          onClick={() => {
+            if (redTeam.length === 0 || blueTeam.length === 0) {
+              showToast('양 팀에 선수를 배치해주세요!');
+              return;
+            }
+            setShowConfirm(true);
+          }}
+          className="w-full bg-orange-500 text-white font-bold py-3 rounded-xl hover:brightness-110 active:scale-95 transition-all"
+        >
+          전술설정 완료
+        </button>
+      )}
+
+      <Modal title="최종 컨펌" isOpen={showConfirm} onClose={() => setShowConfirm(false)}>
+        <p className="text-[13px] font-bold text-gray-800 mb-4 whitespace-pre-wrap leading-relaxed text-center">
+          Red {redTeam.length}명 vs Blue {blueTeam.length}명{'\n'}
+          전체 회원에게 팀 편성 결과가 공개됩니다.{'\n'}
+          이대로 완료하시겠어요?
+        </p>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              setTacticsCompleted(true);
+              setShowConfirm(false);
+              showToast('팀 편성이 확정되었습니다! 🎉');
+              // saveTactics/finalizeTactics가 appConfig.useMockData에 따라 자동 분기합니다
+            }}
+            className="flex-1 bg-gray-900 text-white font-bold py-3 rounded-xl hover:brightness-110 active:scale-95 transition-all text-[13px]"
+          >
+            네, 완료할게요
+          </button>
+          <button
+            onClick={() => setShowConfirm(false)}
+            className="flex-1 bg-gray-100 text-gray-600 font-bold py-3 rounded-xl hover:bg-gray-200 active:scale-95 transition-all text-[13px]"
+          >
+            조금 더 볼게요
+          </button>
+        </div>
+      </Modal>
+    </section>
+  );
+}

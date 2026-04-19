@@ -1,0 +1,13 @@
+{
+  "apphosting": {
+    "backendId": "guppy",
+    "rootDir": "/",
+    "ignore": [
+      ".git",
+      ".next",
+      "node_modules",
+      "firebase-debug.log",
+      "firebase-debug.*.log"
+    ]
+  }
+}
