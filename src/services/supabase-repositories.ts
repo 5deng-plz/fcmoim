@@ -4,10 +4,15 @@ import { createPrivilegedSupabaseClient } from '../lib/supabase-server';
 import type {
   AccountRow,
   NormalizedJoinProfile,
+  SchedulePollOptionRow,
+  SchedulePollRow,
+  SchedulePollStatus,
+  SchedulePollVoteRow,
   TeamMembershipRow,
 } from '../types/domain';
 import type { AccountMembershipRepositories } from './account-membership';
 import type { MatchResultRepositories } from './match-results';
+import type { SchedulePollRepositories } from './schedule-polls';
 
 type MembershipDbRow = {
   id: string;
@@ -27,6 +32,44 @@ type AccountDbRow = {
   id: string;
   display_name: string | null;
   avatar_url: string | null;
+};
+
+type SchedulePollMembershipDbRow = {
+  id: string;
+  club_id: string;
+  role: TeamMembershipRow['role'];
+  status: TeamMembershipRow['status'];
+};
+
+type SchedulePollOptionDbRow = {
+  id: string;
+  poll_id: string;
+  option_date: string;
+  sort_order: number;
+};
+
+type SchedulePollVoteDbRow = {
+  id: string;
+  poll_id: string;
+  option_id: string;
+  membership_id: string;
+  is_available: boolean;
+};
+
+type SchedulePollDbRow = {
+  id: string;
+  club_id: string;
+  season_id: string | null;
+  title: string;
+  status: SchedulePollStatus;
+  common_time: string;
+  location: string;
+  memo: string | null;
+  closes_at: string | null;
+  created_by: string;
+  promoted_match_id: string | null;
+  schedule_poll_options?: SchedulePollOptionDbRow[] | null;
+  schedule_poll_votes?: SchedulePollVoteDbRow[] | null;
 };
 
 export function createSupabaseAccountMembershipRepositories(
@@ -161,8 +204,192 @@ export function createSupabaseMatchResultRepositories(
   };
 }
 
+export function createSupabaseSchedulePollRepositories(
+  supabase: SupabaseClient,
+): SchedulePollRepositories {
+  return {
+    memberships: {
+      async findByAccountAndClub(accountId, clubId) {
+        const { data, error } = await supabase
+          .from('team_memberships')
+          .select('id, club_id, role, status')
+          .eq('account_id', accountId)
+          .eq('club_id', clubId)
+          .maybeSingle<SchedulePollMembershipDbRow>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch schedule poll membership.', { cause: error });
+        }
+
+        return data
+          ? {
+              id: data.id,
+              clubId: data.club_id,
+              role: data.role,
+              status: data.status,
+            }
+          : null;
+      },
+    },
+    polls: {
+      async create(input) {
+        const { data, error } = await supabase
+          .from('schedule_polls')
+          .insert({
+            club_id: input.clubId,
+            season_id: input.seasonId,
+            title: input.title,
+            common_time: input.commonTime,
+            location: input.location,
+            memo: input.memo,
+            closes_at: input.closesAt,
+            created_by: input.createdByMembershipId,
+          })
+          .select('id')
+          .single<{ id: string }>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to create schedule poll.', { cause: error });
+        }
+
+        const { error: optionsError } = await supabase
+          .from('schedule_poll_options')
+          .insert(input.optionDates.map((optionDate, sortOrder) => ({
+            poll_id: data.id,
+            option_date: optionDate,
+            sort_order: sortOrder,
+          })));
+
+        if (optionsError) {
+          await supabase.from('schedule_polls').delete().eq('id', data.id);
+          throw new AppError('internal_error', 'Failed to create schedule poll options.', {
+            cause: optionsError,
+          });
+        }
+
+        return fetchSchedulePollById(supabase, data.id);
+      },
+
+      async listActive(clubId) {
+        const { data, error } = await supabase
+          .from('schedule_polls')
+          .select(SCHEDULE_POLL_SELECT)
+          .eq('club_id', clubId)
+          .eq('status', 'open')
+          .order('created_at', { ascending: false })
+          .returns<SchedulePollDbRow[]>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch active schedule polls.', { cause: error });
+        }
+
+        return (data ?? []).map(mapSchedulePoll);
+      },
+
+      async findById(pollId) {
+        const { data, error } = await supabase
+          .from('schedule_polls')
+          .select(SCHEDULE_POLL_SELECT)
+          .eq('id', pollId)
+          .maybeSingle<SchedulePollDbRow>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch schedule poll.', { cause: error });
+        }
+
+        return data ? mapSchedulePoll(data) : null;
+      },
+
+      async replaceVote(input) {
+        const { error: deleteError } = await supabase
+          .from('schedule_poll_votes')
+          .delete()
+          .eq('poll_id', input.pollId)
+          .eq('membership_id', input.membershipId);
+
+        if (deleteError) {
+          throw new AppError('internal_error', 'Failed to clear previous schedule poll votes.', {
+            cause: deleteError,
+          });
+        }
+
+        const votes = input.selectedOptionIds.map((optionId) => ({
+          poll_id: input.pollId,
+          option_id: optionId,
+          membership_id: input.membershipId,
+          is_available: true,
+        }));
+
+        if (votes.length > 0) {
+          const { error: insertError } = await supabase.from('schedule_poll_votes').insert(votes);
+          if (insertError) {
+            throw new AppError('internal_error', 'Failed to save schedule poll votes.', {
+              cause: insertError,
+            });
+          }
+        }
+
+        return fetchSchedulePollById(supabase, input.pollId);
+      },
+
+      async promoteToMatch(input) {
+        const poll = await fetchSchedulePollById(supabase, input.pollId);
+        const selectedOption = poll.options.find((option) => option.id === input.optionId);
+        if (!selectedOption) {
+          throw new AppError('bad_request', 'Selected option does not belong to this poll.');
+        }
+        if (!poll.seasonId) {
+          throw new AppError('bad_request', 'Schedule poll needs a season before promotion.');
+        }
+
+        const { data: match, error: matchError } = await supabase
+          .from('matches')
+          .insert({
+            club_id: poll.clubId,
+            season_id: poll.seasonId,
+            title: poll.title,
+            date: toKoreaIsoDateTime(selectedOption.optionDate, poll.commonTime),
+            location: poll.location,
+            type: 'match',
+            status: 'scheduled',
+            memo: poll.memo,
+            created_by: input.promotedByMembershipId,
+          })
+          .select('id')
+          .single<{ id: string }>();
+
+        if (matchError) {
+          throw new AppError('internal_error', 'Failed to create match from schedule poll.', {
+            cause: matchError,
+          });
+        }
+
+        const { error: pollError } = await supabase
+          .from('schedule_polls')
+          .update({
+            status: 'promoted',
+            promoted_match_id: match.id,
+          })
+          .eq('id', input.pollId);
+
+        if (pollError) {
+          await supabase.from('matches').delete().eq('id', match.id);
+          throw new AppError('internal_error', 'Failed to promote schedule poll.', {
+            cause: pollError,
+          });
+        }
+
+        return { pollId: input.pollId, matchId: match.id };
+      },
+    },
+  };
+}
+
 const MEMBERSHIP_SELECT =
   'id, account_id, club_id, role, status, profile_name, main_position, height, weight, birth, photo_url';
+
+const SCHEDULE_POLL_SELECT =
+  'id, club_id, season_id, title, status, common_time, location, memo, closes_at, created_by, promoted_match_id, schedule_poll_options(id, poll_id, option_date, sort_order), schedule_poll_votes(id, poll_id, option_id, membership_id, is_available)';
 
 function mapMembership(row: MembershipDbRow): TeamMembershipRow {
   return {
@@ -202,6 +429,63 @@ function toPendingMembershipInsert(input: {
   }
 
   return payload;
+}
+
+async function fetchSchedulePollById(supabase: SupabaseClient, pollId: string) {
+  const { data, error } = await supabase
+    .from('schedule_polls')
+    .select(SCHEDULE_POLL_SELECT)
+    .eq('id', pollId)
+    .single<SchedulePollDbRow>();
+
+  if (error) {
+    throw new AppError('internal_error', 'Failed to fetch schedule poll.', { cause: error });
+  }
+
+  return mapSchedulePoll(data);
+}
+
+function mapSchedulePoll(row: SchedulePollDbRow): SchedulePollRow {
+  return {
+    id: row.id,
+    clubId: row.club_id,
+    seasonId: row.season_id,
+    title: row.title,
+    status: row.status,
+    commonTime: row.common_time.slice(0, 5),
+    location: row.location,
+    memo: row.memo,
+    closesAt: row.closes_at,
+    createdByMembershipId: row.created_by,
+    promotedMatchId: row.promoted_match_id,
+    options: mapSchedulePollOptions(row.schedule_poll_options ?? []),
+    votes: mapSchedulePollVotes(row.schedule_poll_votes ?? []),
+  };
+}
+
+function mapSchedulePollOptions(rows: SchedulePollOptionDbRow[]): SchedulePollOptionRow[] {
+  return rows
+    .map((row) => ({
+      id: row.id,
+      pollId: row.poll_id,
+      optionDate: row.option_date,
+      sortOrder: row.sort_order,
+    }))
+    .sort((left, right) => left.sortOrder - right.sortOrder || left.optionDate.localeCompare(right.optionDate));
+}
+
+function mapSchedulePollVotes(rows: SchedulePollVoteDbRow[]): SchedulePollVoteRow[] {
+  return rows.map((row) => ({
+    id: row.id,
+    pollId: row.poll_id,
+    optionId: row.option_id,
+    membershipId: row.membership_id,
+    isAvailable: row.is_available,
+  }));
+}
+
+function toKoreaIsoDateTime(optionDate: string, commonTime: string) {
+  return `${optionDate}T${commonTime}:00+09:00`;
 }
 
 function createMatchResultCommandBuffer() {

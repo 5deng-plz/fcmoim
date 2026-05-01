@@ -8,6 +8,8 @@ export type PositionCode = 'FW' | 'MF' | 'DF';
 
 export type PreferredFootCode = 'left' | 'right' | 'both';
 
+export type SchedulePollStatus = 'open' | 'closed' | 'promoted' | 'cancelled';
+
 export type AccountRow = {
   id: string;
   email: string | null;
@@ -27,6 +29,37 @@ export type TeamMembershipRow = {
   weightKg: number | null;
   birthDate: string | null;
   photoUrl: string | null;
+};
+
+export type SchedulePollOptionRow = {
+  id: string;
+  pollId: string;
+  optionDate: string;
+  sortOrder: number;
+};
+
+export type SchedulePollVoteRow = {
+  id: string;
+  pollId: string;
+  optionId: string;
+  membershipId: string;
+  isAvailable: boolean;
+};
+
+export type SchedulePollRow = {
+  id: string;
+  clubId: string;
+  seasonId: string | null;
+  title: string;
+  status: SchedulePollStatus;
+  commonTime: string;
+  location: string;
+  memo: string | null;
+  closesAt: string | null;
+  createdByMembershipId: string;
+  promotedMatchId: string | null;
+  options: SchedulePollOptionRow[];
+  votes: SchedulePollVoteRow[];
 };
 
 export type AuthContext = {
@@ -58,4 +91,3 @@ export type ApprovedMemberAction =
   | 'create-match'
   | 'save-match-result'
   | 'write-announcement';
-

@@ -23,6 +23,16 @@ env:
     availability:
       - BUILD
       - RUNTIME
+    # JSON shape consumed by src/config/app.config.ts:
+    # {"url":"https://<project>.supabase.co","publishableKey":"<publishable-key>"}
+    # Local/dev may use the equivalent split vars:
+    # NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.
+
+  - variable: NEXT_PUBLIC_DEFAULT_CLUB_ID
+    value: 00000000-0000-0000-0000-000000000001
+    availability:
+      - BUILD
+      - RUNTIME
 
   - variable: SUPABASE_SECRET_KEY
     secret: supabase-secret-key

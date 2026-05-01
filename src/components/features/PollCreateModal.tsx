@@ -3,37 +3,81 @@
 import { Vote } from 'lucide-react';
 import { useState } from 'react';
 import Modal from '@/components/ui/Modal';
+import { appConfig } from '@/config/app.config';
 import { useModalStore } from '@/stores/useModalStore';
+import { useScheduleStore } from '@/stores/useScheduleStore';
+import { getSchedulePollErrorMessage } from '@/stores/schedulePollClient';
 import { useToastStore } from '@/stores/useToastStore';
 import CalendarView from './CalendarView';
 
 export default function PollCreateModal() {
   const { activeModal, closeModal } = useModalStore();
+  const createPoll = useScheduleStore((state) => state.createPoll);
   const { showToast } = useToastStore();
   const [title, setTitle] = useState('3월 친선 경기 일정 투표');
   const [selectedDates, setSelectedDates] = useState<number[]>([]);
   const [time, setTime] = useState('18:00');
   const [location, setLocation] = useState('');
   const [memo, setMemo] = useState('');
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isValid = title.trim() && selectedDates.length >= 2 && time && location.trim();
+  const isValid = Boolean(title.trim() && selectedDates.length >= 2 && time && location.trim());
+  const canSubmit = isValid && !isSubmitting;
 
-  const handleSubmit = () => {
-    if (!isValid) return;
-    showToast('일정 투표가 생성되었어요!');
-    closeModal();
+  const resetForm = () => {
     setTitle('3월 친선 경기 일정 투표');
     setSelectedDates([]);
     setTime('18:00');
     setLocation('');
     setMemo('');
+    setSubmitError(null);
+  };
+
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      await createPoll({
+        clubId: appConfig.defaultClubId,
+        seasonId: null,
+        title: title.trim(),
+        commonTime: time,
+        location: location.trim(),
+        memo: memo.trim() || null,
+        closesAt: null,
+        optionDates: selectedDates
+          .slice()
+          .sort((left, right) => left - right)
+          .map(toMarch2026Date),
+      });
+
+      showToast('일정 투표가 생성되었어요!');
+      closeModal();
+      resetForm();
+    } catch (error) {
+      const message = getSchedulePollErrorMessage(error, '일정 투표를 생성하지 못했어요.');
+      setSubmitError(message);
+      showToast(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleClose = () => {
+    if (isSubmitting) return;
+    closeModal();
+    setSubmitError(null);
   };
 
   return (
     <Modal
       title="투표 만들기"
       isOpen={activeModal === 'pollCreate'}
-      onClose={closeModal}
+      onClose={handleClose}
     >
       <div className="space-y-4">
         <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
@@ -119,18 +163,29 @@ export default function PollCreateModal() {
           />
         </div>
 
+        {submitError ? (
+          <p role="alert" className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold leading-relaxed text-red-600">
+            {submitError}
+          </p>
+        ) : null}
+
         <button
+          type="button"
           onClick={handleSubmit}
-          disabled={!isValid}
+          disabled={!canSubmit}
           className={`w-full py-3 rounded-xl font-bold text-sm transition-all duration-150 ${
-            isValid
+            canSubmit
               ? 'bg-green-600 text-white hover:brightness-110 active:scale-95'
               : 'bg-gray-200 text-gray-400 cursor-not-allowed'
           }`}
         >
-          투표 생성하기
+          {isSubmitting ? '생성 중...' : '투표 생성하기'}
         </button>
       </div>
     </Modal>
   );
+}
+
+function toMarch2026Date(day: number) {
+  return `2026-03-${day.toString().padStart(2, '0')}`;
 }
