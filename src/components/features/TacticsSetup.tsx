@@ -21,6 +21,7 @@ export default function TacticsSetup() {
   const { showToast } = useToastStore();
   const [showConfirm, setShowConfirm] = useState(false);
   const [tacticsCompleted, setTacticsCompleted] = useState(false);
+  const [currentTurn] = useState<'red' | 'blue'>('red'); // 시연용 턴 상태
 
   const isLeader = userRole === 'admin';
 
@@ -47,7 +48,10 @@ export default function TacticsSetup() {
 
       <div className="grid grid-cols-2 gap-3 mb-3">
         {/* Red Team Area */}
-        <div className="bg-red-50 rounded-xl p-3 border border-red-200 shadow-sm flex flex-col">
+        <div className={`bg-red-50 rounded-xl p-3 border border-red-200 shadow-sm flex flex-col ${currentTurn === 'red' ? 'ring-2 ring-green-500 shadow-md transform scale-[1.02] transition-all relative z-10' : ''}`}>
+          {currentTurn === 'red' && (
+            <div className="absolute -top-2 -right-2 w-4 h-4 bg-green-500 rounded-full animate-ping opacity-75"></div>
+          )}
           <h4 className="text-[11px] font-black text-red-600 mb-2 border-b border-red-200 pb-1 flex items-center justify-between">
             <span className="flex items-center gap-1"><Shirt size={14} className="fill-red-500/20 text-red-500" /> Red (나)</span>
             <span className="text-gray-500 font-medium">2명</span>
@@ -66,7 +70,10 @@ export default function TacticsSetup() {
         </div>
         
         {/* Blue Team Area */}
-        <div className="bg-blue-50 rounded-xl p-3 border border-blue-200 shadow-sm flex flex-col">
+        <div className={`bg-blue-50 rounded-xl p-3 border border-blue-200 shadow-sm flex flex-col ${currentTurn === 'blue' ? 'ring-2 ring-green-500 shadow-md transform scale-[1.02] transition-all relative z-10' : ''}`}>
+          {currentTurn === 'blue' && (
+            <div className="absolute -top-2 -right-2 w-4 h-4 bg-green-500 rounded-full animate-ping opacity-75"></div>
+          )}
           <h4 className="text-[11px] font-black text-blue-600 mb-2 border-b border-blue-200 pb-1 flex items-center justify-between">
             <span className="flex items-center gap-1"><Shirt size={14} className="fill-blue-500/20 text-blue-500" /> Blue</span>
             <span className="text-gray-500 font-medium">1명</span>

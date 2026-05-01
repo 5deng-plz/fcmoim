@@ -1,51 +1,31 @@
 'use client';
 
-import { CalendarDays, MapPin, Plus, Vote } from 'lucide-react';
+import { Vote } from 'lucide-react';
 import { useState } from 'react';
 import Modal from '@/components/ui/Modal';
 import { useModalStore } from '@/stores/useModalStore';
 import { useToastStore } from '@/stores/useToastStore';
-
-type PollOption = {
-  date: string;
-  time: string;
-  location: string;
-};
-
-const emptyOption = (): PollOption => ({
-  date: '',
-  time: '',
-  location: '',
-});
+import CalendarView from './CalendarView';
 
 export default function PollCreateModal() {
   const { activeModal, closeModal } = useModalStore();
   const { showToast } = useToastStore();
   const [title, setTitle] = useState('3월 친선 경기 일정 투표');
-  const [options, setOptions] = useState<PollOption[]>([emptyOption(), emptyOption()]);
+  const [selectedDates, setSelectedDates] = useState<number[]>([]);
+  const [time, setTime] = useState('18:00');
+  const [location, setLocation] = useState('');
   const [memo, setMemo] = useState('');
 
-  const completeOptions = options.filter((option) => option.date && option.time && option.location.trim());
-  const isValid = title.trim() && completeOptions.length >= 2;
-
-  const updateOption = (index: number, patch: Partial<PollOption>) => {
-    setOptions((current) =>
-      current.map((option, optionIndex) =>
-        optionIndex === index ? { ...option, ...patch } : option,
-      ),
-    );
-  };
-
-  const addOption = () => {
-    setOptions((current) => [...current, emptyOption()]);
-  };
+  const isValid = title.trim() && selectedDates.length >= 2 && time && location.trim();
 
   const handleSubmit = () => {
     if (!isValid) return;
     showToast('일정 투표가 생성되었어요!');
     closeModal();
     setTitle('3월 친선 경기 일정 투표');
-    setOptions([emptyOption(), emptyOption()]);
+    setSelectedDates([]);
+    setTime('18:00');
+    setLocation('');
     setMemo('');
   };
 
@@ -72,49 +52,60 @@ export default function PollCreateModal() {
           />
         </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-gray-500 block">후보 일정</label>
-            <button
-              onClick={addOption}
-              className="inline-flex items-center gap-1 rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-bold text-gray-600 transition-colors hover:bg-gray-200"
-            >
-              <Plus size={13} />
-              후보 추가
-            </button>
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-bold text-gray-500 block">후보 날짜 선택 (2~4개)</label>
+            <span className="text-xs font-bold text-green-600">{selectedDates.length}/4 선택됨</span>
           </div>
+          <div className="-mx-5 sm:mx-0">
+            <CalendarView 
+              isMulti 
+              maxSelections={4}
+              value={selectedDates} 
+              onChangeMulti={setSelectedDates} 
+              hideLegend 
+            />
+          </div>
+        </div>
 
-          {options.map((option, index) => (
-            <div key={index} className="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-2">
-              <div className="text-xs font-black text-gray-700">후보 {index + 1}</div>
-              <div className="grid grid-cols-2 gap-2">
-                <label className="relative">
-                  <CalendarDays size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="date"
-                    value={option.date}
-                    onChange={(event) => updateOption(index, { date: event.target.value })}
-                    className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-8 pr-2 text-xs focus:border-green-500 focus:outline-none"
-                  />
-                </label>
-                <input
-                  type="time"
-                  value={option.time}
-                  onChange={(event) => updateOption(index, { time: event.target.value })}
-                  className="w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-xs focus:border-green-500 focus:outline-none"
-                />
-              </div>
-              <label className="relative block">
-                <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  value={option.location}
-                  onChange={(event) => updateOption(index, { location: event.target.value })}
-                  placeholder="장소"
-                  className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-8 pr-2 text-xs focus:border-green-500 focus:outline-none"
-                />
-              </label>
-            </div>
-          ))}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className="text-xs font-bold text-gray-500 mb-1 block">일괄 적용 시간</label>
+            <input
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-green-500 focus:outline-none transition-colors"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-gray-500 mb-1 block">장소</label>
+            <input
+              type="text"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="서울 용산 풋살장"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-green-500 focus:outline-none transition-colors"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs font-bold text-gray-500 mb-1 block">선택된 항목 요약</label>
+          <div className="bg-gray-50 rounded-xl border border-gray-100 p-3 max-h-32 overflow-y-auto">
+            {selectedDates.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-2">캘린더에서 날짜를 2개 이상 선택해주세요</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {[...selectedDates].sort((a, b) => a - b).map((d, i) => (
+                  <li key={d} className="flex items-start gap-2 text-xs font-medium leading-snug text-gray-700">
+                    <span className="w-4 h-4 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-[10px] font-bold shrink-0">{i + 1}</span>
+                    <span>항목 {i + 1}: 3월 {d}일 {time} · {location || '장소 미정'}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
 
         <div>

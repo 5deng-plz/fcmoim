@@ -21,6 +21,7 @@
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.103.2",
     "firebase": "^12.12.1",
+    "korean-holidays": "^1.0.0",
     "lucide-react": "^0.577.0",
     "next": "^16.2.4",
     "react": "19.2.3",

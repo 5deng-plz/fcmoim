@@ -6,6 +6,6 @@ interface ScheduleState {
 }
 
 export const useScheduleStore = create<ScheduleState>((set) => ({
-  selectedDate: 14,
+  selectedDate: new Date().getDate(),
   setSelectedDate: (date) => set({ selectedDate: date }),
 }));

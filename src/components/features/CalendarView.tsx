@@ -2,42 +2,70 @@
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useScheduleStore } from '@/stores/useScheduleStore';
+import { isHoliday } from 'korean-holidays';
 
 interface CalendarEvent {
   day: number;
-  type: 'past_match' | 'upcoming_match' | 'training' | 'seminar' | 'etc';
+  type: 'match' | 'training' | 'seminar' | 'etc' | 'poll';
 }
 
 const events: CalendarEvent[] = [
-  { day: 7, type: 'past_match' },
-  { day: 14, type: 'past_match' },
-  { day: 15, type: 'upcoming_match' },
+  { day: 7, type: 'match' },
+  { day: 14, type: 'match' },
+  { day: 15, type: 'match' },
+  { day: 21, type: 'poll' },
+  { day: 22, type: 'poll' },
   { day: 22, type: 'training' },
   { day: 28, type: 'seminar' },
 ];
 
 const dotColor: Record<string, string> = {
-  past_match: 'bg-green-500',
-  upcoming_match: 'bg-red-500',
-  training: 'bg-blue-500',
+  match: 'bg-green-500',
+  training: 'bg-orange-500',
   seminar: 'bg-purple-500',
-  etc: 'bg-gray-400',
+  etc: 'bg-gray-500',
+  poll: 'bg-yellow-500',
 };
 
 interface CalendarViewProps {
-  value?: number;
-  onChange?: (day: number) => void;
+  value?: number | number[];
+  onChange?: (val: number) => void;
+  onChangeMulti?: (val: number[]) => void;
   hideLegend?: boolean;
+  isMulti?: boolean;
+  maxSelections?: number;
 }
 
-export default function CalendarView({ value, onChange, hideLegend = false }: CalendarViewProps) {
+export default function CalendarView({
+  value,
+  onChange,
+  onChangeMulti,
+  hideLegend = false,
+  isMulti = false,
+  maxSelections,
+}: CalendarViewProps) {
   const scheduleStore = useScheduleStore();
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
   
-  const selectedDate = value !== undefined ? value : scheduleStore.selectedDate;
+  const selectedDates = value !== undefined 
+    ? (Array.isArray(value) ? value : [value])
+    : [scheduleStore.selectedDate];
+
   const handleSelect = (day: number) => {
-    if (onChange) onChange(day);
-    else scheduleStore.setSelectedDate(day);
+    if (isMulti) {
+      if (onChangeMulti) {
+        const currentVals = Array.isArray(value) ? value : [];
+        if (currentVals.includes(day)) {
+          onChangeMulti(currentVals.filter((d) => d !== day));
+        } else {
+          if (maxSelections && currentVals.length >= maxSelections) return;
+          onChangeMulti([...currentVals, day]);
+        }
+      }
+    } else {
+      if (onChange) onChange(day);
+      else scheduleStore.setSelectedDate(day);
+    }
   };
 
   return (
@@ -53,38 +81,56 @@ export default function CalendarView({ value, onChange, hideLegend = false }: Ca
       </div>
 
       <div className="grid grid-cols-7 gap-1 text-center mb-2">
-        {['일', '월', '화', '수', '목', '금', '토'].map((d) => (
-          <div key={d} className="text-[11px] font-bold text-gray-400">
+        {['일', '월', '화', '수', '목', '금', '토'].map((d, i) => (
+          <div key={d} className={`text-[11px] font-bold ${i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-gray-400'}`}>
             {d}
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-y-2 text-center text-sm font-medium text-gray-700">
-        <div className="text-transparent">0</div>
-        <div className="text-transparent">0</div>
+      <div className="grid grid-cols-7 gap-y-2 text-center text-sm font-medium">
         {days.map((d) => {
-          const event = events.find((e) => e.day === d);
-          const isSelected = d === selectedDate;
+          const dayEvents = events.filter((e) => e.day === d);
+          const isSelected = selectedDates.includes(d);
+          
+          const dateObj = new Date(2026, 2, d); // 2026년 3월
+          const dayOfWeek = dateObj.getDay();
+          const isRedDay = dayOfWeek === 0 || isHoliday(dateObj);
+          const isBlueDay = dayOfWeek === 6 && !isRedDay;
+          
+          const textColor = isSelected
+            ? 'text-white'
+            : isRedDay
+            ? 'text-red-500'
+            : isBlueDay
+            ? 'text-blue-500'
+            : 'text-gray-700';
+
           return (
-            <div
+            <button
+              type="button"
               key={d}
-              onClick={() => (onChange ? handleSelect(d) : event && handleSelect(d))}
-              className={`relative flex justify-center items-center h-8 w-8 mx-auto rounded-full transition-all duration-200 ${
+              onClick={() => handleSelect(d)}
+              aria-label={`3월 ${d}일${dayEvents.length > 0 ? `, ${dayEvents.length}개 일정` : ''}`}
+              aria-pressed={isSelected}
+              className={`relative flex justify-center items-center h-8 w-8 mx-auto rounded-full transition-all duration-200 cursor-pointer ${
                 isSelected
-                  ? 'bg-gray-900 text-white font-bold'
-                  : event || onChange
-                    ? 'hover:bg-gray-100 cursor-pointer'
-                    : ''
-              }`}
+                  ? 'bg-gray-900 font-bold'
+                  : 'hover:bg-gray-100'
+              } ${textColor}`}
             >
               {d}
-              {event && (
-                <div
-                  className={`absolute bottom-0 w-1.5 h-1.5 rounded-full ${dotColor[event.type]}`}
-                />
+              {dayEvents.length > 0 && (
+                <div className="absolute bottom-0 flex gap-0.5">
+                  {dayEvents.map((event, idx) => (
+                    <div
+                      key={idx}
+                      className={`w-1.5 h-1.5 rounded-full ${dotColor[event.type]}`}
+                    />
+                  ))}
+                </div>
               )}
-            </div>
+            </button>
           );
         })}
       </div>
@@ -93,14 +139,10 @@ export default function CalendarView({ value, onChange, hideLegend = false }: Ca
         <div className="flex items-center gap-3 mt-4 pt-3 border-t border-gray-50 text-[10px] text-gray-400 font-medium justify-center flex-wrap">
           <div className="flex items-center gap-1">
             <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            <span>완료</span>
+            <span>경기</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-            <span>예정</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+            <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
             <span>전지훈련</span>
           </div>
           <div className="flex items-center gap-1">
@@ -108,8 +150,12 @@ export default function CalendarView({ value, onChange, hideLegend = false }: Ca
             <span>정신교육</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+            <div className="w-1.5 h-1.5 rounded-full bg-gray-500" />
             <span>기타</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+            <span>투표중</span>
           </div>
         </div>
       )}

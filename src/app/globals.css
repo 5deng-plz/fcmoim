@@ -61,10 +61,12 @@
     font-display: swap;
   }
 
-  html {
+  html, body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    overscroll-behavior: none;
+    overflow: hidden;
   }
 }
 
@@ -73,7 +75,7 @@
     min-height: 100vh;
     min-height: 100dvh;
     min-height: 100svh;
-    background: #d1d5db;
+    background: linear-gradient(135deg, #1f2937 0%, #0f172a 100%);
     display: flex;
     justify-content: center;
     align-items: stretch;
@@ -156,5 +158,31 @@
   @keyframes dropzone-pulse {
     0%, 100% { opacity: 0.5; }
     50% { opacity: 1; }
+  }
+
+  /* ── 골드 쉬머 카드 애니메이션 ── */
+  @keyframes gold-shimmer {
+    0% {
+      background-position: -200% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
+  }
+  .card-gold-shimmer {
+    background: linear-gradient(
+      110deg,
+      #fffbeb 0%,
+      #fef3c7 20%,
+      #fde68a 35%,
+      #fef3c7 50%,
+      #fffbeb 65%,
+      #fef3c7 80%,
+      #fffbeb 100%
+    );
+    background-size: 200% 100%;
+    animation: gold-shimmer 3s ease-in-out infinite;
+    border: 1.5px solid #f59e0b;
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.15), 0 1px 3px rgba(0,0,0,0.06);
   }
 }

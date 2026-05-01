@@ -31,6 +31,10 @@ interface AppState {
   // ─── 참석 투표 (데모용) ───
   attendStatus: AttendanceStatus;
   setAttendStatus: (status: AttendanceStatus) => void;
+
+  // ─── 팀 정보 ───
+  teamName: string;
+  setTeamName: (name: string) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -61,4 +65,8 @@ export const useAppStore = create<AppState>((set) => ({
   // ─── 참석 투표 (데모용) ───
   attendStatus: 'none',
   setAttendStatus: (status) => set({ attendStatus: status }),
+
+  // ─── 팀 정보 ───
+  teamName: 'FC Tiger',
+  setTeamName: (name) => set({ teamName: name }),
 }));

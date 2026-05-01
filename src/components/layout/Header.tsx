@@ -19,6 +19,7 @@ export default function Header() {
     setShowJoinForm,
     showNotifications,
     setShowNotifications,
+    teamName,
   } = useAppStore();
 
   const isSubPage = showMyPage || showCommunity || showJoinForm;
@@ -51,7 +52,7 @@ export default function Header() {
         <>
           <h1 className="text-xl font-black text-gray-900 tracking-tight flex items-center gap-1.5">
             <FcMoimMark size={24} />
-            FC Moim
+            {teamName}
           </h1>
           <div className="flex items-center gap-3">
             {/* 데모용 역할 전환 — 개발 모드에서만 표시 */}

@@ -6,14 +6,14 @@ import { useModalStore } from '@/stores/useModalStore';
 import { useToastStore } from '@/stores/useToastStore';
 
 import CalendarView from './CalendarView';
+import Badge from '@/components/ui/Badge';
 
 const eventTypes = [
   { key: 'match', label: '경기', emoji: '⚽' },
   { key: 'training', label: '전지훈련', emoji: '🏕' },
   { key: 'seminar', label: '정신교육', emoji: '🍻' },
-  { key: 'etc', label: '기타', emoji: '📌' },
+  { key: 'etc', label: '기타', emoji: '🎸' },
 ] as const;
-
 
 export default function MatchCreateModal() {
   const { activeModal, closeModal } = useModalStore();
@@ -21,8 +21,8 @@ export default function MatchCreateModal() {
   const [type, setType] = useState<string>('match');
   const [title, setTitle] = useState('');
   const [dateNum, setDateNum] = useState<number>(new Date().getDate());
-  const [time, setTime] = useState('');
-  const [location, setLocation] = useState('');
+  const [time, setTime] = useState('18:00');
+  const [location, setLocation] = useState('서울 영등포 SKY파크');
   const [memo, setMemo] = useState('');
 
   const isValid = (type === 'match' || title.trim()) && dateNum && time && location;
@@ -32,8 +32,8 @@ export default function MatchCreateModal() {
     closeModal();
     setTitle('');
     setDateNum(new Date().getDate());
-    setTime('');
-    setLocation('');
+    setTime('18:00');
+    setLocation('서울 영등포 SKY파크');
     setMemo('');
   };
 
@@ -48,18 +48,19 @@ export default function MatchCreateModal() {
           <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">
             일정 유형
           </label>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {eventTypes.map((et) => (
               <button
+                type="button"
                 key={et.key}
                 onClick={() => setType(et.key)}
-                className={`py-2 px-1 rounded-xl text-center text-xs font-bold transition-all duration-150 ${
+                className={`rounded-xl py-3 text-center text-xs font-bold transition-all duration-150 ${
                   type === et.key
                     ? 'bg-green-600 text-white shadow-md'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
-                <span className="block text-lg mb-0.5">{et.emoji}</span>
+                <span className="block text-2xl mb-1">{et.emoji}</span>
                 {et.label}
               </button>
             ))}
@@ -67,9 +68,10 @@ export default function MatchCreateModal() {
         </div>
 
         {type === 'match' ? (
-          <div className="bg-green-50 border border-green-200 rounded-xl p-3">
-            <p className="text-xs font-bold text-green-700 mt-1">
-              🏆 Round 8 정규 리그 (자동 생성)
+          <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2">
+            <Badge label="Round 8" variant="green" />
+            <p className="text-xs font-bold text-green-700">
+              정규 리그 (자동 생성)
             </p>
           </div>
         ) : (

@@ -58,114 +58,136 @@ export default function JoinRequestForm() {
         <p className="text-sm text-gray-500">FC Moim에 합류하기 위한 정보를 입력해주세요</p>
       </div>
 
-      {/* 이름 */}
-      <div>
-        <label className="text-xs font-bold text-gray-700 mb-1.5 block">이름 *</label>
-        <input
-          type="text"
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder="실명을 입력해주세요"
-          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-        />
-      </div>
-
-      {/* 포지션 */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="space-y-6">
         <div>
-          <label className="text-xs font-bold text-gray-700 mb-1.5 block">주 포지션 *</label>
-          <select
-            value={formData.mainPosition}
-            onChange={(e) => setFormData({ ...formData, mainPosition: e.target.value as Position })}
-            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all appearance-none"
-          >
-            <option value="FW">공격 (FW)</option>
-            <option value="MF">미드필더 (MF)</option>
-            <option value="DF">수비 (DF)</option>
-          </select>
-        </div>
-        <div>
-          <label className="text-xs font-bold text-gray-700 mb-1.5 block">부 포지션</label>
-          <select
-            value={formData.subPosition}
-            onChange={(e) => setFormData({ ...formData, subPosition: e.target.value as Position | '' })}
-            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all appearance-none"
-          >
-            <option value="">선택 안함</option>
-            <option value="FW">공격 (FW)</option>
-            <option value="MF">미드필더 (MF)</option>
-            <option value="DF">수비 (DF)</option>
-          </select>
-        </div>
-      </div>
-
-      {/* 신체 정보 */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="text-xs font-bold text-gray-700 mb-1.5 block">신장 (cm)</label>
+          <h3 className="text-sm font-black text-gray-900 mb-4 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+            기본 정보
+          </h3>
+          <label className="text-xs font-bold text-gray-700 mb-1.5 block">이름 *</label>
           <input
-            type="number"
-            value={formData.height}
-            onChange={(e) => setFormData({ ...formData, height: e.target.value })}
-            placeholder="175"
+            type="text"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder="실명을 입력해주세요"
             className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
           />
         </div>
-        <div>
-          <label className="text-xs font-bold text-gray-700 mb-1.5 block">체중 (kg)</label>
-          <input
-            type="number"
-            value={formData.weight}
-            onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-            placeholder="70"
-            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-          />
-        </div>
-      </div>
 
-      {/* 주발 */}
-      <div>
-        <label className="text-xs font-bold text-gray-700 mb-1.5 block">주발</label>
-        <div className="flex gap-2">
-          {(['오른발', '왼발', '양발'] as const).map((foot) => (
-            <button
-              key={foot}
-              onClick={() => setFormData({ ...formData, preferredFoot: foot })}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 ${
-                formData.preferredFoot === foot
-                  ? 'bg-gray-900 text-white'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-              }`}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className="text-xs font-bold text-gray-700 mb-1.5 block">주 포지션 *</label>
+            <select
+              value={formData.mainPosition}
+              onChange={(e) => setFormData({ ...formData, mainPosition: e.target.value as Position })}
+              className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all appearance-none"
             >
-              {foot}
-            </button>
-          ))}
+              <option value="FW">공격 (FW)</option>
+              <option value="MF">미드필더 (MF)</option>
+              <option value="DF">수비 (DF)</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-bold text-gray-700 mb-1.5 block">부 포지션</label>
+            <select
+              value={formData.subPosition}
+              onChange={(e) => setFormData({ ...formData, subPosition: e.target.value as Position | '' })}
+              className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all appearance-none"
+            >
+              <option value="">선택 안함</option>
+              <option value="FW">공격 (FW)</option>
+              <option value="MF">미드필더 (MF)</option>
+              <option value="DF">수비 (DF)</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      {/* 생년 */}
-      <div className="grid grid-cols-2 gap-3">
+      <hr className="border-gray-100" />
+
+      <div className="space-y-6">
         <div>
-          <label className="text-xs font-bold text-gray-700 mb-1.5 block">출생연도</label>
-          <input
-            type="number"
-            value={formData.birthYear}
-            onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
-            placeholder="1990"
-            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-          />
+          <h3 className="text-sm font-black text-gray-900 mb-4 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+            신체 정보
+          </h3>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="text-xs font-bold text-gray-700 mb-1.5 block">신장 (cm)</label>
+              <input
+                type="number"
+                value={formData.height}
+                onChange={(e) => setFormData({ ...formData, height: e.target.value })}
+                placeholder="175"
+                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-gray-700 mb-1.5 block">체중 (kg)</label>
+              <input
+                type="number"
+                value={formData.weight}
+                onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                placeholder="70"
+                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-gray-700 mb-1.5 block">주발</label>
+            <div className="flex gap-2">
+              {(['오른발', '왼발', '양발'] as const).map((foot) => (
+                <button
+                  type="button"
+                  key={foot}
+                  onClick={() => setFormData({ ...formData, preferredFoot: foot })}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 ${
+                    formData.preferredFoot === foot
+                      ? 'bg-gray-900 text-white'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  }`}
+                >
+                  {foot}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
+      </div>
+
+      <hr className="border-gray-100" />
+
+      <div className="space-y-6">
         <div>
-          <label className="text-xs font-bold text-gray-700 mb-1.5 block">출생월</label>
-          <input
-            type="number"
-            value={formData.birthMonth}
-            onChange={(e) => setFormData({ ...formData, birthMonth: e.target.value })}
-            placeholder="3"
-            min="1"
-            max="12"
-            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-          />
+          <h3 className="text-sm font-black text-gray-900 mb-4 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+            추가 정보
+          </h3>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="text-xs font-bold text-gray-700 mb-1.5 block">출생연도</label>
+              <input
+                type="number"
+                value={formData.birthYear}
+                onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
+                placeholder="1990"
+                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-gray-700 mb-1.5 block">출생월</label>
+              <input
+                type="number"
+                value={formData.birthMonth}
+                onChange={(e) => setFormData({ ...formData, birthMonth: e.target.value })}
+                placeholder="3"
+                min="1"
+                max="12"
+                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+              />
+            </div>
+          </div>
         </div>
       </div>
 

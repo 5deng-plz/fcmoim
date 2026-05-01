@@ -1,6 +1,6 @@
 interface BadgeProps {
   label: string;
-  variant?: 'green' | 'orange' | 'gray' | 'slate' | 'red' | 'yellow';
+  variant?: 'green' | 'orange' | 'gray' | 'slate' | 'red' | 'yellow' | 'amber';
   className?: string;
   pulse?: boolean;
 }
@@ -12,6 +12,7 @@ const variantClasses: Record<string, string> = {
   slate: 'bg-slate-200 text-slate-600',
   red: 'bg-red-50 text-red-500',
   yellow: 'bg-yellow-100 text-yellow-700',
+  amber: 'bg-amber-700 text-white',
 };
 
 export default function Badge({

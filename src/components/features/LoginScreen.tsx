@@ -7,7 +7,7 @@ import { useAppStore } from '@/stores/useAppStore';
 
 export default function LoginScreen() {
   const { signInKakao } = useAuthStore();
-  const { setAuthView, setUserStatus } = useAppStore();
+  const { setAuthView, setIsAuthenticated, setUserRole, setUserStatus } = useAppStore();
 
   const handleKakaoLogin = async () => {
     await signInKakao();
@@ -18,14 +18,21 @@ export default function LoginScreen() {
     setUserStatus('guest');
   };
 
+  const handleDevLogin = () => {
+    setIsAuthenticated(true);
+    setUserRole('admin');
+    setUserStatus('approved');
+    setAuthView('login');
+  };
+
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-10">
       {/* 로고 & 팀명 */}
       <div className="text-center space-y-2">
-        <div className="inline-flex items-center justify-center w-20 h-20 bg-green-50 rounded-3xl mb-2">
+        <div className="inline-flex items-center justify-center w-20 h-20 bg-green-50 rounded-3xl mb-2 shadow-lg shadow-green-100 border border-green-100">
           <FcMoimMark size={44} />
         </div>
-        <h1 className="text-2xl font-black text-gray-900 tracking-tight">FC Moim</h1>
+        <h1 className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 tracking-tight">FC Moim</h1>
         <p className="text-sm text-gray-400">아마추어 풋살 동호회 매니지먼트</p>
       </div>
 
@@ -52,6 +59,15 @@ export default function LoginScreen() {
         <Eye size={16} />
         먼저 둘러볼게요
       </button>
+
+      {process.env.NODE_ENV === 'development' ? (
+        <button
+          onClick={handleDevLogin}
+          className="mt-8 rounded-lg bg-gray-100 px-3 py-2 text-xs font-bold text-gray-400 transition-colors hover:bg-gray-200 active:scale-95"
+        >
+          개발자 전용 임시 로그인 (Admin)
+        </button>
+      ) : null}
     </div>
   );
 }

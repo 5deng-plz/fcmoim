@@ -121,8 +121,10 @@ export default function TacticsDragBuilder() {
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const [bench, setBench] = useState<Player[]>(initialPlayers);
-  const [redTeam, setRedTeam] = useState<Player[]>([]);
-  const [blueTeam, setBlueTeam] = useState<Player[]>([]);
+  const [teams, setTeams] = useState<{ id: string; name: string; color: 'red' | 'blue'; players: Player[] }[]>([
+    { id: 'red', name: 'Red', color: 'red', players: [] },
+    { id: 'blue', name: 'Blue', color: 'blue', players: [] },
+  ]);
 
   const isLeader = userRole === 'admin' || userRole === 'operator';
 
@@ -131,19 +133,18 @@ export default function TacticsDragBuilder() {
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
   );
 
-  const activePlayer = [...bench, ...redTeam, ...blueTeam].find((p) => p.id === activeId);
+  const activePlayer = [bench, ...teams.flatMap(t => t.players)].flat().find((p) => p.id === activeId);
 
-  const findPlayerZone = (id: string): 'bench' | 'red' | 'blue' | null => {
+  const findPlayerZone = (id: string): string | null => {
     if (bench.find((p) => p.id === id)) return 'bench';
-    if (redTeam.find((p) => p.id === id)) return 'red';
-    if (blueTeam.find((p) => p.id === id)) return 'blue';
+    const team = teams.find(t => t.players.find(p => p.id === id));
+    if (team) return team.id;
     return null;
   };
 
   const removeFromZone = (id: string) => {
     setBench((prev) => prev.filter((p) => p.id !== id));
-    setRedTeam((prev) => prev.filter((p) => p.id !== id));
-    setBlueTeam((prev) => prev.filter((p) => p.id !== id));
+    setTeams((prev) => prev.map(t => ({ ...t, players: t.players.filter(p => p.id !== id) })));
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -156,7 +157,7 @@ export default function TacticsDragBuilder() {
     if (!over) return;
 
     const playerId = active.id as string;
-    const player = [...bench, ...redTeam, ...blueTeam].find((p) => p.id === playerId);
+    const player = [bench, ...teams.flatMap(t => t.players)].flat().find((p) => p.id === playerId);
     if (!player) return;
 
     const targetZone = (over.data?.current as { zone?: string })?.zone;
@@ -165,13 +166,17 @@ export default function TacticsDragBuilder() {
 
     removeFromZone(playerId);
 
-    if (targetZone === 'red') {
-      setRedTeam((prev) => [...prev, player]);
-    } else if (targetZone === 'blue') {
-      setBlueTeam((prev) => [...prev, player]);
-    } else {
+    if (targetZone === 'bench') {
       setBench((prev) => [...prev, player]);
+    } else {
+      setTeams((prev) => prev.map(t => t.id === targetZone ? { ...t, players: [...t.players, player] } : t));
     }
+  };
+
+  const getTeamClasses = (color: string) => {
+    if (color === 'red') return { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-600', fill: 'fill-red-500/20 text-red-500', emptyText: 'text-red-400' };
+    if (color === 'blue') return { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-600', fill: 'fill-blue-500/20 text-blue-500', emptyText: 'text-blue-400' };
+    return { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-600', fill: 'fill-green-500/20 text-green-500', emptyText: 'text-green-400' };
   };
 
   if (!isLeader) return null;
@@ -184,7 +189,7 @@ export default function TacticsDragBuilder() {
         </h3>
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold text-gray-500 bg-white px-2 py-1 rounded-md">
-            참석 {bench.length + redTeam.length + blueTeam.length}명
+            참석 {bench.length + teams.reduce((acc, t) => acc + t.players.length, 0)}명
           </span>
         </div>
       </div>
@@ -209,51 +214,33 @@ export default function TacticsDragBuilder() {
           </div>
         )}
 
-        {/* Red / Blue 드롭존 */}
+        {/* Teams 드롭존 */}
         <div className="grid grid-cols-2 gap-3 mb-3">
-          {/* Red Team */}
-          <div className="bg-red-50 rounded-xl p-3 border border-red-200 min-h-[120px]">
-            <h4 className="text-[11px] font-black text-red-600 mb-2 border-b border-red-200 pb-1 flex items-center justify-between">
-              <span className="flex items-center gap-1">
-                <Shirt size={14} className="fill-red-500/20 text-red-500" /> Red
-              </span>
-              <span className="text-gray-500 font-medium">{redTeam.length}명</span>
-            </h4>
-            <SortableContext items={redTeam.map((p) => p.id)} strategy={verticalListSortingStrategy}>
-              <div className="space-y-1.5">
-                {redTeam.length === 0 && (
-                  <div className="dropzone-empty border-red-200 text-center py-4 text-[10px] text-red-400 font-medium">
-                    선수를 드래그해서 배치
+          {teams.map((team) => {
+            const cls = getTeamClasses(team.color);
+            return (
+              <div key={team.id} className={`${cls.bg} rounded-xl p-3 border ${cls.border} min-h-[120px]`}>
+                <h4 className={`text-[11px] font-black ${cls.text} mb-2 border-b ${cls.border} pb-1 flex items-center justify-between`}>
+                  <span className="flex items-center gap-1">
+                    <Shirt size={14} className={cls.fill} /> {team.name}
+                  </span>
+                  <span className="text-gray-500 font-medium">{team.players.length}명</span>
+                </h4>
+                <SortableContext items={team.players.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-1.5">
+                    {team.players.length === 0 && (
+                      <div className={`dropzone-empty ${cls.border} text-center py-4 text-[10px] ${cls.emptyText} font-medium`}>
+                        선수를 드래그해서 배치
+                      </div>
+                    )}
+                    {team.players.map((player) => (
+                      <DraggablePlayerCard key={player.id} player={player} zone={team.id} />
+                    ))}
                   </div>
-                )}
-                {redTeam.map((player) => (
-                  <DraggablePlayerCard key={player.id} player={player} zone="red" />
-                ))}
+                </SortableContext>
               </div>
-            </SortableContext>
-          </div>
-
-          {/* Blue Team */}
-          <div className="bg-blue-50 rounded-xl p-3 border border-blue-200 min-h-[120px]">
-            <h4 className="text-[11px] font-black text-blue-600 mb-2 border-b border-blue-200 pb-1 flex items-center justify-between">
-              <span className="flex items-center gap-1">
-                <Shirt size={14} className="fill-blue-500/20 text-blue-500" /> Blue
-              </span>
-              <span className="text-gray-500 font-medium">{blueTeam.length}명</span>
-            </h4>
-            <SortableContext items={blueTeam.map((p) => p.id)} strategy={verticalListSortingStrategy}>
-              <div className="space-y-1.5">
-                {blueTeam.length === 0 && (
-                  <div className="dropzone-empty border-blue-200 text-center py-4 text-[10px] text-blue-400 font-medium">
-                    선수를 드래그해서 배치
-                  </div>
-                )}
-                {blueTeam.map((player) => (
-                  <DraggablePlayerCard key={player.id} player={player} zone="blue" />
-                ))}
-              </div>
-            </SortableContext>
-          </div>
+            );
+          })}
         </div>
 
         <DragOverlay>
@@ -264,7 +251,7 @@ export default function TacticsDragBuilder() {
       {/* 팁 인디케이터 */}
       <div className="bg-white px-4 py-2 text-center shadow-sm relative z-20 mb-3 rounded-lg">
         <div className="inline-flex items-center gap-4 bg-gray-50 px-4 py-1.5 rounded-full border border-gray-100">
-          <span className="text-xs font-bold text-gray-500">배치된 인원: {redTeam.length + blueTeam.length}명</span>
+          <span className="text-xs font-bold text-gray-500">배치된 인원: {teams.reduce((acc, t) => acc + t.players.length, 0)}명</span>
         </div>
       </div>
 
@@ -276,8 +263,8 @@ export default function TacticsDragBuilder() {
       ) : (
         <button
           onClick={() => {
-            if (redTeam.length === 0 || blueTeam.length === 0) {
-              showToast('양 팀에 선수를 배치해주세요!');
+            if (teams.some(t => t.players.length === 0)) {
+              showToast('모든 팀에 선수를 배치해주세요!');
               return;
             }
             setShowConfirm(true);
@@ -290,7 +277,7 @@ export default function TacticsDragBuilder() {
 
       <Modal title="최종 컨펌" isOpen={showConfirm} onClose={() => setShowConfirm(false)}>
         <p className="text-[13px] font-bold text-gray-800 mb-4 whitespace-pre-wrap leading-relaxed text-center">
-          Red {redTeam.length}명 vs Blue {blueTeam.length}명{'\n'}
+          {teams.map(t => `${t.name} ${t.players.length}명`).join(' vs ')}{'\n'}
           전체 회원에게 팀 편성 결과가 공개됩니다.{'\n'}
           이대로 완료하시겠어요?
         </p>
