@@ -8,12 +8,13 @@
 //   2. 브라우저에서는 export된 supabase 싱글턴 사용
 //
 
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { appConfig } from '@/config/app.config';
+import { createBrowserClient } from '@supabase/ssr';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { appConfig } from '../config/app.config';
 
 // ─── Public (Anonymous) 클라이언트 ───
 // 브라우저 세션과 함께 사용하는 기본 클라이언트
-export const supabase: SupabaseClient = createClient(
+export const supabase: SupabaseClient = createBrowserClient(
   appConfig.supabase.url,
   appConfig.supabase.publishableKey,
 );
