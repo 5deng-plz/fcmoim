@@ -21,6 +21,7 @@ export interface AppConfig {
   firebase: FirebaseConfig;
   supabase: SupabaseConfig;
   vapidKey: string;
+  defaultClubId: string;
   useMockData: boolean;
 }
 
@@ -36,23 +37,6 @@ function parseJsonConfig<T extends object>(value: string | undefined, fallback: 
     return fallback;
   }
 }
-
-const localConfig: AppConfig = {
-  profile: 'local',
-  firebase: {
-    apiKey: 'demo-local-api-key',
-    authDomain: 'fcmoim-local.firebaseapp.com',
-    projectId: 'fcmoim-local',
-    messagingSenderId: '000000000000',
-    appId: '1:000000000000:web:0000000000000000',
-  },
-  supabase: {
-    url: 'https://localhost.supabase.co',
-    publishableKey: 'demo-local-publishable-key',
-  },
-  vapidKey: 'demo-local-vapid-key',
-  useMockData: true,
-};
 
 const firebasePublicConfig = parseJsonConfig<FirebaseConfig & { vapidKey?: string }>(
   process.env.NEXT_PUBLIC_FIREBASE_PUBLIC_CONFIG,
@@ -74,6 +58,37 @@ const supabasePublicConfig = parseJsonConfig<SupabaseConfig>(
   },
 );
 
+const hasRealSupabasePublicConfig = Boolean(
+  supabasePublicConfig.url &&
+  supabasePublicConfig.publishableKey &&
+  !supabasePublicConfig.url.includes('localhost.supabase.co') &&
+  !supabasePublicConfig.publishableKey.startsWith('demo-'),
+);
+
+const defaultClubId =
+  process.env.NEXT_PUBLIC_DEFAULT_CLUB_ID ||
+  '00000000-0000-0000-0000-000000000001';
+
+const localConfig: AppConfig = {
+  profile: 'local',
+  firebase: {
+    apiKey: firebasePublicConfig.apiKey || 'demo-local-api-key',
+    authDomain: firebasePublicConfig.authDomain || 'fcmoim-local.firebaseapp.com',
+    projectId: firebasePublicConfig.projectId || 'fcmoim-local',
+    messagingSenderId: firebasePublicConfig.messagingSenderId || '000000000000',
+    appId: firebasePublicConfig.appId || '1:000000000000:web:0000000000000000',
+  },
+  supabase: hasRealSupabasePublicConfig
+    ? supabasePublicConfig
+    : {
+        url: 'https://localhost.supabase.co',
+        publishableKey: 'demo-local-publishable-key',
+      },
+  vapidKey: firebasePublicConfig.vapidKey || 'demo-local-vapid-key',
+  defaultClubId,
+  useMockData: !hasRealSupabasePublicConfig,
+};
+
 const prodConfig: AppConfig = {
   profile: 'prod',
   firebase: {
@@ -85,6 +100,7 @@ const prodConfig: AppConfig = {
   },
   supabase: supabasePublicConfig,
   vapidKey: firebasePublicConfig.vapidKey || '',
+  defaultClubId,
   useMockData: false,
 };
 

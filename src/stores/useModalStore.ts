@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 
-type ModalType = 'matchCreate' | 'announcementCreate' | null;
+type ModalType = 'matchCreate' | 'pollCreate' | 'announcementCreate' | null;
 
 interface ModalState {
   activeModal: ModalType;

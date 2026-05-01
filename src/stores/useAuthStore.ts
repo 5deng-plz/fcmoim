@@ -13,12 +13,17 @@ import {
   getCurrentAuthUser,
   logout,
   onAuthChange,
-  signInWithGoogle,
   signInWithKakao,
   type AuthUser,
 } from '@/lib/auth';
 import { updateUserStatus } from '@/lib/api';
 import { useAppStore } from './useAppStore';
+import {
+  fetchMembershipSnapshot,
+  mapMembershipSnapshotToUser,
+  membershipStateToUserStatus,
+  shouldShowJoinRequest,
+} from './membershipClient';
 
 let unsubscribeAuthListener: (() => void) | null = null;
 
@@ -29,7 +34,6 @@ interface AuthState {
   lastTenant: string | null;
 
   initialize: () => Promise<void>;
-  signInGoogle: () => Promise<void>;
   signInKakao: () => Promise<void>;
   signOut: () => Promise<void>;
   setMemberProfile: (user: User | null) => void;
@@ -50,51 +54,59 @@ function applyAuthState(
   set: (partial: Partial<AuthState>) => void,
   authUser: AuthUser | null,
 ) {
-  if (authUser) {
-    const memberProfile: User = {
-      ...MOCK_USER_DEFAULT,
-      id: authUser.id,
-      authUid: authUser.id,
-      name:
-        authUser.user_metadata?.full_name ||
-        authUser.user_metadata?.name ||
-        authUser.user_metadata?.nickname ||
-        authUser.email?.split('@')[0] ||
-        'FC Moim 회원',
-      photoUrl:
-        authUser.user_metadata?.avatar_url ||
-        authUser.user_metadata?.picture ||
-        null,
-      role: 'member',
-      status: 'approved',
-    };
-
+  if (!authUser) {
     set({
-      authUser,
-      memberProfile,
+      authUser: null,
+      memberProfile: null,
       isLoading: false,
     });
 
     useAppStore.setState({
-      isAuthenticated: true,
-      userStatus: 'approved',
-      userRole: memberProfile.role,
+      isAuthenticated: false,
+      userStatus: 'guest',
       authView: 'login',
+      showJoinForm: false,
     });
     return;
   }
 
   set({
-    authUser: null,
-    memberProfile: null,
-    isLoading: false,
+    authUser,
+    isLoading: true,
   });
 
-  useAppStore.setState({
-    isAuthenticated: false,
-    userStatus: 'guest',
-    authView: 'login',
-  });
+  void fetchMembershipSnapshot()
+    .then((snapshot) => {
+      const memberProfile = mapMembershipSnapshotToUser(snapshot, authUser);
+      set({
+        authUser,
+        memberProfile,
+        isLoading: false,
+      });
+
+      useAppStore.setState({
+        isAuthenticated: true,
+        userStatus: membershipStateToUserStatus(snapshot.membershipState),
+        userRole: memberProfile?.role || snapshot.membership?.role || 'member',
+        authView: 'login',
+        showJoinForm: shouldShowJoinRequest(snapshot.membershipState),
+      });
+    })
+    .catch((error) => {
+      console.error('[FC Moim] Membership state initialization failed:', error);
+      set({
+        authUser,
+        memberProfile: null,
+        isLoading: false,
+      });
+
+      useAppStore.setState({
+        isAuthenticated: false,
+        userStatus: 'guest',
+        authView: 'login',
+        showJoinForm: false,
+      });
+    });
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -133,31 +145,6 @@ export const useAuthStore = create<AuthState>((set) => ({
         authView: 'login',
       });
     }
-  },
-
-  // ─── Google 로그인 ───
-  signInGoogle: async () => {
-    if (appConfig.useMockData) {
-      const mockUser = {
-        id: 'mock-google',
-        email: 'test@gmail.com',
-        user_metadata: { name: '구글 테스트' },
-      } as unknown as AuthUser;
-
-      set({
-        authUser: mockUser,
-        memberProfile: { ...MOCK_USER_DEFAULT, name: '구글 테스트', authUid: 'mock-google' },
-        isLoading: false,
-      });
-      useAppStore.setState({
-        isAuthenticated: true,
-        userStatus: 'approved',
-        authView: 'login',
-      });
-      return;
-    }
-
-    await signInWithGoogle();
   },
 
   // ─── 카카오 로그인 ───

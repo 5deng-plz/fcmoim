@@ -8,8 +8,7 @@ import { useToastStore } from '@/stores/useToastStore';
 import CalendarView from './CalendarView';
 
 const eventTypes = [
-  { key: 'match', label: '경기(확정)', emoji: '⚽' },
-  { key: 'vote', label: '경기(투표)', emoji: '🗳️' },
+  { key: 'match', label: '경기', emoji: '⚽' },
   { key: 'training', label: '전지훈련', emoji: '🏕' },
   { key: 'seminar', label: '정신교육', emoji: '🍻' },
   { key: 'etc', label: '기타', emoji: '📌' },
@@ -26,7 +25,7 @@ export default function MatchCreateModal() {
   const [location, setLocation] = useState('');
   const [memo, setMemo] = useState('');
 
-  const isValid = (type === 'match' || type === 'vote' || title.trim()) && dateNum && time && location;
+  const isValid = (type === 'match' || title.trim()) && dateNum && time && location;
 
   const handleSubmit = () => {
     showToast('일정이 생성되었어요! 📅');
@@ -67,7 +66,7 @@ export default function MatchCreateModal() {
           </div>
         </div>
 
-        {type === 'match' || type === 'vote' ? (
+        {type === 'match' ? (
           <div className="bg-green-50 border border-green-200 rounded-xl p-3">
             <p className="text-xs font-bold text-green-700 mt-1">
               🏆 Round 8 정규 리그 (자동 생성)

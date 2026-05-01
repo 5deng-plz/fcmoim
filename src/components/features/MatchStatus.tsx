@@ -14,7 +14,7 @@ import Image from 'next/image';
 interface MatchStatusProps {
   status: '예정' | '라커룸' | '종료';
   tacticsCompleted?: boolean;
-  type?: 'match' | 'vote_match' | 'training' | 'seminar' | 'etc';
+  type?: 'match' | 'training' | 'seminar' | 'etc';
 }
 
 export default function MatchStatus({ status, tacticsCompleted = false, type = 'match' }: MatchStatusProps) {
@@ -28,12 +28,11 @@ export default function MatchStatus({ status, tacticsCompleted = false, type = '
       <section className="animate-fadeIn space-y-4">
         <div className="flex items-center gap-2 px-1">
           <h3 className="font-bold text-gray-900 text-lg">
-            {type === 'vote_match' ? '⚽ 친선 경기 투표' : 'R7 정규 리그'}
+            R7 정규 리그
           </h3>
           <Badge 
-            label={type === 'vote_match' ? '투표진행중' : '예정'} 
-            variant={type === 'vote_match' ? 'yellow' : 'red'} 
-            pulse={type === 'vote_match'}
+            label="예정"
+            variant="red"
           />
         </div>
         <div className="card p-4">

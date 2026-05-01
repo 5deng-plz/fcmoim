@@ -5,14 +5,13 @@ import { useScheduleStore } from '@/stores/useScheduleStore';
 
 interface CalendarEvent {
   day: number;
-  type: 'past_match' | 'upcoming_match' | 'vote_match' | 'training' | 'seminar' | 'etc';
+  type: 'past_match' | 'upcoming_match' | 'training' | 'seminar' | 'etc';
 }
 
 const events: CalendarEvent[] = [
   { day: 7, type: 'past_match' },
   { day: 14, type: 'past_match' },
   { day: 15, type: 'upcoming_match' },
-  { day: 21, type: 'vote_match' },
   { day: 22, type: 'training' },
   { day: 28, type: 'seminar' },
 ];
@@ -20,7 +19,6 @@ const events: CalendarEvent[] = [
 const dotColor: Record<string, string> = {
   past_match: 'bg-green-500',
   upcoming_match: 'bg-red-500',
-  vote_match: 'bg-yellow-500',
   training: 'bg-blue-500',
   seminar: 'bg-purple-500',
   etc: 'bg-gray-400',
@@ -100,10 +98,6 @@ export default function CalendarView({ value, onChange, hideLegend = false }: Ca
           <div className="flex items-center gap-1">
             <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
             <span>예정</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
-            <span>투표</span>
           </div>
           <div className="flex items-center gap-1">
             <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />

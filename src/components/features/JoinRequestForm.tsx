@@ -1,13 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import { appConfig } from '@/config/app.config';
 import { useAppStore } from '@/stores/useAppStore';
 import { useToastStore } from '@/stores/useToastStore';
+import { buildJoinProfileRequest, submitJoinRequest } from '@/stores/membershipClient';
 import type { Position } from '@/types';
 
 export default function JoinRequestForm() {
-  const { setUserStatus, setShowJoinForm } = useAppStore();
+  const { isAuthenticated, setUserStatus, setShowJoinForm } = useAppStore();
   const { showToast } = useToastStore();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -20,18 +23,33 @@ export default function JoinRequestForm() {
     birthMonth: '',
   });
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.name.trim()) {
       showToast('이름을 입력해주세요!');
       return;
     }
 
-    // updateProfile이 appConfig.useMockData에 따라 자동 분기합니다
-    // await createUserMutation({ ...formData, status: 'pending' });
+    if (!appConfig.useMockData && !isAuthenticated) {
+      showToast('로그인 후 가입 신청을 제출해주세요.');
+      return;
+    }
 
-    setShowJoinForm(false);
-    setUserStatus('pending');
-    showToast('가입 신청이 완료되었어요! 관리자 승인을 기다려주세요 🙏');
+    const profile = buildJoinProfileRequest(formData);
+
+    try {
+      setIsSubmitting(true);
+      if (!appConfig.useMockData) {
+        await submitJoinRequest(profile);
+      }
+      setShowJoinForm(false);
+      setUserStatus('pending');
+      showToast('가입 신청이 완료되었어요! 관리자 승인을 기다려주세요 🙏');
+    } catch (error) {
+      console.error('[FC Moim] Join request failed:', error);
+      showToast(error instanceof Error ? error.message : '가입 신청을 제출하지 못했습니다.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -153,10 +171,11 @@ export default function JoinRequestForm() {
 
       {/* 제출 */}
       <button
-        onClick={handleSubmit}
-        className="w-full bg-green-600 text-white font-bold py-3.5 rounded-xl text-sm hover:bg-green-700 active:scale-[0.98] transition-all shadow-sm"
+        onClick={() => void handleSubmit()}
+        disabled={isSubmitting}
+        className="w-full bg-green-600 text-white font-bold py-3.5 rounded-xl text-sm hover:bg-green-700 active:scale-[0.98] transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        가입 신청하기 ⚽
+        {isSubmitting ? '제출 중...' : '가입 신청하기'}
       </button>
 
       <p className="text-center text-[11px] text-gray-400">

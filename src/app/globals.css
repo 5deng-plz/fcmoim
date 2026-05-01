@@ -69,6 +69,52 @@
 }
 
 @layer utilities {
+  .app-viewport {
+    min-height: 100vh;
+    min-height: 100dvh;
+    min-height: 100svh;
+    background: #d1d5db;
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    font-family: Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  .phone-shell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: min(100vw, 430px);
+    height: 100vh;
+    height: 100dvh;
+    height: 100svh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  @media (min-width: 640px) {
+    .app-viewport {
+      align-items: center;
+      padding-block: clamp(12px, 2.5dvh, 32px);
+    }
+
+    .phone-shell {
+      width: min(430px, calc(100vw - 32px));
+      height: min(900px, calc(100dvh - clamp(24px, 5dvh, 64px)));
+      min-height: min(640px, 100dvh);
+      border: 8px solid #1f2937;
+      border-radius: clamp(24px, 5vw, 40px);
+      box-shadow: 0 24px 72px rgba(17, 24, 39, 0.28);
+    }
+  }
+
+  @media (min-width: 768px) and (max-width: 1180px) and (orientation: portrait) {
+    .phone-shell {
+      width: min(440px, calc(100vw - 48px));
+      height: min(920px, calc(100dvh - 48px));
+    }
+  }
+
   /* ── Scrollbar 숨김 ── */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
