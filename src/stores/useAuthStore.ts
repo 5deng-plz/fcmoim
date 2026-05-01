@@ -1,14 +1,8 @@
-// ========================================
-// FC Moim — Supabase Auth Zustand Store
-// Profile에 따라 mock 또는 실제 Auth 자동 분기
-// ========================================
-
 'use client';
 
 import { create } from 'zustand';
 import { appConfig } from '@/config/app.config';
 import type { User, UserStatus } from '@/types';
-import { MOCK_USER_DEFAULT } from '@/mocks/data';
 import {
   getCurrentAuthUser,
   logout,
@@ -16,7 +10,6 @@ import {
   signInWithKakao,
   type AuthUser,
 } from '@/lib/auth';
-import { updateUserStatus } from '@/lib/api';
 import { useAppStore } from './useAppStore';
 import {
   fetchMembershipSnapshot,
@@ -31,13 +24,11 @@ interface AuthState {
   authUser: AuthUser | null;
   memberProfile: User | null;
   isLoading: boolean;
-  lastTenant: string | null;
 
   initialize: () => Promise<void>;
   signInKakao: () => Promise<void>;
   signOut: () => Promise<void>;
   setMemberProfile: (user: User | null) => void;
-  setLastTenant: (tenant: string | null) => void;
   approveUser: (userId: string) => Promise<void>;
 }
 
@@ -113,20 +104,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   authUser: null,
   memberProfile: null,
   isLoading: true,
-  lastTenant: null,
 
   // ─── 초기화 ───
   initialize: async () => {
-    if (appConfig.useMockData) {
-      set({ isLoading: false });
-      useAppStore.setState({
-        isAuthenticated: false,
-        userStatus: 'guest',
-        authView: 'login',
-      });
-      return;
-    }
-
     if (!unsubscribeAuthListener) {
       unsubscribeAuthListener = onAuthChange((user) => {
         applyAuthState(set, user);
@@ -149,34 +129,12 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   // ─── 카카오 로그인 ───
   signInKakao: async () => {
-    if (appConfig.useMockData) {
-      const mockUser = {
-        id: 'mock-kakao',
-        email: 'test@kakao.com',
-        user_metadata: { name: '카카오 테스트' },
-      } as unknown as AuthUser;
-
-      set({
-        authUser: mockUser,
-        memberProfile: { ...MOCK_USER_DEFAULT, name: '카카오 테스트', authUid: 'mock-kakao' },
-        isLoading: false,
-      });
-      useAppStore.setState({
-        isAuthenticated: true,
-        userStatus: 'approved',
-        authView: 'login',
-      });
-      return;
-    }
-
     await signInWithKakao();
   },
 
   // ─── 로그아웃 ───
   signOut: async () => {
-    if (!appConfig.useMockData) {
-      await logout();
-    }
+    await logout();
     set({
       authUser: null,
       memberProfile: null,
@@ -194,12 +152,33 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ memberProfile: user });
     syncAppAuthState(Boolean(user), user?.status || 'guest', user?.role || 'member');
   },
-  setLastTenant: (tenant) => {
-    set({ lastTenant: tenant });
-  },
 
   // ─── 관리자: 회원 승인 ───
   approveUser: async (userId: string) => {
-    await updateUserStatus(userId, 'approved');
+    const response = await fetch('/api/membership/review', {
+      method: 'PATCH',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        clubId: appConfig.defaultClubId,
+        membershipId: userId,
+        decision: 'approved',
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(await getApiErrorMessage(response, '회원 승인을 처리하지 못했습니다.'));
+    }
   },
 }));
+
+async function getApiErrorMessage(response: Response, fallback: string) {
+  try {
+    const data = await response.json() as { error?: { message?: string } };
+    return data.error?.message || fallback;
+  } catch {
+    return fallback;
+  }
+}

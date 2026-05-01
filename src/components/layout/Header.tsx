@@ -3,7 +3,8 @@
 import { Bell, Home } from 'lucide-react';
 import Image from 'next/image';
 import FcMoimMark from '@/components/brand/FcMoimMark';
-import { getDemoFace } from '@/mocks/demoMedia';
+import { appConfig } from '@/config/app.config';
+import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import { useAppStore } from '@/stores/useAppStore';
 
 export default function Header() {
@@ -31,8 +32,6 @@ export default function Header() {
     setShowJoinForm(false);
   };
 
-  const isDev = process.env.NODE_ENV === 'development';
-
   return (
     <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl px-4 py-3 flex justify-between items-center min-h-[56px]"
       style={{ boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.02)' }}
@@ -55,8 +54,7 @@ export default function Header() {
             {teamName}
           </h1>
           <div className="flex items-center gap-3">
-            {/* 데모용 역할 전환 — 개발 모드에서만 표시 */}
-            {isDev && (
+            {appConfig.enableAdminTestBypass && (
               <select
                 value={userRole}
                 onChange={(e) =>
@@ -98,7 +96,7 @@ export default function Header() {
                 className="hover:ring-2 hover:ring-green-300 rounded-full active:scale-90 transition-all"
               >
                 <Image
-                  src={getDemoFace('Felix')}
+                  src={getFallbackAvatar('member-profile')}
                   alt="프로필"
                   width={34}
                   height={34}

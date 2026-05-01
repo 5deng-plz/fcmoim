@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { getDemoFace } from '@/mocks/demoMedia';
+import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 
 interface AttendeeListProps {
   count: number;
@@ -17,7 +17,7 @@ export default function AttendeeList({ count, total }: AttendeeListProps) {
         {seeds.slice(0, count).map((seed, i) => (
           <Image
             key={i}
-            src={getDemoFace(seed)}
+            src={getFallbackAvatar(seed)}
             alt="참석자"
             width={28}
             height={28}

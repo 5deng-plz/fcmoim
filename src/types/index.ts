@@ -1,6 +1,6 @@
 // ========================================
 // FC Moim — 공통 타입 정의
-// Phase 0-B: 전면 업데이트 (게스트 모드, UserStats, EventType, MatchTeam 고도화)
+// v1.0 공통 도메인 타입
 // ========================================
 
 // DateTime alias for Firestore Timestamps or ISO strings

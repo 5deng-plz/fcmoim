@@ -6,9 +6,31 @@ import HomeTab from '../src/components/tabs/HomeTab';
 import ScheduleTab from '../src/components/tabs/ScheduleTab';
 import { useAppStore } from '../src/stores/useAppStore';
 import { useScheduleStore } from '../src/stores/useScheduleStore';
-import { getMockActiveSchedulePolls } from '../src/mocks/schedulePolls';
+import type { SchedulePoll } from '../src/stores/schedulePollClient';
 
-describe('Stage 1 auth provider UI', () => {
+const activePoll: SchedulePoll = {
+  id: 'poll-march-friendly',
+  clubId: 'club-test',
+  seasonId: null,
+  title: '3월 친선 경기 일정 투표',
+  status: 'open',
+  commonTime: '19:00',
+  location: '서울 용산 풋살장',
+  memo: '가능한 날짜를 모두 선택해주세요',
+  closesAt: null,
+  createdByMembershipId: 'membership-operator',
+  promotedMatchId: null,
+  options: [
+    { id: 'option-1', pollId: 'poll-march-friendly', optionDate: '2026-03-21', sortOrder: 0 },
+    { id: 'option-2', pollId: 'poll-march-friendly', optionDate: '2026-03-22', sortOrder: 1, displayTime: '10:00' },
+  ],
+  votes: [
+    { id: 'vote-1', pollId: 'poll-march-friendly', optionId: 'option-1', membershipId: 'membership-1', isAvailable: true },
+    { id: 'vote-2', pollId: 'poll-march-friendly', optionId: 'option-2', membershipId: 'membership-2', isAvailable: true },
+  ],
+};
+
+describe('v1.0 auth provider UI', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
@@ -23,12 +45,13 @@ describe('Stage 1 auth provider UI', () => {
   it('hides the Admin shortcut outside development', () => {
     render(<LoginScreen />);
 
-    expect(screen.queryByRole('button', { name: /개발자 전용 임시 로그인/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /테스트 관리자 로그인/ })).not.toBeInTheDocument();
   });
 
-  it('preserves the development-only Admin shortcut for local QA', async () => {
+  it('preserves the explicit local Admin shortcut for QA', async () => {
     const user = userEvent.setup();
     vi.stubEnv('NODE_ENV', 'development');
+    vi.stubEnv('NEXT_PUBLIC_ENABLE_ADMIN_TEST_BYPASS', 'true');
     useAppStore.setState({
       isAuthenticated: false,
       userRole: 'member',
@@ -38,7 +61,7 @@ describe('Stage 1 auth provider UI', () => {
 
     render(<LoginScreen />);
 
-    await user.click(screen.getByRole('button', { name: /개발자 전용 임시 로그인/ }));
+    await user.click(screen.getByRole('button', { name: /테스트 관리자 로그인/ }));
 
     expect(useAppStore.getState()).toMatchObject({
       isAuthenticated: true,
@@ -49,7 +72,7 @@ describe('Stage 1 auth provider UI', () => {
   });
 });
 
-describe('Stage 1 schedule and poll UX', () => {
+describe('v1.0 schedule and poll UX', () => {
   beforeEach(() => {
     useAppStore.setState({
       userRole: 'admin',
@@ -60,8 +83,8 @@ describe('Stage 1 schedule and poll UX', () => {
       showJoinForm: false,
     });
     useScheduleStore.setState({
-      activePolls: getMockActiveSchedulePolls(),
-      activePollsStatus: 'idle',
+      activePolls: [activePoll],
+      activePollsStatus: 'ready',
       activePollsError: null,
     });
   });

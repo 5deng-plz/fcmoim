@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, Megaphone, Pin, Vote } from 'lucide-react';
-import { appConfig } from '@/config/app.config';
 import { useAppStore } from '@/stores/useAppStore';
 import { useModalStore } from '@/stores/useModalStore';
 import { useScheduleStore } from '@/stores/useScheduleStore';
@@ -33,19 +32,12 @@ export default function RecentNotice() {
   const [voteErrors, setVoteErrors] = useState<Record<string, string | null>>({});
 
   useEffect(() => {
-    if (appConfig.useMockData) return;
-
-    let ignore = false;
+    if (activePollsStatus !== 'idle') return;
 
     void loadActivePolls().catch((error) => {
-      if (ignore) return;
       showToast(getSchedulePollErrorMessage(error, '일정 투표를 불러오지 못했어요.'));
     });
-
-    return () => {
-      ignore = true;
-    };
-  }, [loadActivePolls, showToast]);
+  }, [activePollsStatus, loadActivePolls, showToast]);
 
   const handlePollSelect = (pollId: string, optionId: string) => {
     if (!canVote || submittingPollId === pollId) return;
@@ -119,7 +111,7 @@ export default function RecentNotice() {
       </div>
 
       <div className="space-y-2">
-        {activePollsStatus === 'loading' && !appConfig.useMockData ? (
+        {activePollsStatus === 'loading' ? (
           <div role="status" className="card p-4 text-xs font-bold text-gray-500">
             일정 투표를 불러오는 중입니다
           </div>
@@ -254,35 +246,24 @@ export default function RecentNotice() {
           );
         })}
 
-        <div className="card card-interactive p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center shrink-0">
-            <Megaphone size={18} className="text-red-400" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <Pin size={12} className="text-red-500 shrink-0" />
-              <p className="text-sm font-bold text-gray-900 truncate">
-                25/26 새 시즌 OVR 초기화 안내
+        {activePollsStatus === 'ready' && activePolls.length === 0 ? (
+          <div className="card p-4 flex items-center gap-3">
+            <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center shrink-0">
+              <Megaphone size={18} className="text-gray-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <Pin size={12} className="text-gray-300 shrink-0" />
+                <p className="text-sm font-bold text-gray-700 truncate">
+                  표시할 공지나 일정 투표가 없어요
+                </p>
+              </div>
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                새 공지가 등록되면 이곳에 표시됩니다
               </p>
             </div>
-            <p className="text-[11px] text-gray-400 mt-0.5">
-              운영진 · 2시간 전
-            </p>
           </div>
-        </div>
-        <div className="card card-interactive p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center shrink-0">
-            <Megaphone size={18} className="text-blue-400" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-gray-900 truncate">
-              3월 회식 장소 투표 안내
-            </p>
-            <p className="text-[11px] text-gray-400 mt-0.5">
-              운영진 · 1일 전
-            </p>
-          </div>
-        </div>
+        ) : null}
       </div>
     </section>
   );
@@ -298,18 +279,10 @@ function formatPollOption(poll: SchedulePoll, option: SchedulePollOption) {
 }
 
 function getOptionVoteCount(poll: SchedulePoll, option: SchedulePollOption) {
-  if (typeof option.demoVoteCount === 'number') {
-    return option.demoVoteCount;
-  }
-
   return poll.votes.filter((vote) => vote.optionId === option.id && vote.isAvailable).length;
 }
 
 function getOptionVoteTotal(poll: SchedulePoll, option: SchedulePollOption) {
-  if (typeof option.demoTotalCount === 'number') {
-    return option.demoTotalCount;
-  }
-
   const uniqueVoters = new Set(poll.votes.map((vote) => vote.membershipId));
   return Math.max(uniqueVoters.size, getOptionVoteCount(poll, option), 1);
 }

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { appConfig } from '@/config/app.config';
 import { useAppStore } from '@/stores/useAppStore';
 import { useToastStore } from '@/stores/useToastStore';
 import { buildJoinProfileRequest, submitJoinRequest } from '@/stores/membershipClient';
@@ -29,7 +28,7 @@ export default function JoinRequestForm() {
       return;
     }
 
-    if (!appConfig.useMockData && !isAuthenticated) {
+    if (!isAuthenticated) {
       showToast('로그인 후 가입 신청을 제출해주세요.');
       return;
     }
@@ -38,9 +37,7 @@ export default function JoinRequestForm() {
 
     try {
       setIsSubmitting(true);
-      if (!appConfig.useMockData) {
-        await submitJoinRequest(profile);
-      }
+      await submitJoinRequest(profile);
       setShowJoinForm(false);
       setUserStatus('pending');
       showToast('가입 신청이 완료되었어요! 관리자 승인을 기다려주세요 🙏');

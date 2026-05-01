@@ -136,7 +136,7 @@ function createRepositories(options?: {
   };
 }
 
-describe('Stage 1 schedule poll service', () => {
+describe('v1.0 schedule poll service', () => {
   it('allows an approved operator to create a multi-date poll using the server auth membership', async () => {
     const repositories = createRepositories();
     const service = await loadService(repositories);

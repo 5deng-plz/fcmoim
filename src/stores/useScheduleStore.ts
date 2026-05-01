@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { appConfig } from '@/config/app.config';
 import {
   createSchedulePoll,
   fetchActiveSchedulePolls,
@@ -9,11 +8,6 @@ import {
   type SchedulePoll,
   type VoteSchedulePollRequest,
 } from './schedulePollClient';
-import {
-  applyMockSchedulePollVote,
-  createMockSchedulePoll,
-  getMockActiveSchedulePolls,
-} from '@/mocks/schedulePolls';
 
 type ActivePollsStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -29,23 +23,14 @@ interface ScheduleState {
   submitPollVote: (input: VoteSchedulePollRequest) => Promise<SchedulePoll>;
 }
 
-export const useScheduleStore = create<ScheduleState>((set, get) => ({
+export const useScheduleStore = create<ScheduleState>((set) => ({
   selectedDate: new Date().getDate(),
-  activePolls: appConfig.useMockData ? getMockActiveSchedulePolls() : [],
-  activePollsStatus: appConfig.useMockData ? 'ready' : 'idle',
+  activePolls: [],
+  activePollsStatus: 'idle',
   activePollsError: null,
   setSelectedDate: (date) => set({ selectedDate: date }),
   setActivePolls: (polls) => set({ activePolls: polls, activePollsStatus: 'ready', activePollsError: null }),
-  loadActivePolls: async (clubId = appConfig.defaultClubId) => {
-    if (appConfig.useMockData) {
-      set((state) => ({
-        activePolls: state.activePolls.length > 0 ? state.activePolls : getMockActiveSchedulePolls(),
-        activePollsStatus: 'ready',
-        activePollsError: null,
-      }));
-      return;
-    }
-
+  loadActivePolls: async (clubId) => {
     set({ activePollsStatus: 'loading', activePollsError: null });
 
     try {
@@ -58,16 +43,6 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
     }
   },
   createPoll: async (input) => {
-    if (appConfig.useMockData) {
-      const poll = createMockSchedulePoll(input);
-      set((state) => ({
-        activePolls: upsertPoll(state.activePolls, poll),
-        activePollsStatus: 'ready',
-        activePollsError: null,
-      }));
-      return poll;
-    }
-
     const poll = await createSchedulePoll(input);
     set((state) => ({
       activePolls: upsertPoll(state.activePolls, poll),
@@ -77,21 +52,6 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
     return poll;
   },
   submitPollVote: async (input) => {
-    if (appConfig.useMockData) {
-      const poll = get().activePolls.find((candidate) => candidate.id === input.pollId);
-      if (!poll) {
-        throw new Error('일정 투표를 찾지 못했어요.');
-      }
-
-      const updatedPoll = applyMockSchedulePollVote(poll, input.selectedOptionIds);
-      set((state) => ({
-        activePolls: upsertPoll(state.activePolls, updatedPoll),
-        activePollsStatus: 'ready',
-        activePollsError: null,
-      }));
-      return updatedPoll;
-    }
-
     const poll = await voteSchedulePoll(input);
     set((state) => ({
       activePolls: upsertPoll(state.activePolls, poll),

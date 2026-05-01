@@ -2,6 +2,7 @@
 
 import { Eye } from 'lucide-react';
 import FcMoimMark from '@/components/brand/FcMoimMark';
+import { appConfig } from '@/config/app.config';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useAppStore } from '@/stores/useAppStore';
 
@@ -60,12 +61,12 @@ export default function LoginScreen() {
         먼저 둘러볼게요
       </button>
 
-      {process.env.NODE_ENV === 'development' ? (
+      {appConfig.enableAdminTestBypass ? (
         <button
           onClick={handleDevLogin}
           className="mt-8 rounded-lg bg-gray-100 px-3 py-2 text-xs font-bold text-gray-400 transition-colors hover:bg-gray-200 active:scale-95"
         >
-          개발자 전용 임시 로그인 (Admin)
+          테스트 관리자 로그인 (Admin)
         </button>
       ) : null}
     </div>

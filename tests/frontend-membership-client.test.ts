@@ -7,6 +7,7 @@ import {
   submitJoinRequest,
   type MembershipSnapshot,
 } from '../src/stores/membershipClient';
+import { useAuthStore } from '../src/stores/useAuthStore';
 import type { AuthUser } from '../src/lib/auth';
 
 describe('frontend membership state mapping', () => {
@@ -114,6 +115,30 @@ describe('frontend join request payload', () => {
           birthDate: null,
           photoUrl: null,
         },
+      }),
+    }));
+
+    const requestInit = fetchMock.mock.calls[0]?.[1];
+    expect(requestInit).toBeDefined();
+    expect(JSON.parse(requestInit?.body as string)).not.toHaveProperty('authUid');
+  });
+
+  it('posts membership approval without client authUid', async () => {
+    const fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
+      void input;
+      void init;
+      return new Response(JSON.stringify({ id: 'membership-1', status: 'approved' }), { status: 200 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await useAuthStore.getState().approveUser('membership-1');
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/membership/review', expect.objectContaining({
+      method: 'PATCH',
+      body: JSON.stringify({
+        clubId: 'club-test',
+        membershipId: 'membership-1',
+        decision: 'approved',
       }),
     }));
 

@@ -1,4 +1,4 @@
-const FACE_BY_KEY: Record<string, string> = {
+const AVATAR_BY_KEY: Record<string, string> = {
   Felix: 'https://i.pravatar.cc/300?img=12',
   Son: 'https://i.pravatar.cc/300?img=14',
   Lee: 'https://i.pravatar.cc/300?img=15',
@@ -32,6 +32,7 @@ const FACE_BY_KEY: Record<string, string> = {
   강현수: 'https://i.pravatar.cc/300?img=26',
 };
 
-export function getDemoFace(key: string) {
-  return FACE_BY_KEY[key] ?? `https://i.pravatar.cc/300?u=${encodeURIComponent(key)}`;
+export function getFallbackAvatar(key: string | null | undefined) {
+  const seed = key?.trim() || 'fcmoim-member';
+  return AVATAR_BY_KEY[seed] ?? `https://i.pravatar.cc/300?u=${encodeURIComponent(seed)}`;
 }

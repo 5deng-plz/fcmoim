@@ -1,6 +1,6 @@
 // ========================================
 // FC Moim — FCM 클라이언트 모듈
-// Profile에 따라 mock 또는 실제 FCM 자동 분기
+// Firebase Cloud Messaging runtime helpers
 // ========================================
 
 import { appConfig } from '@/config/app.config';
@@ -20,11 +20,6 @@ export type NotificationType = keyof typeof NOTIFICATION_TEMPLATES;
 
 // ─── FCM 토큰 요청 ───
 export async function requestFCMToken(): Promise<string | null> {
-  if (appConfig.useMockData) {
-    console.log(`[${appConfig.profile}] FCM 토큰 요청 (mock)`);
-    return 'mock-fcm-token';
-  }
-
   try {
     // TODO: Firebase Console > Cloud Messaging에서 Web Push VAPID key를 발급하고
     // App Hosting 환경 변수/Secret Manager 등록 후 실제 FCM 토큰 발급을 활성화한다.
@@ -48,11 +43,6 @@ export async function requestFCMToken(): Promise<string | null> {
 
 // ─── FCM 포그라운드 메시지 리스너 ───
 export function onForegroundMessage(callback: (payload: { title: string; body: string }) => void): void {
-  if (appConfig.useMockData) {
-    console.log(`[${appConfig.profile}] FCM 포그라운드 리스너 등록 (mock)`);
-    return;
-  }
-
   import('firebase/messaging').then(({ getMessaging, onMessage }) => {
     import('./firebase').then(({ app }) => {
       const messaging = getMessaging(app);

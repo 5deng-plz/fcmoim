@@ -36,7 +36,7 @@ async function loadService(repositories: {
   return createMatchResultService(repositories);
 }
 
-describe('Stage 1 match result save transaction', () => {
+describe('v1.0 match result save transaction', () => {
   it('rolls back match score, player stats, OVR, and point changes when one player update fails', async () => {
     const tx = {
       updateMatchScore: vi.fn(async () => undefined),

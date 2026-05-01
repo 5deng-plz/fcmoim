@@ -1,7 +1,10 @@
 export type AppProfile = 'local' | 'prod';
 
-export const activeProfile: AppProfile =
-  (process.env.APP_PROFILE as AppProfile) || 'local';
+function resolveProfile(value: string | undefined): AppProfile {
+  return value === 'prod' ? 'prod' : 'local';
+}
+
+export const activeProfile: AppProfile = resolveProfile(process.env.APP_PROFILE);
 
 export interface FirebaseConfig {
   apiKey: string;
@@ -22,7 +25,7 @@ export interface AppConfig {
   supabase: SupabaseConfig;
   vapidKey: string;
   defaultClubId: string;
-  useMockData: boolean;
+  readonly enableAdminTestBypass: boolean;
 }
 
 function parseJsonConfig<T extends object>(value: string | undefined, fallback: T): T {
@@ -58,35 +61,33 @@ const supabasePublicConfig = parseJsonConfig<SupabaseConfig>(
   },
 );
 
-const hasRealSupabasePublicConfig = Boolean(
-  supabasePublicConfig.url &&
-  supabasePublicConfig.publishableKey &&
-  !supabasePublicConfig.url.includes('localhost.supabase.co') &&
-  !supabasePublicConfig.publishableKey.startsWith('demo-'),
-);
-
 const defaultClubId =
   process.env.NEXT_PUBLIC_DEFAULT_CLUB_ID ||
   '00000000-0000-0000-0000-000000000001';
 
+function isAdminTestBypassEnabled(profile: AppProfile) {
+  return (
+    profile === 'local' &&
+    process.env.NODE_ENV !== 'production' &&
+    process.env.NEXT_PUBLIC_ENABLE_ADMIN_TEST_BYPASS === 'true'
+  );
+}
+
 const localConfig: AppConfig = {
   profile: 'local',
   firebase: {
-    apiKey: firebasePublicConfig.apiKey || 'demo-local-api-key',
-    authDomain: firebasePublicConfig.authDomain || 'fcmoim-local.firebaseapp.com',
-    projectId: firebasePublicConfig.projectId || 'fcmoim-local',
-    messagingSenderId: firebasePublicConfig.messagingSenderId || '000000000000',
-    appId: firebasePublicConfig.appId || '1:000000000000:web:0000000000000000',
+    apiKey: firebasePublicConfig.apiKey,
+    authDomain: firebasePublicConfig.authDomain,
+    projectId: firebasePublicConfig.projectId,
+    messagingSenderId: firebasePublicConfig.messagingSenderId,
+    appId: firebasePublicConfig.appId,
   },
-  supabase: hasRealSupabasePublicConfig
-    ? supabasePublicConfig
-    : {
-        url: 'https://localhost.supabase.co',
-        publishableKey: 'demo-local-publishable-key',
-      },
-  vapidKey: firebasePublicConfig.vapidKey || 'demo-local-vapid-key',
+  supabase: supabasePublicConfig,
+  vapidKey: firebasePublicConfig.vapidKey || '',
   defaultClubId,
-  useMockData: !hasRealSupabasePublicConfig,
+  get enableAdminTestBypass() {
+    return isAdminTestBypassEnabled('local');
+  },
 };
 
 const prodConfig: AppConfig = {
@@ -101,7 +102,9 @@ const prodConfig: AppConfig = {
   supabase: supabasePublicConfig,
   vapidKey: firebasePublicConfig.vapidKey || '',
   defaultClubId,
-  useMockData: false,
+  get enableAdminTestBypass() {
+    return isAdminTestBypassEnabled('prod');
+  },
 };
 
 const profiles: Record<AppProfile, AppConfig> = {
@@ -109,4 +112,4 @@ const profiles: Record<AppProfile, AppConfig> = {
   prod: prodConfig,
 };
 
-export const appConfig = profiles[activeProfile];
+export const appConfig = profiles[activeProfile] as AppConfig & Record<string, unknown>;

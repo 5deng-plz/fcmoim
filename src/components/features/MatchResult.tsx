@@ -1,6 +1,6 @@
 import { CreditCard, Send, Shirt } from 'lucide-react';
 import Image from 'next/image';
-import { getDemoFace } from '@/mocks/demoMedia';
+import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 
 export default function MatchResult() {
   return (
@@ -17,12 +17,12 @@ export default function MatchResult() {
           </div>
           <div className="flex flex-wrap justify-center gap-1.5 mt-1">
             <div className="relative">
-              <Image src={getDemoFace('Felix')} alt="손흥민" width={32} height={32} className="rounded-full bg-white border border-red-200 ring-2 ring-red-400 object-cover" unoptimized />
+              <Image src={getFallbackAvatar('Felix')} alt="손흥민" width={32} height={32} className="rounded-full bg-white border border-red-200 ring-2 ring-red-400 object-cover" unoptimized />
               <span className="absolute -bottom-1 -right-1 text-[10px] bg-white rounded-full">🧑‍✈️</span>
             </div>
             {['Kim', 'Hwang', 'Cho', 'LeeJ', 'Baek'].map(seed => (
               <div key={seed} className="relative w-8 h-8">
-                <Image src={getDemoFace(seed)} alt={seed} fill className="rounded-full bg-white border border-red-200 object-cover" unoptimized />
+                <Image src={getFallbackAvatar(seed)} alt={seed} fill className="rounded-full bg-white border border-red-200 object-cover" unoptimized />
               </div>
             ))}
           </div>
@@ -39,12 +39,12 @@ export default function MatchResult() {
           </div>
           <div className="flex flex-wrap justify-center gap-1.5 mt-1">
             <div className="relative">
-              <Image src={getDemoFace('Lee')} alt="이강인" width={32} height={32} className="rounded-full bg-white border border-blue-200 ring-2 ring-blue-400 object-cover" unoptimized />
+              <Image src={getFallbackAvatar('Lee')} alt="이강인" width={32} height={32} className="rounded-full bg-white border border-blue-200 ring-2 ring-blue-400 object-cover" unoptimized />
               <span className="absolute -bottom-1 -right-1 text-[10px] bg-white rounded-full">🧑‍✈️</span>
             </div>
             {['Park', 'Choi', 'Jung', 'Kang', 'Jo'].map(seed => (
               <div key={seed} className="relative w-8 h-8">
-                <Image src={getDemoFace(seed)} alt={seed} fill className="rounded-full bg-white border border-blue-200 object-cover" unoptimized />
+                <Image src={getFallbackAvatar(seed)} alt={seed} fill className="rounded-full bg-white border border-blue-200 object-cover" unoptimized />
               </div>
             ))}
           </div>

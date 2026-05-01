@@ -28,7 +28,7 @@ interface AppState {
   userStatus: UserStatus;
   setUserStatus: (status: UserStatus) => void;
 
-  // ─── 참석 투표 (데모용) ───
+  // ─── 참석 응답 ───
   attendStatus: AttendanceStatus;
   setAttendStatus: (status: AttendanceStatus) => void;
 
@@ -57,12 +57,12 @@ export const useAppStore = create<AppState>((set) => ({
   setAuthView: (view) => set({ authView: view }),
   isAuthenticated: false,
   setIsAuthenticated: (auth) => set({ isAuthenticated: auth }),
-  userRole: 'admin',
+  userRole: 'member',
   setUserRole: (role) => set({ userRole: role }),
   userStatus: 'guest',
   setUserStatus: (status) => set({ userStatus: status }),
 
-  // ─── 참석 투표 (데모용) ───
+  // ─── 참석 응답 ───
   attendStatus: 'none',
   setAttendStatus: (status) => set({ attendStatus: status }),
 

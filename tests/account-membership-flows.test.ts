@@ -153,7 +153,7 @@ function createRepositories(options?: {
   return { accounts, memberships };
 }
 
-describe('Stage 1 Account + TeamMembership flows', () => {
+describe('v1.0 Account + TeamMembership flows', () => {
   it('bootstraps an authenticated Supabase user as an Account and returns new when no TeamMembership exists', async () => {
     const repositories = createRepositories();
     const service = await loadService(repositories);

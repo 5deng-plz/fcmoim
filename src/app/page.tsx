@@ -53,7 +53,7 @@ function PendingScreen() {
         </p>
       </div>
       <div className="space-y-2 w-full max-w-[240px]">
-        {appConfig.useMockData ? (
+        {appConfig.enableAdminTestBypass ? (
           <button
             onClick={() => {
               setIsAuthenticated(true);
@@ -62,7 +62,7 @@ function PendingScreen() {
             }}
             className="w-full bg-gray-900 text-white font-bold py-3 px-6 rounded-xl text-sm hover:bg-gray-800 active:scale-95 transition-all"
           >
-            (데모) 관리자 승인 완료
+            테스트 관리자 승인 완료
           </button>
         ) : null}
         <button

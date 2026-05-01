@@ -6,7 +6,7 @@ import { Shirt, GripVertical } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
 import { useToastStore } from '@/stores/useToastStore';
 import Modal from '@/components/ui/Modal';
-import { getDemoFace } from '@/mocks/demoMedia';
+import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import {
   DndContext,
   closestCenter,
@@ -25,7 +25,6 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-// ─── 더미 데이터: 참석 확정 명단 ───
 interface Player {
   id: string;
   name: string;
@@ -34,18 +33,7 @@ interface Player {
   photo: string;
 }
 
-const initialPlayers: Player[] = [
-  { id: 'p1', name: '손흥민', ovr: 72, position: 'FW', photo: 'Felix' },
-  { id: 'p2', name: '이강인', ovr: 68, position: 'MF', photo: 'Lee' },
-  { id: 'p3', name: '김민재', ovr: 70, position: 'DF', photo: 'Kim' },
-  { id: 'p4', name: '황희찬', ovr: 65, position: 'FW', photo: 'Hwang' },
-  { id: 'p5', name: '조규성', ovr: 63, position: 'FW', photo: 'Cho' },
-  { id: 'p6', name: '이재성', ovr: 66, position: 'MF', photo: 'LeeJ' },
-  { id: 'p7', name: '백승호', ovr: 61, position: 'MF', photo: 'Baek' },
-  { id: 'p8', name: '정우영', ovr: 64, position: 'DF', photo: 'Jung' },
-  { id: 'p9', name: '김영권', ovr: 67, position: 'DF', photo: 'KimY' },
-  { id: 'p10', name: '권창훈', ovr: 62, position: 'MF', photo: 'Kwon' },
-];
+const initialPlayers: Player[] = [];
 
 // ─── 드래그 가능 선수 카드 ───
 function DraggablePlayerCard({ player, zone }: { player: Player; zone: string }) {
@@ -76,7 +64,7 @@ function DraggablePlayerCard({ player, zone }: { player: Player; zone: string })
     >
       <GripVertical size={14} className="text-gray-300 flex-shrink-0" />
       <Image
-        src={getDemoFace(player.photo)}
+        src={getFallbackAvatar(player.photo)}
         alt={player.name}
         width={28}
         height={28}
@@ -100,7 +88,7 @@ function PlayerOverlay({ player }: { player: Player }) {
     <div className="flex items-center gap-2 bg-white rounded-lg p-2 border-2 border-green-400 shadow-xl cursor-grabbing scale-105">
       <GripVertical size={14} className="text-green-400 flex-shrink-0" />
       <Image
-        src={getDemoFace(player.photo)}
+        src={getFallbackAvatar(player.photo)}
         alt={player.name}
         width={28}
         height={28}
@@ -287,7 +275,6 @@ export default function TacticsDragBuilder() {
               setTacticsCompleted(true);
               setShowConfirm(false);
               showToast('팀 편성이 확정되었습니다! 🎉');
-              // saveTactics/finalizeTactics가 appConfig.useMockData에 따라 자동 분기합니다
             }}
             className="flex-1 bg-gray-900 text-white font-bold py-3 rounded-xl hover:brightness-110 active:scale-95 transition-all text-[13px]"
           >

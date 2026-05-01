@@ -20,7 +20,7 @@ vi.mock('@/config/app.config', () => ({
     },
     vapidKey: '',
     defaultClubId: 'club-real',
-    useMockData: false,
+    enableAdminTestBypass: false,
   },
 }));
 

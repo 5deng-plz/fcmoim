@@ -1,6 +1,6 @@
 import { Zap, Target, Plus, Coins, Trophy, Star, Shield, Flame, Crown } from 'lucide-react';
 import Image from 'next/image';
-import { getDemoFace } from '@/mocks/demoMedia';
+import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 
 export default function LockerProfile() {
   return (
@@ -8,7 +8,7 @@ export default function LockerProfile() {
       <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500 rounded-full blur-[60px] opacity-20"></div>
       <div className="flex gap-4 mb-5">
         <div className="w-24 h-32 bg-[#1e293b] rounded-lg overflow-hidden border-2 border-[#334155] relative shadow-lg shrink-0">
-          <Image src={getDemoFace('Felix')} alt="Profile" fill className="object-cover" unoptimized />
+          <Image src={getFallbackAvatar('member-profile')} alt="Profile" fill className="object-cover" unoptimized />
         </div>
         <div className="flex flex-col justify-center">
           <h2 className="text-2xl font-black">손흥민</h2>

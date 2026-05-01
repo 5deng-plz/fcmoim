@@ -11,8 +11,6 @@ export type SchedulePollOption = {
   sortOrder: number;
   displayTime?: string;
   displayLocation?: string;
-  demoVoteCount?: number;
-  demoTotalCount?: number;
 };
 
 export type SchedulePollVote = {

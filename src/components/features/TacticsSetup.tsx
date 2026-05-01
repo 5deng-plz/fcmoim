@@ -6,7 +6,7 @@ import { useAppStore } from '@/stores/useAppStore';
 import { useToastStore } from '@/stores/useToastStore';
 import { useState } from 'react';
 import Modal from '@/components/ui/Modal';
-import { getDemoFace } from '@/mocks/demoMedia';
+import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 
 const selectablePlayers = [
   { id: 1, name: '김민재', ovr: 70, photo: 'Kim', selected: false },
@@ -21,7 +21,7 @@ export default function TacticsSetup() {
   const { showToast } = useToastStore();
   const [showConfirm, setShowConfirm] = useState(false);
   const [tacticsCompleted, setTacticsCompleted] = useState(false);
-  const [currentTurn] = useState<'red' | 'blue'>('red'); // 시연용 턴 상태
+  const [currentTurn] = useState<'red' | 'blue'>('red');
 
   const isLeader = userRole === 'admin';
 
@@ -36,7 +36,7 @@ export default function TacticsSetup() {
         <div className="flex items-center gap-1.5 bg-gray-100 pl-2 pr-1 py-1 rounded-full">
           <span className="text-[10px] font-bold text-gray-600">현재 턴:</span>
           <Image
-            src={getDemoFace('Felix')}
+            src={getFallbackAvatar('Felix')}
             alt="턴"
             width={16}
             height={16}
@@ -58,12 +58,12 @@ export default function TacticsSetup() {
           </h4>
           <div className="flex flex-wrap justify-center gap-1.5 mt-1">
             <div className="relative">
-              <Image src={getDemoFace('Felix')} alt="손흥민" width={32} height={32} className="rounded-full bg-white border border-red-200 ring-2 ring-red-400 object-cover" unoptimized />
+              <Image src={getFallbackAvatar('Felix')} alt="손흥민" width={32} height={32} className="rounded-full bg-white border border-red-200 ring-2 ring-red-400 object-cover" unoptimized />
               <span className="absolute -bottom-1 -right-1 text-[10px] bg-white rounded-full">🧑‍✈️</span>
             </div>
             {selectablePlayers.filter((p) => p.selected).map((p) => (
               <div key={p.id} className="relative">
-                <Image src={getDemoFace(p.photo)} alt={p.name} width={32} height={32} className="rounded-full bg-white border border-red-200 object-cover" unoptimized />
+                <Image src={getFallbackAvatar(p.photo)} alt={p.name} width={32} height={32} className="rounded-full bg-white border border-red-200 object-cover" unoptimized />
               </div>
             ))}
           </div>
@@ -80,7 +80,7 @@ export default function TacticsSetup() {
           </h4>
           <div className="flex flex-wrap justify-center gap-1.5 mt-1">
             <div className="relative">
-              <Image src={getDemoFace('Lee')} alt="이강인" width={32} height={32} className="rounded-full bg-white border border-blue-200 ring-2 ring-blue-400 object-cover" unoptimized />
+              <Image src={getFallbackAvatar('Lee')} alt="이강인" width={32} height={32} className="rounded-full bg-white border border-blue-200 ring-2 ring-blue-400 object-cover" unoptimized />
               <span className="absolute -bottom-1 -right-1 text-[10px] bg-white rounded-full">🧑‍✈️</span>
             </div>
           </div>
@@ -98,7 +98,7 @@ export default function TacticsSetup() {
           >
             <div className="relative">
               <Image
-                src={getDemoFace(p.photo)}
+                src={getFallbackAvatar(p.photo)}
                 alt={p.name}
                 width={32}
                 height={32}

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Award, ChevronDown, ChevronUp, TrendingUp, TrendingDown, Minus, Target, Users, Zap } from 'lucide-react';
 import Image from 'next/image';
-import { getDemoFace } from '@/mocks/demoMedia';
+import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import PlayerMatchHistory from '@/components/features/PlayerMatchHistory';
 
 const leaderboards = [
@@ -158,7 +158,7 @@ export default function RecordsTab() {
                     className={`rounded-full bg-gray-200 object-cover ${
                       index === 0 ? 'ring-2 ring-amber-300 ring-offset-1' : ''
                     }`}
-                    src={getDemoFace(p.name)}
+                    src={getFallbackAvatar(p.name)}
                     alt={p.name}
                     width={32}
                     height={32}
