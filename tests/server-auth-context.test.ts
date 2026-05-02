@@ -69,6 +69,24 @@ describe('v1.0 server auth context', () => {
     });
   });
 
+  it('defaults the local development server bypass on for the Admin shortcut flow', async () => {
+    vi.stubEnv('APP_PROFILE', 'local');
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.stubEnv('ENABLE_E2E_TEST_AUTH_BYPASS', '');
+
+    await expect(
+      getRequiredServerAuthContext(createSupabaseWithClaims({
+        data: { claims: null },
+        error: null,
+      })),
+    ).resolves.toEqual({
+      user: {
+        id: '00000000-0000-0000-0000-000000000011',
+        email: 'e2e-admin@fcmoim.test',
+      },
+    });
+  });
+
   it.each([
     ['production node env', { NODE_ENV: 'production', APP_PROFILE: 'local' }],
     ['prod app profile', { NODE_ENV: 'test', APP_PROFILE: 'prod' }],
@@ -88,9 +106,16 @@ describe('v1.0 server auth context', () => {
   });
 
   it('exposes the same safety gate for E2E privileged server clients', () => {
+    vi.stubEnv('ENABLE_E2E_TEST_AUTH_BYPASS', '');
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.stubEnv('APP_PROFILE', 'local');
+    expect(isE2ETestAuthBypassEnabled()).toBe(true);
+
+    vi.stubEnv('ENABLE_E2E_TEST_AUTH_BYPASS', 'false');
+    expect(isE2ETestAuthBypassEnabled()).toBe(false);
+
     vi.stubEnv('ENABLE_E2E_TEST_AUTH_BYPASS', 'true');
     vi.stubEnv('NODE_ENV', 'test');
-    vi.stubEnv('APP_PROFILE', 'local');
     expect(isE2ETestAuthBypassEnabled()).toBe(true);
 
     vi.stubEnv('NODE_ENV', 'production');

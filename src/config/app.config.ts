@@ -66,10 +66,13 @@ const defaultClubId =
   '00000000-0000-0000-0000-000000000001';
 
 function isAdminTestBypassEnabled(profile: AppProfile) {
+  const explicitFlag = process.env.NEXT_PUBLIC_ENABLE_ADMIN_TEST_BYPASS;
+
   return (
     profile === 'local' &&
     process.env.NODE_ENV !== 'production' &&
-    process.env.NEXT_PUBLIC_ENABLE_ADMIN_TEST_BYPASS === 'true'
+    (process.env.NODE_ENV === 'development' || explicitFlag === 'true') &&
+    explicitFlag !== 'false'
   );
 }
 

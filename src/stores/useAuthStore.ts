@@ -27,10 +27,18 @@ interface AuthState {
 
   initialize: () => Promise<void>;
   signInKakao: () => Promise<void>;
+  signInDevAdmin: () => void;
   signOut: () => Promise<void>;
   setMemberProfile: (user: User | null) => void;
   approveUser: (userId: string) => Promise<void>;
 }
+
+const DEV_ADMIN_SESSION_KEY = 'fcmoim.devAdminSession';
+const DEV_ADMIN_ACCOUNT_ID = '00000000-0000-0000-0000-000000000011';
+const DEV_ADMIN_MEMBERSHIP_ID = '00000000-0000-0000-0000-000000000211';
+const DEV_ADMIN_EMAIL = 'e2e-admin@fcmoim.test';
+const AUTH_INIT_TIMEOUT_MS = 2500;
+let memoryDevAdminSession = false;
 
 function syncAppAuthState(isAuthenticated: boolean, userStatus: UserStatus, userRole: User['role']) {
   useAppStore.setState({
@@ -46,6 +54,11 @@ function applyAuthState(
   authUser: AuthUser | null,
 ) {
   if (!authUser) {
+    if (hasDevAdminSession()) {
+      applyDevAdminSession(set);
+      return;
+    }
+
     set({
       authUser: null,
       memberProfile: null,
@@ -100,6 +113,120 @@ function applyAuthState(
     });
 }
 
+function applyDevAdminSession(set: (partial: Partial<AuthState>) => void) {
+  const authUser = createDevAdminAuthUser();
+  const memberProfile = createDevAdminProfile();
+
+  set({
+    authUser,
+    memberProfile,
+    isLoading: false,
+  });
+
+  useAppStore.setState({
+    isAuthenticated: true,
+    userStatus: 'approved',
+    userRole: 'admin',
+    authView: 'login',
+    showJoinForm: false,
+  });
+}
+
+function persistDevAdminSession() {
+  if (!appConfig.enableAdminTestBypass || typeof window === 'undefined') return;
+  if (typeof window.localStorage?.setItem === 'function') {
+    window.localStorage.setItem(DEV_ADMIN_SESSION_KEY, 'admin');
+    return;
+  }
+
+  memoryDevAdminSession = true;
+}
+
+function clearDevAdminSession() {
+  memoryDevAdminSession = false;
+
+  if (typeof window === 'undefined') return;
+  if (typeof window.localStorage?.removeItem === 'function') {
+    window.localStorage.removeItem(DEV_ADMIN_SESSION_KEY);
+  }
+}
+
+function hasDevAdminSession() {
+  if (!appConfig.enableAdminTestBypass) {
+    return false;
+  }
+
+  if (typeof window === 'undefined') {
+    return memoryDevAdminSession;
+  }
+
+  if (typeof window.localStorage?.getItem === 'function') {
+    return window.localStorage.getItem(DEV_ADMIN_SESSION_KEY) === 'admin';
+  }
+
+  return memoryDevAdminSession;
+}
+
+function createDevAdminAuthUser(): AuthUser {
+  const now = new Date(0).toISOString();
+
+  return {
+    id: DEV_ADMIN_ACCOUNT_ID,
+    aud: 'authenticated',
+    role: 'authenticated',
+    email: DEV_ADMIN_EMAIL,
+    app_metadata: {
+      provider: 'dev-admin',
+      providers: ['dev-admin'],
+    },
+    user_metadata: {
+      name: 'E2E Admin',
+    },
+    created_at: now,
+    updated_at: now,
+  } as AuthUser;
+}
+
+function createDevAdminProfile(): User {
+  const now = new Date(0).toISOString();
+
+  return {
+    id: DEV_ADMIN_MEMBERSHIP_ID,
+    authUid: DEV_ADMIN_ACCOUNT_ID,
+    name: 'E2E Admin',
+    mainPosition: 'MF',
+    subPosition: null,
+    ovr: 60,
+    stats: {
+      speed: 60,
+      shooting: 60,
+      passing: 60,
+      defense: 60,
+      physical: 60,
+      dribble: 60,
+    },
+    matchPoints: 0,
+    photoUrl: null,
+    role: 'admin',
+    status: 'approved',
+    height: null,
+    weight: null,
+    birth: null,
+    preferredFoot: '오른발',
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+async function getCurrentAuthUserWithTimeout() {
+  return Promise.race([
+    getCurrentAuthUser(),
+    new Promise<null>((resolve) => {
+      window.setTimeout(() => resolve(null), AUTH_INIT_TIMEOUT_MS);
+    }),
+  ]);
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
   authUser: null,
   memberProfile: null,
@@ -114,10 +241,20 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
 
     try {
-      const user = await getCurrentAuthUser();
+      if (hasDevAdminSession()) {
+        applyDevAdminSession(set);
+        return;
+      }
+
+      const user = await getCurrentAuthUserWithTimeout();
       applyAuthState(set, user);
     } catch (error) {
       console.error('[FC Moim] Auth initialization failed:', error);
+      if (hasDevAdminSession()) {
+        applyDevAdminSession(set);
+        return;
+      }
+
       set({ isLoading: false });
       useAppStore.setState({
         isAuthenticated: false,
@@ -132,8 +269,15 @@ export const useAuthStore = create<AuthState>((set) => ({
     await signInWithKakao();
   },
 
+  signInDevAdmin: () => {
+    if (!appConfig.enableAdminTestBypass) return;
+    persistDevAdminSession();
+    applyDevAdminSession(set);
+  },
+
   // ─── 로그아웃 ───
   signOut: async () => {
+    clearDevAdminSession();
     await logout();
     set({
       authUser: null,

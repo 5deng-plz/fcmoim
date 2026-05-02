@@ -35,7 +35,8 @@ function PhoneFrame({ children, surface = 'white' }: { children: ReactNode; surf
 
 // ─── 승인 대기 화면 ───
 function PendingScreen() {
-  const { setIsAuthenticated, setUserStatus, setAuthView } = useAppStore();
+  const { setUserStatus, setAuthView } = useAppStore();
+  const { signInDevAdmin } = useAuthStore();
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[500px] text-center p-6 space-y-6">
@@ -56,9 +57,7 @@ function PendingScreen() {
         {appConfig.enableAdminTestBypass ? (
           <button
             onClick={() => {
-              setIsAuthenticated(true);
-              setUserStatus('approved');
-              setAuthView('login');
+              signInDevAdmin();
             }}
             className="w-full bg-gray-900 text-white font-bold py-3 px-6 rounded-xl text-sm hover:bg-gray-800 active:scale-95 transition-all"
           >

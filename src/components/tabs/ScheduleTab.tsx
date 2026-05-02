@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useMemo } from 'react';
 import CalendarView from '@/components/features/CalendarView';
 import { useScheduleStore } from '@/stores/useScheduleStore';
 import { useAppStore } from '@/stores/useAppStore';
@@ -7,10 +8,40 @@ import { useModalStore } from '@/stores/useModalStore';
 import { CalendarX2 } from 'lucide-react';
 
 export default function ScheduleTab() {
-  const { selectedDate } = useScheduleStore();
+  const {
+    selectedDate,
+    activePolls,
+    activePollsStatus,
+    loadActivePolls,
+  } = useScheduleStore();
   const { userRole } = useAppStore();
   const { openModal } = useModalStore();
   const canManageSchedule = userRole === 'admin' || userRole === 'operator';
+  const pollCalendarEvents = useMemo(() => (
+    activePolls.flatMap((poll) => (
+      poll.options.flatMap((option) => {
+        const day = Number(option.optionDate.split('-')[2]);
+
+        if (!Number.isInteger(day) || day < 1 || day > 31) {
+          return [];
+        }
+
+        return [{
+          day,
+          date: option.optionDate,
+          type: 'poll' as const,
+        }];
+      })
+    ))
+  ), [activePolls]);
+
+  useEffect(() => {
+    if (activePollsStatus !== 'idle') return;
+
+    void loadActivePolls().catch(() => {
+      // Home notice cards show the retry UI; the calendar simply omits remote markers.
+    });
+  }, [activePollsStatus, loadActivePolls]);
 
   return (
     <div className="space-y-6 animate-fadeIn pb-20">
@@ -41,7 +72,7 @@ export default function ScheduleTab() {
         </section>
       ) : null}
 
-      <CalendarView />
+      <CalendarView events={pollCalendarEvents} />
 
       <section className="card p-5">
         <div className="flex items-start gap-3">

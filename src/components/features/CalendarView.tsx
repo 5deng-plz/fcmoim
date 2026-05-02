@@ -7,6 +7,7 @@ import { isHoliday } from 'korean-holidays';
 
 interface CalendarEvent {
   day: number;
+  date?: string;
   type: 'match' | 'training' | 'seminar' | 'etc' | 'poll';
 }
 
@@ -117,7 +118,9 @@ export default function CalendarView({
           <div key={key} aria-hidden="true" className="h-8 w-8" />
         ))}
         {days.map((d) => {
-          const dayEvents = events.filter((e) => e.day === d);
+          const dayEvents = events.filter((e) => (
+            e.day === d && isEventInVisibleMonth(e, year, monthIndex)
+          ));
           const isSelected = selectedDates.includes(d);
           
           const dateObj = new Date(year, monthIndex, d);
@@ -162,7 +165,7 @@ export default function CalendarView({
         })}
       </div>
 
-      {!hideLegend && events.length > 0 && (
+      {!hideLegend && (
         <div className="flex items-center gap-3 mt-4 pt-3 border-t border-gray-50 text-[10px] text-gray-400 font-medium justify-center flex-wrap">
           <div className="flex items-center gap-1">
             <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
@@ -192,4 +195,13 @@ export default function CalendarView({
 
 function startOfMonth(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function isEventInVisibleMonth(event: CalendarEvent, year: number, monthIndex: number) {
+  if (!event.date) {
+    return true;
+  }
+
+  const [eventYear, eventMonth] = event.date.split('-').map(Number);
+  return eventYear === year && eventMonth === monthIndex + 1;
 }

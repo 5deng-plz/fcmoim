@@ -155,18 +155,20 @@ export default function RecentNotice() {
                     <Vote size={18} />
                   </div>
                   <div className="min-w-0">
-                    <div className="mb-0.5 flex min-w-0 flex-wrap items-center gap-1.5">
-                      <h3 className="min-w-0 text-sm font-black leading-snug text-gray-900">
-                        {poll.title}
-                      </h3>
-                      <Badge label="투표중" variant="amber" className="shrink-0" />
-                    </div>
+                    <h3 className="mb-0.5 min-w-0 text-sm font-black leading-snug text-gray-900">
+                      {poll.title}
+                    </h3>
                     <p className="text-xs font-medium leading-snug text-gray-500">
                       {poll.memo || '가능한 일정을 모두 선택해주세요'}
                     </p>
                   </div>
                 </div>
-                <div className="shrink-0 text-gray-400">
+                <div className="flex shrink-0 items-center gap-2 text-gray-400">
+                  <Badge
+                    label="투표중"
+                    variant="red"
+                    className="border border-red-200 bg-red-100 text-red-700 shadow-sm"
+                  />
                   {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                 </div>
               </button>

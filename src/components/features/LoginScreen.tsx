@@ -7,8 +7,8 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { useAppStore } from '@/stores/useAppStore';
 
 export default function LoginScreen() {
-  const { signInKakao } = useAuthStore();
-  const { setAuthView, setIsAuthenticated, setUserRole, setUserStatus } = useAppStore();
+  const { signInKakao, signInDevAdmin } = useAuthStore();
+  const { setAuthView, setUserStatus } = useAppStore();
 
   const handleKakaoLogin = async () => {
     await signInKakao();
@@ -20,10 +20,7 @@ export default function LoginScreen() {
   };
 
   const handleDevLogin = () => {
-    setIsAuthenticated(true);
-    setUserRole('admin');
-    setUserStatus('approved');
-    setAuthView('login');
+    signInDevAdmin();
   };
 
   return (

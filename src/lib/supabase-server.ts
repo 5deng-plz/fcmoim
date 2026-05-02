@@ -59,10 +59,13 @@ export async function getRequiredServerAuthContext(
 }
 
 export function isE2ETestAuthBypassEnabled() {
+  const explicitFlag = process.env.ENABLE_E2E_TEST_AUTH_BYPASS;
+
   return (
-    process.env.ENABLE_E2E_TEST_AUTH_BYPASS === 'true' &&
     process.env.NODE_ENV !== 'production' &&
-    process.env.APP_PROFILE !== 'prod'
+    process.env.APP_PROFILE !== 'prod' &&
+    explicitFlag !== 'false' &&
+    (process.env.NODE_ENV === 'development' || explicitFlag === 'true')
   );
 }
 
