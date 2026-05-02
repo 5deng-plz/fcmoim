@@ -1,38 +1,33 @@
-const AVATAR_BY_KEY: Record<string, string> = {
-  Felix: 'https://i.pravatar.cc/300?img=12',
-  Son: 'https://i.pravatar.cc/300?img=14',
-  Lee: 'https://i.pravatar.cc/300?img=15',
-  LeeJ: 'https://i.pravatar.cc/300?img=16',
-  Kim: 'https://i.pravatar.cc/300?img=18',
-  KimY: 'https://i.pravatar.cc/300?img=19',
-  Hwang: 'https://i.pravatar.cc/300?img=20',
-  Cho: 'https://i.pravatar.cc/300?img=21',
-  Baek: 'https://i.pravatar.cc/300?img=22',
-  Jung: 'https://i.pravatar.cc/300?img=23',
-  Park: 'https://i.pravatar.cc/300?img=24',
-  Choi: 'https://i.pravatar.cc/300?img=25',
-  Kang: 'https://i.pravatar.cc/300?img=26',
-  Jo: 'https://i.pravatar.cc/300?img=27',
-  Kwon: 'https://i.pravatar.cc/300?img=28',
-  Yoon: 'https://i.pravatar.cc/300?img=29',
-  Jang: 'https://i.pravatar.cc/300?img=30',
-  Lim: 'https://i.pravatar.cc/300?img=31',
-  Han: 'https://i.pravatar.cc/300?img=32',
-  Oh: 'https://i.pravatar.cc/300?img=33',
-  손흥민: 'https://i.pravatar.cc/300?img=14',
-  이강인: 'https://i.pravatar.cc/300?img=15',
-  김민재: 'https://i.pravatar.cc/300?img=18',
-  황희찬: 'https://i.pravatar.cc/300?img=20',
-  조규성: 'https://i.pravatar.cc/300?img=21',
-  이재성: 'https://i.pravatar.cc/300?img=16',
-  백승호: 'https://i.pravatar.cc/300?img=22',
-  정우영: 'https://i.pravatar.cc/300?img=23',
-  김영권: 'https://i.pravatar.cc/300?img=19',
-  권창훈: 'https://i.pravatar.cc/300?img=28',
-  강현수: 'https://i.pravatar.cc/300?img=26',
-};
-
 export function getFallbackAvatar(key: string | null | undefined) {
   const seed = key?.trim() || 'fcmoim-member';
-  return AVATAR_BY_KEY[seed] ?? `https://i.pravatar.cc/300?u=${encodeURIComponent(seed)}`;
+  const label = seed === 'member-profile' ? 'FC' : seed.slice(0, 2).toUpperCase();
+  const hue = hashSeed(seed) % 360;
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300">
+      <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="hsl(${hue}, 70%, 46%)" />
+          <stop offset="100%" stop-color="hsl(${(hue + 38) % 360}, 74%, 32%)" />
+        </linearGradient>
+      </defs>
+      <rect width="300" height="300" rx="150" fill="url(#bg)" />
+      <circle cx="150" cy="118" r="48" fill="rgba(255,255,255,0.9)" />
+      <path d="M68 248c15-55 52-85 82-85s67 30 82 85" fill="rgba(255,255,255,0.9)" />
+      <text x="150" y="270" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" font-weight="800" fill="rgba(255,255,255,0.88)">${escapeSvg(label)}</text>
+    </svg>
+  `;
+
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+function hashSeed(seed: string) {
+  return [...seed].reduce((hash, char) => ((hash << 5) - hash + char.charCodeAt(0)) >>> 0, 0);
+}
+
+function escapeSvg(value: string) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
 }

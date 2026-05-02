@@ -50,7 +50,7 @@ export default function Header() {
       ) : (
         <>
           <h1 className="text-xl font-black text-gray-900 tracking-tight flex items-center gap-1.5">
-            <FcMoimMark size={24} />
+            <FcMoimMark size={24} title="" />
             {teamName}
           </h1>
           <div className="flex items-center gap-3">

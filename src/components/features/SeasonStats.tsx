@@ -1,9 +1,4 @@
-import {
-  Trophy,
-  MinusCircle,
-  XCircle,
-  PieChart,
-} from 'lucide-react';
+import { Trophy, MinusCircle, XCircle, PieChart } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 const iconMap: Record<string, LucideIcon> = {
@@ -13,28 +8,12 @@ const iconMap: Record<string, LucideIcon> = {
   'pie-chart': PieChart,
 };
 
-// highlight: 'red' = 최근 승리로 승률 상승, 'blue' = 최근 패배로 승률 하락, null = 변동 없음
-type HighlightColor = 'red' | 'blue' | null;
-const currentHighlight: HighlightColor = 'red'; // 최근 경기 결과에 따라 동적 변경
-
 const seasonStats = [
-  { label: '승', value: '8', icon: 'trophy', color: 'text-yellow-500', highlightOn: 'red' as const },
-  { label: '무', value: '2', icon: 'minus-circle', color: 'text-gray-400', highlightOn: null },
-  { label: '패', value: '3', icon: 'x-circle', color: 'text-red-400', highlightOn: 'blue' as const },
-  { label: '승률', value: '61%', icon: 'pie-chart', color: 'text-blue-500', highlightOn: 'both' as const },
+  { label: '승', value: '0', icon: 'trophy', color: 'text-yellow-500' },
+  { label: '무', value: '0', icon: 'minus-circle', color: 'text-gray-400' },
+  { label: '패', value: '0', icon: 'x-circle', color: 'text-red-400' },
+  { label: '승률', value: '0%', icon: 'pie-chart', color: 'text-blue-500' },
 ];
-
-function getValueColor(stat: typeof seasonStats[number], highlight: HighlightColor): string {
-  if (!highlight) return 'text-gray-900';
-  if (stat.highlightOn === 'both') {
-    // 승률은 red/blue 모두 반응
-    return highlight === 'red' ? 'text-red-500' : 'text-blue-500';
-  }
-  if (stat.highlightOn === highlight) {
-    return highlight === 'red' ? 'text-red-500' : 'text-blue-500';
-  }
-  return 'text-gray-900';
-}
 
 export default function SeasonStats() {
   return (
@@ -46,7 +25,6 @@ export default function SeasonStats() {
         <div className="grid grid-cols-4 gap-y-5 gap-x-2 divide-x divide-gray-50">
           {seasonStats.map((stat, idx) => {
             const IconComp = iconMap[stat.icon];
-            const valueColor = getValueColor(stat, currentHighlight);
             return (
               <div
                 key={idx}
@@ -59,7 +37,7 @@ export default function SeasonStats() {
                   </span>
                 </div>
                 <div className="flex items-baseline">
-                  <span className={`text-2xl font-black ${valueColor} transition-colors`}>
+                  <span className="text-2xl font-black text-gray-900 transition-colors">
                     {stat.value}
                   </span>
                 </div>
@@ -67,6 +45,9 @@ export default function SeasonStats() {
             );
           })}
         </div>
+        <p className="mt-3 border-t border-gray-50 pt-3 text-center text-[11px] font-medium text-gray-400">
+          확정 경기 결과가 저장되면 시즌 기록이 자동으로 채워집니다
+        </p>
       </div>
     </section>
   );

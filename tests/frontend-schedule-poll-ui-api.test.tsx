@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SchedulePoll } from '../src/stores/schedulePollClient';
 
 vi.mock('@/config/app.config', () => ({
@@ -53,6 +53,8 @@ const createdPoll: SchedulePoll = {
 describe('PollCreateModal real API wiring', () => {
   beforeEach(() => {
     vi.unstubAllGlobals();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date(2026, 2, 1));
     useAppStore.setState({
       userRole: 'member',
       userStatus: 'approved',
@@ -71,8 +73,12 @@ describe('PollCreateModal real API wiring', () => {
     useToastStore.setState({ message: null });
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('posts selected dates to the schedule poll API without authUid', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const fetchMock = vi.fn(async () => (
       new Response(JSON.stringify(createdPoll), { status: 201 })
     ));
@@ -93,7 +99,7 @@ describe('PollCreateModal real API wiring', () => {
     expect(body).toEqual({
       clubId: 'club-real',
       seasonId: null,
-      title: '3월 친선 경기 일정 투표',
+      title: '3월 일정 투표',
       commonTime: '18:00',
       location: '서울 용산 풋살장',
       memo: null,
@@ -106,7 +112,7 @@ describe('PollCreateModal real API wiring', () => {
   });
 
   it('keeps the modal open and shows the API failure message', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const fetchMock = vi.fn(async () => (
       new Response(JSON.stringify({
         error: {

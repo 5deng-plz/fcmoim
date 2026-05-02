@@ -14,7 +14,8 @@ export default function PollCreateModal() {
   const { activeModal, closeModal } = useModalStore();
   const createPoll = useScheduleStore((state) => state.createPoll);
   const { showToast } = useToastStore();
-  const [title, setTitle] = useState('3월 친선 경기 일정 투표');
+  const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
+  const [title, setTitle] = useState(() => createDefaultPollTitle(new Date()));
   const [selectedDates, setSelectedDates] = useState<number[]>([]);
   const [time, setTime] = useState('18:00');
   const [location, setLocation] = useState('');
@@ -26,7 +27,7 @@ export default function PollCreateModal() {
   const canSubmit = isValid && !isSubmitting;
 
   const resetForm = () => {
-    setTitle('3월 친선 경기 일정 투표');
+    setTitle(createDefaultPollTitle(visibleMonth));
     setSelectedDates([]);
     setTime('18:00');
     setLocation('');
@@ -52,7 +53,7 @@ export default function PollCreateModal() {
         optionDates: selectedDates
           .slice()
           .sort((left, right) => left - right)
-          .map(toMarch2026Date),
+          .map((day) => toIsoDate(day, visibleMonth)),
       });
 
       showToast('일정 투표가 생성되었어요!');
@@ -107,6 +108,14 @@ export default function PollCreateModal() {
               maxSelections={4}
               value={selectedDates} 
               onChangeMulti={setSelectedDates} 
+              monthDate={visibleMonth}
+              onMonthDateChange={(nextMonth) => {
+                if (title === createDefaultPollTitle(visibleMonth)) {
+                  setTitle(createDefaultPollTitle(nextMonth));
+                }
+                setVisibleMonth(nextMonth);
+                setSelectedDates([]);
+              }}
               hideLegend 
             />
           </div>
@@ -144,7 +153,7 @@ export default function PollCreateModal() {
                 {[...selectedDates].sort((a, b) => a - b).map((d, i) => (
                   <li key={d} className="flex items-start gap-2 text-xs font-medium leading-snug text-gray-700">
                     <span className="w-4 h-4 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-[10px] font-bold shrink-0">{i + 1}</span>
-                    <span>항목 {i + 1}: 3월 {d}일 {time} · {location || '장소 미정'}</span>
+                    <span>항목 {i + 1}: {formatDateLabel(d, visibleMonth)} {time} · {location || '장소 미정'}</span>
                   </li>
                 ))}
               </ul>
@@ -186,6 +195,20 @@ export default function PollCreateModal() {
   );
 }
 
-function toMarch2026Date(day: number) {
-  return `2026-03-${day.toString().padStart(2, '0')}`;
+function startOfMonth(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function createDefaultPollTitle(date: Date) {
+  return `${date.getMonth() + 1}월 일정 투표`;
+}
+
+function formatDateLabel(day: number, monthDate: Date) {
+  return `${monthDate.getMonth() + 1}월 ${day}일`;
+}
+
+function toIsoDate(day: number, monthDate: Date) {
+  const year = monthDate.getFullYear();
+  const month = String(monthDate.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}-${String(day).padStart(2, '0')}`;
 }

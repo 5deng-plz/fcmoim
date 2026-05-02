@@ -1,6 +1,6 @@
 'use client';
 
-import { Trophy, Users, TrendingUp, Eye } from 'lucide-react';
+import { ClipboardList, Trophy, Users, TrendingUp, Eye } from 'lucide-react';
 import FcMoimMark from '@/components/brand/FcMoimMark';
 import { useAppStore } from '@/stores/useAppStore';
 
@@ -38,92 +38,38 @@ export default function GuestDashboard() {
         <div className="grid grid-cols-3 gap-2">
           <div className="bg-white rounded-xl p-3 text-center border border-gray-100">
             <Users size={16} className="text-green-600 mx-auto mb-1" />
-            <span className="text-base font-black text-gray-900">24</span>
+            <span className="text-base font-black text-gray-900">-</span>
             <p className="text-[9px] text-gray-400 font-medium">회원</p>
           </div>
           <div className="bg-white rounded-xl p-3 text-center border border-gray-100">
             <Trophy size={16} className="text-yellow-500 mx-auto mb-1" />
-            <span className="text-base font-black text-gray-900">3</span>
+            <span className="text-base font-black text-gray-900">-</span>
             <p className="text-[9px] text-gray-400 font-medium">시즌</p>
           </div>
           <div className="bg-white rounded-xl p-3 text-center border border-gray-100">
             <TrendingUp size={16} className="text-blue-500 mx-auto mb-1" />
-            <span className="text-base font-black text-gray-900">42</span>
+            <span className="text-base font-black text-gray-900">-</span>
             <p className="text-[9px] text-gray-400 font-medium">경기</p>
           </div>
         </div>
 
-        {/* 지난 시즌 아카이브 */}
+        {/* 공개 기록 */}
         <section>
           <h3 className="text-sm font-black text-gray-900 mb-3 flex items-center gap-1.5">
-            <Trophy size={15} className="text-yellow-500" />
-            지난 시즌 기록
+            <ClipboardList size={15} className="text-yellow-500" />
+            팀 기록
           </h3>
 
-          {/* 24/25 시즌 */}
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-3">
-            <div className="p-3.5 border-b border-gray-50">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-gray-900">24/25 시즌</span>
-                <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">완료</span>
+          <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-yellow-50 text-yellow-500">
+                <ClipboardList size={18} />
               </div>
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div>
-                  <span className="text-base font-black text-gray-900">18</span>
-                  <p className="text-[9px] text-gray-400">총 경기</p>
-                </div>
-                <div>
-                  <span className="text-base font-black text-green-600">12</span>
-                  <p className="text-[9px] text-gray-400">승리</p>
-                </div>
-                <div>
-                  <span className="text-base font-black text-gray-900">67%</span>
-                  <p className="text-[9px] text-gray-400">승률</p>
-                </div>
-              </div>
-            </div>
-            <div className="px-3.5 py-2.5 bg-gray-50">
-              <p className="text-[9px] font-bold text-gray-400 mb-1.5">시즌 TOP 3</p>
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2 text-xs">
-                  <span>🥇</span>
-                  <span className="font-bold text-gray-900">손흥민</span>
-                  <span className="text-green-600 text-[10px] font-black italic">OVR 80 · MOM 6회</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <span>🥈</span>
-                  <span className="font-bold text-gray-900">이강인</span>
-                  <span className="text-green-600 text-[10px] font-black italic">OVR 75 · 어시스트 14</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <span>🥉</span>
-                  <span className="font-bold text-gray-900">김민재</span>
-                  <span className="text-green-600 text-[10px] font-black italic">OVR 68 · 클린시트 8</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 23/24 시즌 */}
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <div className="p-3.5">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-gray-900">23/24 시즌</span>
-                <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">완료</span>
-              </div>
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div>
-                  <span className="text-base font-black text-gray-900">14</span>
-                  <p className="text-[9px] text-gray-400">총 경기</p>
-                </div>
-                <div>
-                  <span className="text-base font-black text-green-600">9</span>
-                  <p className="text-[9px] text-gray-400">승리</p>
-                </div>
-                <div>
-                  <span className="text-base font-black text-gray-900">64%</span>
-                  <p className="text-[9px] text-gray-400">승률</p>
-                </div>
+              <div>
+                <p className="text-sm font-bold text-gray-900">공개된 기록이 없어요</p>
+                <p className="mt-1 text-xs font-medium leading-relaxed text-gray-400">
+                  시즌 결과가 저장되면 게스트도 볼 수 있는 범위의 기록이 표시됩니다.
+                </p>
               </div>
             </div>
           </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
 import { useScheduleStore } from '@/stores/useScheduleStore';
 import { isHoliday } from 'korean-holidays';
 
@@ -8,16 +9,6 @@ interface CalendarEvent {
   day: number;
   type: 'match' | 'training' | 'seminar' | 'etc' | 'poll';
 }
-
-const events: CalendarEvent[] = [
-  { day: 7, type: 'match' },
-  { day: 14, type: 'match' },
-  { day: 15, type: 'match' },
-  { day: 21, type: 'poll' },
-  { day: 22, type: 'poll' },
-  { day: 22, type: 'training' },
-  { day: 28, type: 'seminar' },
-];
 
 const dotColor: Record<string, string> = {
   match: 'bg-green-500',
@@ -34,6 +25,9 @@ interface CalendarViewProps {
   hideLegend?: boolean;
   isMulti?: boolean;
   maxSelections?: number;
+  events?: CalendarEvent[];
+  monthDate?: Date;
+  onMonthDateChange?: (date: Date) => void;
 }
 
 export default function CalendarView({
@@ -43,9 +37,20 @@ export default function CalendarView({
   hideLegend = false,
   isMulti = false,
   maxSelections,
+  events = [],
+  monthDate,
+  onMonthDateChange,
 }: CalendarViewProps) {
   const scheduleStore = useScheduleStore();
-  const days = Array.from({ length: 31 }, (_, i) => i + 1);
+  const [internalMonthDate, setInternalMonthDate] = useState(() => startOfMonth(new Date()));
+  const visibleMonth = startOfMonth(monthDate ?? internalMonthDate);
+  const year = visibleMonth.getFullYear();
+  const monthIndex = visibleMonth.getMonth();
+  const monthLabel = `${year}년 ${monthIndex + 1}월`;
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  const firstWeekday = new Date(year, monthIndex, 1).getDay();
+  const leadingBlanks = Array.from({ length: firstWeekday }, (_, i) => `blank-${i}`);
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
   
   const selectedDates = value !== undefined 
     ? (Array.isArray(value) ? value : [value])
@@ -68,14 +73,33 @@ export default function CalendarView({
     }
   };
 
+  const moveMonth = (direction: -1 | 1) => {
+    const nextMonth = startOfMonth(new Date(year, monthIndex + direction, 1));
+    if (onMonthDateChange) {
+      onMonthDateChange(nextMonth);
+      return;
+    }
+    setInternalMonthDate(nextMonth);
+  };
+
   return (
     <section className="card p-5">
       <div className="flex justify-between items-center mb-4">
-        <button className="p-1 hover:text-gray-900 active:scale-90 transition-all text-gray-400">
+        <button
+          type="button"
+          onClick={() => moveMonth(-1)}
+          aria-label="이전 달"
+          className="p-1 hover:text-gray-900 active:scale-90 transition-all text-gray-400"
+        >
           <ChevronLeft size={20} />
         </button>
-        <h2 className="font-bold text-gray-900 tracking-tight">2026년 3월</h2>
-        <button className="p-1 hover:text-gray-900 active:scale-90 transition-all text-gray-400">
+        <h2 className="font-bold text-gray-900 tracking-tight">{monthLabel}</h2>
+        <button
+          type="button"
+          onClick={() => moveMonth(1)}
+          aria-label="다음 달"
+          className="p-1 hover:text-gray-900 active:scale-90 transition-all text-gray-400"
+        >
           <ChevronRight size={20} />
         </button>
       </div>
@@ -89,11 +113,14 @@ export default function CalendarView({
       </div>
 
       <div className="grid grid-cols-7 gap-y-2 text-center text-sm font-medium">
+        {leadingBlanks.map((key) => (
+          <div key={key} aria-hidden="true" className="h-8 w-8" />
+        ))}
         {days.map((d) => {
           const dayEvents = events.filter((e) => e.day === d);
           const isSelected = selectedDates.includes(d);
           
-          const dateObj = new Date(2026, 2, d); // 2026년 3월
+          const dateObj = new Date(year, monthIndex, d);
           const dayOfWeek = dateObj.getDay();
           const isRedDay = dayOfWeek === 0 || isHoliday(dateObj);
           const isBlueDay = dayOfWeek === 6 && !isRedDay;
@@ -111,7 +138,7 @@ export default function CalendarView({
               type="button"
               key={d}
               onClick={() => handleSelect(d)}
-              aria-label={`3월 ${d}일${dayEvents.length > 0 ? `, ${dayEvents.length}개 일정` : ''}`}
+              aria-label={`${monthIndex + 1}월 ${d}일${dayEvents.length > 0 ? `, ${dayEvents.length}개 일정` : ''}`}
               aria-pressed={isSelected}
               className={`relative flex justify-center items-center h-8 w-8 mx-auto rounded-full transition-all duration-200 cursor-pointer ${
                 isSelected
@@ -135,7 +162,7 @@ export default function CalendarView({
         })}
       </div>
 
-      {!hideLegend && (
+      {!hideLegend && events.length > 0 && (
         <div className="flex items-center gap-3 mt-4 pt-3 border-t border-gray-50 text-[10px] text-gray-400 font-medium justify-center flex-wrap">
           <div className="flex items-center gap-1">
             <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
@@ -161,4 +188,8 @@ export default function CalendarView({
       )}
     </section>
   );
+}
+
+function startOfMonth(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
 }

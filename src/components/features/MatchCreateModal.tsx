@@ -22,18 +22,18 @@ export default function MatchCreateModal() {
   const [title, setTitle] = useState('');
   const [dateNum, setDateNum] = useState<number>(new Date().getDate());
   const [time, setTime] = useState('18:00');
-  const [location, setLocation] = useState('서울 영등포 SKY파크');
+  const [location, setLocation] = useState('');
   const [memo, setMemo] = useState('');
 
   const isValid = (type === 'match' || title.trim()) && dateNum && time && location;
 
   const handleSubmit = () => {
-    showToast('일정이 생성되었어요! 📅');
+    showToast('확정 일정 생성 API 연결 후 저장할 수 있어요.');
     closeModal();
     setTitle('');
     setDateNum(new Date().getDate());
     setTime('18:00');
-    setLocation('서울 영등포 SKY파크');
+    setLocation('');
     setMemo('');
   };
 
@@ -69,9 +69,9 @@ export default function MatchCreateModal() {
 
         {type === 'match' ? (
           <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2">
-            <Badge label="Round 8" variant="green" />
+            <Badge label="경기" variant="green" />
             <p className="text-xs font-bold text-green-700">
-              정규 리그 (자동 생성)
+              확정 경기 일정
             </p>
           </div>
         ) : (

@@ -5,7 +5,14 @@ import { appConfig } from '../config/app.config';
 import { AppError } from '../types/api';
 import type { AuthContext } from '../types/domain';
 
+const E2E_DEFAULT_AUTH_USER_ID = '00000000-0000-0000-0000-000000000011';
+const E2E_DEFAULT_AUTH_EMAIL = 'e2e-admin@fcmoim.test';
+
 export async function createSupabaseServerClient(): Promise<SupabaseClient> {
+  if (isE2ETestAuthBypassEnabled()) {
+    return createPrivilegedSupabaseClient();
+  }
+
   const cookieStore = await cookies();
 
   return createServerClient(appConfig.supabase.url, appConfig.supabase.publishableKey, {
@@ -32,6 +39,11 @@ export async function getRequiredServerAuthContext(
   const { data, error } = await supabase.auth.getClaims();
 
   if (error || !data?.claims?.sub) {
+    const e2eAuth = getE2ETestAuthContext();
+    if (e2eAuth) {
+      return e2eAuth;
+    }
+
     throw new AppError('unauthorized', 'Authentication is required.', {
       cause: error,
       status: 401,
@@ -42,6 +54,27 @@ export async function getRequiredServerAuthContext(
     user: {
       id: data.claims.sub,
       email: typeof data.claims.email === 'string' ? data.claims.email : null,
+    },
+  };
+}
+
+export function isE2ETestAuthBypassEnabled() {
+  return (
+    process.env.ENABLE_E2E_TEST_AUTH_BYPASS === 'true' &&
+    process.env.NODE_ENV !== 'production' &&
+    process.env.APP_PROFILE !== 'prod'
+  );
+}
+
+function getE2ETestAuthContext(): AuthContext | null {
+  if (!isE2ETestAuthBypassEnabled()) {
+    return null;
+  }
+
+  return {
+    user: {
+      id: process.env.E2E_TEST_AUTH_USER_ID || E2E_DEFAULT_AUTH_USER_ID,
+      email: process.env.E2E_TEST_AUTH_EMAIL || E2E_DEFAULT_AUTH_EMAIL,
     },
   };
 }

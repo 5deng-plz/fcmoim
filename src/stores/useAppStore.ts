@@ -67,6 +67,6 @@ export const useAppStore = create<AppState>((set) => ({
   setAttendStatus: (status) => set({ attendStatus: status }),
 
   // ─── 팀 정보 ───
-  teamName: 'FC Tiger',
+  teamName: 'FC Moim',
   setTeamName: (name) => set({ teamName: name }),
 }));

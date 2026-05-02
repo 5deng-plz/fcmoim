@@ -19,8 +19,9 @@ export default function FcMoimMark({
   return (
     <svg
       viewBox="0 0 64 64"
-      aria-label={title}
-      role="img"
+      aria-hidden={title ? undefined : true}
+      aria-label={title || undefined}
+      role={title ? 'img' : undefined}
       className={className}
       style={style}
       fill="none"

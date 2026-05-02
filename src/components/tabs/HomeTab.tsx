@@ -5,7 +5,7 @@ import UpcomingMatch from '@/components/features/UpcomingMatch';
 import SeasonStats from '@/components/features/SeasonStats';
 import RecentNotice from '@/components/features/RecentNotice';
 import FcMoimMark from '@/components/brand/FcMoimMark';
-import { Trophy, Users, TrendingUp } from 'lucide-react';
+import { ClipboardList, Trophy, Users, TrendingUp } from 'lucide-react';
 
 // ─── 게스트 전용: 팀 소개 섹션 ───
 function TeamIntro() {
@@ -22,17 +22,17 @@ function TeamIntro() {
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-white rounded-xl p-3 text-center border border-gray-100">
           <Users size={18} className="text-green-600 mx-auto mb-1" />
-          <span className="text-lg font-black text-gray-900">24</span>
+          <span className="text-lg font-black text-gray-900">-</span>
           <p className="text-[10px] text-gray-500 font-medium">회원</p>
         </div>
         <div className="bg-white rounded-xl p-3 text-center border border-gray-100">
           <Trophy size={18} className="text-yellow-500 mx-auto mb-1" />
-          <span className="text-lg font-black text-gray-900">3</span>
+          <span className="text-lg font-black text-gray-900">-</span>
           <p className="text-[10px] text-gray-500 font-medium">시즌</p>
         </div>
         <div className="bg-white rounded-xl p-3 text-center border border-gray-100">
           <TrendingUp size={18} className="text-blue-500 mx-auto mb-1" />
-          <span className="text-lg font-black text-gray-900">42</span>
+          <span className="text-lg font-black text-gray-900">-</span>
           <p className="text-[10px] text-gray-500 font-medium">경기</p>
         </div>
       </div>
@@ -45,38 +45,19 @@ function PastSeasonArchive() {
   return (
     <section>
       <h3 className="text-sm font-black text-gray-900 mb-3 flex items-center gap-1.5">
-        <Trophy size={16} className="text-yellow-500" />
-        지난 시즌 기록
+        <ClipboardList size={16} className="text-yellow-500" />
+        팀 기록
       </h3>
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <div className="p-4 border-b border-gray-50">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-gray-900">24/25 시즌</span>
-            <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">완료</span>
+      <div className="bg-white rounded-xl border border-gray-100 p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-yellow-50 text-yellow-500">
+            <ClipboardList size={18} />
           </div>
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div>
-              <span className="text-lg font-black text-gray-900">18</span>
-              <p className="text-[10px] text-gray-400">총 경기</p>
-            </div>
-            <div>
-              <span className="text-lg font-black text-green-600">12</span>
-              <p className="text-[10px] text-gray-400">승리</p>
-            </div>
-            <div>
-              <span className="text-lg font-black text-gray-900">67%</span>
-              <p className="text-[10px] text-gray-400">승률</p>
-            </div>
-          </div>
-        </div>
-        <div className="px-4 py-3 bg-gray-50">
-          <p className="text-[10px] font-bold text-gray-400 mb-2">시즌 MVP</p>
-          <div className="flex items-center gap-2">
-            <span className="text-lg">🏆</span>
-            <span className="text-sm font-bold text-gray-900">손흥민</span>
-            <span className="text-[10px] font-black text-green-600 italic leading-none ml-1.5 translate-y-[1px] inline-block">
-              OVR 72 · MOM 6회
-            </span>
+          <div>
+            <p className="text-sm font-bold text-gray-900">공개된 기록이 없어요</p>
+            <p className="mt-1 text-xs font-medium leading-relaxed text-gray-400">
+              시즌 결과가 저장되면 게스트도 볼 수 있는 범위의 기록이 표시됩니다.
+            </p>
           </div>
         </div>
       </div>

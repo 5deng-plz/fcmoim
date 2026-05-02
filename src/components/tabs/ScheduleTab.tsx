@@ -1,10 +1,10 @@
 'use client';
 
 import CalendarView from '@/components/features/CalendarView';
-import MatchStatus from '@/components/features/MatchStatus';
 import { useScheduleStore } from '@/stores/useScheduleStore';
 import { useAppStore } from '@/stores/useAppStore';
 import { useModalStore } from '@/stores/useModalStore';
+import { CalendarX2 } from 'lucide-react';
 
 export default function ScheduleTab() {
   const { selectedDate } = useScheduleStore();
@@ -43,11 +43,21 @@ export default function ScheduleTab() {
 
       <CalendarView />
 
-      {selectedDate === 7 && <MatchStatus status="종료" />}
-      {selectedDate === 14 && <MatchStatus status="종료" />}
-      {selectedDate === 15 && <MatchStatus status="라커룸" />}
-      {selectedDate === 22 && <MatchStatus status="예정" type="training" />}
-      {selectedDate === 28 && <MatchStatus status="예정" type="seminar" />}
+      <section className="card p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-50 text-gray-400">
+            <CalendarX2 size={20} />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-sm font-black text-gray-900">
+              선택한 날짜에 확정 일정이 없어요
+            </h3>
+            <p className="mt-1 text-xs font-medium leading-relaxed text-gray-400">
+              {selectedDate}일 일정이 확정되면 상세 정보와 참석 현황이 표시됩니다.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
