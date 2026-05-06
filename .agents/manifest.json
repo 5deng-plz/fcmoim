@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "1.0.0",
+  "description": "Reusable agent harness manifest. Project-specific rules live outside this directory.",
+  "sourceOfTruth": {
+    "contracts": ".agents/contracts/agent-contracts.json",
+    "stateSchema": ".agents/state/project-context.schema.json",
+    "validator": ".agents/scripts/validate-harness.mjs"
+  },
+  "agents": [
+    { "id": "architect", "name": "Architect Agent", "prompt": ".agents/agents/architect.md", "mayUpdateProjectState": false },
+    { "id": "backend", "name": "Backend Agent", "prompt": ".agents/agents/backend.md", "mayUpdateProjectState": false },
+    { "id": "data", "name": "Data Agent", "prompt": ".agents/agents/data.md", "mayUpdateProjectState": false },
+    { "id": "devops", "name": "DevOps Agent", "prompt": ".agents/agents/devops.md", "mayUpdateProjectState": false },
+    { "id": "frontend", "name": "Frontend Agent", "prompt": ".agents/agents/frontend.md", "mayUpdateProjectState": false },
+    { "id": "main-orchestrator", "name": "Main Orchestrator Agent", "prompt": ".agents/agents/main-orchestrator.md", "mayUpdateProjectState": true },
+    { "id": "qa", "name": "QA Agent", "prompt": ".agents/agents/qa.md", "mayUpdateProjectState": false },
+    { "id": "review", "name": "Review Agent", "prompt": ".agents/agents/review.md", "mayUpdateProjectState": false }
+  ],
+  "qualityGates": [
+    { "id": "baseline", "owner": "main-orchestrator", "requiredFor": "code changes" },
+    { "id": "deterministic-verify", "owner": "implementing-agent", "requiredFor": "handoff-sized changes" },
+    { "id": "runtime-evidence", "owner": "qa", "requiredFor": "runtime-affecting changes" },
+    { "id": "independent-review", "owner": "review", "requiredFor": "completion" }
+  ],
+  "executionRules": [
+    "Read the root guide and project rules before each task.",
+    "Read the selected role prompt before editing.",
+    "Use project rules for path ownership, required commands, evidence policy, and project documents.",
+    "Only the orchestrator may update project state.",
+    "Worker agents emit statePatchSuggestion instead of editing project state.",
+    "Run configured guard profiles before handoff.",
+    "Review blockers prevent completion."
+  ]
+}

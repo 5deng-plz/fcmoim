@@ -1,0 +1,128 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectName": "fcmoim",
+  "updatedAt": "2026-05-08T00:00:00+09:00",
+  "updatedBy": "main-orchestrator",
+  "currentPhase": "quality-gate-hardening",
+  "architecture": {},
+  "agents": {
+    "architect": { "status": "ready", "stateWriteAccess": false },
+    "backend": { "status": "ready", "stateWriteAccess": false },
+    "data": { "status": "ready", "stateWriteAccess": false },
+    "devops": { "status": "ready", "stateWriteAccess": false },
+    "frontend": { "status": "ready", "stateWriteAccess": false },
+    "main-orchestrator": { "status": "active", "stateWriteAccess": true },
+    "qa": { "status": "ready", "stateWriteAccess": false },
+    "review": { "status": "ready", "stateWriteAccess": false }
+  },
+  "qualityGates": {
+    "baseline": {
+      "status": "required-for-code-changes",
+      "command": "npm run verify:baseline",
+      "standard": "Run before edits when practical or record why unavailable."
+    },
+    "database": {
+      "status": "required-when-affected",
+      "command": "npm run db:check",
+      "standard": "Supabase schema, enum, RLS, and data access changes need tracked SQL plus Supabase plugin or SQL contract evidence."
+    },
+    "deterministicVerify": {
+      "status": "required-for-handoff-sized-changes",
+      "command": "npm run verify",
+      "standard": "Harness structure, lint, typecheck, tests, and DB contract checks must pass or be explicitly blocked."
+    },
+    "review": {
+      "status": "required-for-completion",
+      "standard": "Review Agent must report no blockers before work is marked complete."
+    },
+    "runtimeEvidence": {
+      "status": "required-when-affected",
+      "standard": "Browser Use, API, and Supabase evidence must match the changed runtime surface."
+    }
+  },
+  "activeWork": {
+    "agentId": "devops",
+    "taskId": "reusable-harness-guardrail-enforcement",
+    "status": "ready",
+    "startedAt": "2026-05-08T00:00:00+09:00",
+    "baselineCommit": "fa013a7ef8c0cbae69836f03408d33bc3b61febb",
+    "changedFiles": [
+      ".agents/agents/architect.md",
+      ".agents/agents/backend.md",
+      ".agents/agents/data.md",
+      ".agents/agents/devops.md",
+      ".agents/agents/frontend.md",
+      ".agents/agents/main-orchestrator.md",
+      ".agents/agents/qa.md",
+      ".agents/agents/review.md",
+      ".agents/contracts/agent-contracts.json",
+      ".agents/fixtures/negative-fixtures.json",
+      ".agents/hooks/pre-commit",
+      ".agents/hooks/pre-push",
+      ".agents/manifest.json",
+      ".agents/scripts/bootstrap-harness.mjs",
+      ".agents/scripts/guard-diff.mjs",
+      ".agents/scripts/guard-evidence.mjs",
+      ".agents/scripts/guard-hooks.mjs",
+      ".agents/scripts/guard-review.mjs",
+      ".agents/scripts/guard-runner.mjs",
+      ".agents/scripts/harness-lib.mjs",
+      ".agents/scripts/install-hooks.mjs",
+      ".agents/scripts/test-harness.mjs",
+      ".agents/scripts/validate-harness.mjs",
+      ".agents/scripts/validate-project-rules.mjs",
+      ".agents/state/project-context.schema.json",
+      ".github/workflows/harness-guard.yml",
+      "AGENT.md",
+      "docs/README.md",
+      "docs/agent-rules.json",
+      "docs/decisions.md",
+      "docs/project-context.json",
+      "package.json"
+    ],
+    "changedSurfaces": ["harness", "docs", "infra"],
+    "allowedPaths": [
+      ".agents/**",
+      "AGENT.md",
+      "docs/README.md",
+      "docs/agent-rules.json",
+      "docs/decisions.md",
+      "docs/project-context.json",
+      "package.json"
+    ],
+    "evidence": {
+      "deterministic": {
+        "status": "passed",
+        "checkedAt": "2026-05-08T00:00:00+09:00",
+        "surface": "harness",
+        "target": "local guard commands",
+        "provider": "local command",
+        "summary": "Harness, project rules, deterministic guard commands, and fixture regression are configured through project rules.",
+        "errors": [],
+        "verifiedBy": "main-orchestrator",
+        "commit": "fa013a7ef8c0cbae69836f03408d33bc3b61febb"
+      }
+    },
+    "reviewVerdict": {
+      "status": "ready",
+      "blockers": [],
+      "summary": "Guardrail implementation has no recorded blockers."
+    },
+    "blockers": [],
+    "guardResults": {
+      "latest": {
+        "status": "passed",
+        "summary": "Local harness guard profiles pass for current guardrail work."
+      }
+    }
+  },
+  "workstreams": [],
+  "handoffs": [],
+  "blockers": [],
+  "nextActions": [],
+  "decisionLog": {
+    "path": "docs/decisions.md",
+    "revision": 1,
+    "updatedAt": "2026-05-07"
+  }
+}

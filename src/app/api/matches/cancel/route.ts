@@ -1,0 +1,24 @@
+import { appErrorResponse } from '../../../../types/api';
+import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../../lib/supabase-server';
+import { createMatchService } from '../../../../services/matches';
+import { createSupabaseMatchRepositories } from '../../../../services/supabase-repositories';
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const supabase = await createSupabaseServerClient();
+    const auth = await getRequiredServerAuthContext(supabase);
+    const service = createMatchService(createSupabaseMatchRepositories(supabase));
+
+    const match = await service.cancelMatch({
+      auth,
+      clubId: body.clubId,
+      matchId: body.matchId,
+      cancellationReason: body.cancellationReason,
+    });
+
+    return Response.json(match);
+  } catch (error) {
+    return appErrorResponse(error);
+  }
+}

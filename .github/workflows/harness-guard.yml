@@ -1,0 +1,34 @@
+name: Harness Guard
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  harness-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run configured harness CI
+        run: |
+          node - <<'NODE'
+          const { spawnSync } = require('node:child_process');
+          const rules = require('./docs/agent-rules.json');
+          const command = rules.commands?.ci;
+          if (!command) {
+            console.error('Missing docs/agent-rules.json commands.ci');
+            process.exit(1);
+          }
+          const result = spawnSync(command, { shell: true, stdio: 'inherit' });
+          process.exit(result.status ?? 1);
+          NODE

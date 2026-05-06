@@ -1,0 +1,99 @@
+{
+  "schemaVersion": "1.0.0",
+  "project": {
+    "name": "fcmoim",
+    "docs": {
+      "readme": "docs/README.md",
+      "decisions": "docs/decisions.md",
+      "context": "docs/project-context.json"
+    }
+  },
+  "agents": [
+    {
+      "id": "architect",
+      "owns": ["AGENT.md", "docs/**"],
+      "forbidden": [".github/**", "src/**", "supabase/**"]
+    },
+    {
+      "id": "backend",
+      "owns": ["src/app/api/**", "src/lib/**", "src/services/**", "src/types/**", "tests/**"],
+      "forbidden": [".github/**", ".agents/**", "docs/**", "supabase/**"]
+    },
+    {
+      "id": "data",
+      "owns": ["docs/decisions.md", "src/types/database.generated.ts", "src/types/database.types.ts", "supabase/**"],
+      "forbidden": [".github/**", ".agents/**", "src/components/**"]
+    },
+    {
+      "id": "devops",
+      "owns": [".agents/**", ".env.local.example", ".github/**", "apphosting.yaml", "firebase.json", "package.json", "scripts/**"],
+      "forbidden": ["src/components/**", "supabase/migrations/**"]
+    },
+    {
+      "id": "frontend",
+      "owns": ["public/**", "src/app/**", "src/components/**", "src/config/**", "src/mocks/**", "src/stores/**", "tests/**"],
+      "forbidden": [".github/**", ".agents/**", "docs/decisions.md", "supabase/**"]
+    },
+    {
+      "id": "main-orchestrator",
+      "owns": ["docs/project-context.json", "docs/agent-rules.json"],
+      "forbidden": [".github/**", "src/**", "supabase/**"]
+    },
+    {
+      "id": "qa",
+      "owns": ["tests/**"],
+      "forbidden": [".github/**", ".agents/**", "docs/project-context.json", "src/**", "supabase/**"]
+    },
+    {
+      "id": "review",
+      "owns": [],
+      "forbidden": [".github/**", ".agents/**", "docs/project-context.json", "src/**", "supabase/**", "tests/**"]
+    }
+  ],
+  "sharedAllowedPaths": [".gitignore", "package-lock.json"],
+  "surfaces": [
+    { "id": "harness", "paths": [".agents/**", "AGENT.md", "docs/agent-rules.json"] },
+    { "id": "docs", "paths": ["docs/**"] },
+    { "id": "ui", "paths": ["src/app/**", "src/components/**", "src/stores/**"] },
+    { "id": "api", "paths": ["src/app/api/**", "src/lib/**", "src/services/**"] },
+    { "id": "data", "paths": ["supabase/**", "src/types/database.generated.ts", "src/types/database.types.ts"] },
+    { "id": "infra", "paths": [".github/**", "apphosting.yaml", "firebase.json", "package.json", "scripts/**"] },
+    { "id": "tests", "paths": ["tests/**"] }
+  ],
+  "commands": {
+    "baseline": "npm run verify:baseline",
+    "ci": "npm run harness:validate && npm run harness:validate-project && npm run harness:test && npm run verify",
+    "dataCheck": "npm run db:check",
+    "harnessTest": "node .agents/scripts/test-harness.mjs",
+    "preCommit": "npm run lint",
+    "prePush": "npm run verify",
+    "verify": "npm run verify"
+  },
+  "guardProfiles": {
+    "preCommit": { "steps": ["validateHarness", "validateProject", "guardHooks", "guardDiffStaged", "projectPreCommit"] },
+    "prePush": { "steps": ["projectPrePush", "guardEvidence", "guardReview"] },
+    "ci": { "steps": ["validateHarness", "validateProject", "harnessTest", "projectCi"] },
+    "handoff": { "steps": ["guardDiff", "guardEvidence", "guardReview"] }
+  },
+  "hookPolicy": {
+    "requiredPath": ".agents/hooks"
+  },
+  "bypassPolicy": {
+    "allowedProfiles": ["preCommit"],
+    "blockedProfiles": ["prePush", "ci", "handoff"],
+    "bypassableSteps": ["guardDiffStaged"],
+    "requiredReasonEnv": "HARNESS_BYPASS_REASON"
+  },
+  "evidencePolicy": {
+    "ui": { "requiredEvidence": [{ "type": "browser", "maxAgeMinutes": 1440 }], "providers": ["Browser Use"] },
+    "api": { "requiredEvidence": [{ "type": "api", "maxAgeMinutes": 1440 }] },
+    "data": { "requiredEvidence": [{ "type": "database", "maxAgeMinutes": 1440 }], "providers": ["Supabase plugin", "tracked SQL"] }
+  },
+  "reviewPolicy": {
+    "required": true,
+    "readyStatus": "ready"
+  },
+  "harnessPurity": {
+    "forbiddenTokens": ["fcmoim", "npm", "src/", "tests/", "supabase", "Next.js", "Firebase", "docs/README", "docs/project-context", "docs/decisions"]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "1.0.0",
+  "agents": {
+    "architect": {
+      "capabilities": ["scope", "architecture", "decision policy", "cross-role alignment"],
+      "requiredOutputs": ["decision or proposal", "contract impact note", "statePatchSuggestion"]
+    },
+    "backend": {
+      "capabilities": ["server behavior", "authorization", "validation", "service contracts"],
+      "requiredOutputs": ["implementation notes", "runtime evidence when required", "tests", "statePatchSuggestion"]
+    },
+    "data": {
+      "capabilities": ["data model", "schema policy", "access policy", "data quality"],
+      "requiredOutputs": ["data model or schema note", "data evidence when required", "statePatchSuggestion"]
+    },
+    "devops": {
+      "capabilities": ["commands", "hooks", "deployment", "environment", "observability"],
+      "requiredOutputs": ["operational change note", "verification command note", "statePatchSuggestion"]
+    },
+    "frontend": {
+      "capabilities": ["user interface", "client integration", "accessibility", "runtime rendering"],
+      "requiredOutputs": ["screen or state implementation note", "runtime evidence when required", "statePatchSuggestion"]
+    },
+    "main-orchestrator": {
+      "capabilities": ["coordination", "state updates", "gate enforcement", "handoff"],
+      "requiredOutputs": ["handoff summary", "guard results", "state update"]
+    },
+    "qa": {
+      "capabilities": ["acceptance criteria", "test strategy", "runtime evidence", "release readiness"],
+      "requiredOutputs": ["test matrix", "evidence summary", "release readiness", "statePatchSuggestion"]
+    },
+    "review": {
+      "capabilities": ["diff review", "evidence review", "blocker classification", "residual risk"],
+      "requiredOutputs": ["findings by severity", "missing evidence", "release verdict", "statePatchSuggestion"]
+    }
+  }
+}

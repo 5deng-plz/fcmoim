@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Agent Project Context",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "projectName",
+    "updatedAt",
+    "updatedBy",
+    "currentPhase",
+    "agents",
+    "activeWork",
+    "workstreams",
+    "handoffs",
+    "blockers",
+    "nextActions"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "string", "minLength": 1 },
+    "projectName": { "type": "string", "minLength": 1 },
+    "updatedAt": { "type": "string", "minLength": 1 },
+    "updatedBy": { "const": "main-orchestrator" },
+    "currentPhase": { "type": "string", "minLength": 1 },
+    "agents": { "type": "object" },
+    "activeWork": {
+      "type": "object",
+      "required": [
+        "agentId",
+        "taskId",
+        "status",
+        "startedAt",
+        "baselineCommit",
+        "changedFiles",
+        "changedSurfaces",
+        "allowedPaths",
+        "evidence",
+        "reviewVerdict",
+        "blockers",
+        "guardResults"
+      ],
+      "properties": {
+        "agentId": { "type": ["string", "null"] },
+        "taskId": { "type": ["string", "null"] },
+        "status": { "type": "string", "minLength": 1 },
+        "startedAt": { "type": ["string", "null"] },
+        "baselineCommit": { "type": ["string", "null"] },
+        "changedFiles": { "type": "array", "items": { "type": "string" } },
+        "changedSurfaces": { "type": "array", "items": { "type": "string" } },
+        "allowedPaths": { "type": "array", "items": { "type": "string" } },
+        "evidence": { "type": "object" },
+        "reviewVerdict": { "type": ["object", "null"] },
+        "blockers": { "type": "array" },
+        "guardResults": { "type": "object" }
+      },
+      "additionalProperties": true
+    },
+    "workstreams": { "type": "array" },
+    "handoffs": { "type": "array" },
+    "blockers": { "type": "array" },
+    "nextActions": { "type": "array" }
+  },
+  "additionalProperties": true
+}

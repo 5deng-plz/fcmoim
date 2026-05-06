@@ -1,0 +1,3 @@
+#!/bin/sh
+set -e
+node .agents/scripts/guard-runner.mjs pre-push
