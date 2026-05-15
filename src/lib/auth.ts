@@ -24,6 +24,22 @@ export const signInWithGoogle = () => signInWithProvider('google');
 
 export const signInWithKakao = () => signInWithProvider('kakao');
 
+export async function signInWithEmailPassword(email: string, password: string) {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return user;
+}
+
 export async function logout() {
   const { error } = await supabase.auth.signOut();
   if (error) {

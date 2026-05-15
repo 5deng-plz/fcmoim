@@ -21,8 +21,9 @@ export default function AttendeeList({ count, total }: AttendeeListProps) {
             alt="참석자"
             width={28}
             height={28}
+            sizes="28px"
             className="rounded-full border-[1.5px] border-white bg-gray-200 relative"
-            style={{ zIndex: 14 - i }}
+            style={{ width: 28, height: 28, zIndex: 14 - i }}
             unoptimized
           />
         ))}

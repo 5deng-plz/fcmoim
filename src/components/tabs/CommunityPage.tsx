@@ -30,11 +30,11 @@ export default function CommunityPage() {
               className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3 hover:shadow-md active:scale-[0.98] transition-all duration-200 cursor-pointer"
             >
               <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center shrink-0">
-                <Megaphone size={18} className={a.pinned ? 'text-red-400' : 'text-gray-400'} />
+                <Megaphone size={18} className={a.pinned ? 'text-result-loss' : 'text-gray-400'} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  {a.pinned && <Pin size={12} className="text-red-500 shrink-0" />}
+                  {a.pinned && <Pin size={12} className="text-result-loss shrink-0" />}
                   <p className="text-sm font-bold text-gray-900 truncate">
                     {a.title}
                   </p>

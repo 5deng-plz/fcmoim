@@ -11,6 +11,7 @@ import {
 import { useAppStore } from '../src/stores/useAppStore';
 import { useAuthStore } from '../src/stores/useAuthStore';
 import type { AuthUser } from '../src/lib/auth';
+import { DEFAULT_STATS } from '../src/types';
 
 describe('frontend membership state mapping', () => {
   it.each([
@@ -46,6 +47,10 @@ describe('frontend membership state mapping', () => {
         weightKg: null,
         birthDate: null,
         photoUrl: null,
+        ovr: 74,
+        stats: DEFAULT_STATS,
+        matchPoints: 1280,
+        preferredFoot: 'both',
       },
     };
 
@@ -58,6 +63,9 @@ describe('frontend membership state mapping', () => {
       height: null,
       weight: null,
       birth: null,
+      ovr: 74,
+      matchPoints: 1280,
+      preferredFoot: '양발',
     });
 
     expect(mapMembershipSnapshotToUser({ ...approvedSnapshot, membershipState: 'pending' }, authUser)).toBeNull();
@@ -89,6 +97,10 @@ describe('frontend membership state mapping', () => {
         weightKg: null,
         birthDate: null,
         photoUrl: null,
+        ovr: 60,
+        stats: DEFAULT_STATS,
+        matchPoints: 100,
+        preferredFoot: 'right',
       },
     };
 
@@ -118,6 +130,7 @@ describe('frontend join request payload', () => {
       mainPosition: 'MF',
       height: '',
       weight: '',
+      preferredFoot: '오른발',
       birthYear: '',
       birthMonth: '',
     })).toEqual({
@@ -127,6 +140,7 @@ describe('frontend join request payload', () => {
       weightKg: null,
       birthDate: null,
       photoUrl: null,
+      preferredFoot: 'right',
     });
   });
 
@@ -145,6 +159,7 @@ describe('frontend join request payload', () => {
       weightKg: null,
       birthDate: null,
       photoUrl: null,
+      preferredFoot: 'right',
     }, 'club-1');
 
     expect(fetchMock).toHaveBeenCalledWith('/api/membership', expect.objectContaining({
@@ -158,6 +173,7 @@ describe('frontend join request payload', () => {
           weightKg: null,
           birthDate: null,
           photoUrl: null,
+          preferredFoot: 'right',
         },
       }),
     }));
@@ -243,6 +259,10 @@ describe('frontend join request payload', () => {
           weightKg: null,
           birthDate: null,
           photoUrl: null,
+          ovr: 68,
+          stats: DEFAULT_STATS,
+          matchPoints: 760,
+          preferredFoot: 'left',
         },
       }), { status: 200 });
     });
@@ -282,6 +302,9 @@ describe('frontend join request payload', () => {
       name: '원정 구단주',
       mainPosition: 'DF',
       photoUrl: 'https://kakao.example/avatar.jpg',
+      ovr: 68,
+      matchPoints: 760,
+      preferredFoot: '왼발',
     });
   });
 });

@@ -19,7 +19,7 @@
     },
     "frontend": {
       "capabilities": ["user interface", "client integration", "accessibility", "runtime rendering"],
-      "requiredOutputs": ["screen or state implementation note", "runtime evidence when required", "statePatchSuggestion"]
+      "requiredOutputs": ["screen or state implementation note", "design token compliance note", "semantic slot compliance note", "runtime evidence when required", "statePatchSuggestion"]
     },
     "main-orchestrator": {
       "capabilities": ["coordination", "state updates", "gate enforcement", "handoff"],
@@ -31,7 +31,7 @@
     },
     "review": {
       "capabilities": ["diff review", "evidence review", "blocker classification", "residual risk"],
-      "requiredOutputs": ["findings by severity", "missing evidence", "release verdict", "statePatchSuggestion"]
+      "requiredOutputs": ["findings by severity", "design compliance results DC-1 through DC-6", "missing evidence", "release verdict", "statePatchSuggestion"]
     }
   }
 }

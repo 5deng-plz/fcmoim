@@ -13,17 +13,31 @@
     --surface-card: #ffffff;
     --surface-card-hover: #fafbfc;
     --surface-elevated: #ffffff;
+    --background: var(--surface-bg);
 
     /* ── Text ── */
     --text-primary: #111827;
     --text-secondary: #4b5563;
     --text-tertiary: #9ca3af;
     --text-inverse: #ffffff;
+    --foreground: var(--text-primary);
 
     /* ── Brand ── */
     --color-brand: #16a34a;
     --color-brand-light: #dcfce7;
     --color-brand-hover: #15803d;
+    --brand-primary: var(--color-brand);
+    --brand-primary-hover: var(--color-brand-hover);
+    --brand-primary-bg: var(--color-brand-light);
+
+    /* ── Action ── */
+    --action-primary: var(--brand-primary);
+    --action-primary-hover: var(--brand-primary-hover);
+    --action-secondary: #334155;
+    --action-secondary-hover: #1f2937;
+    --action-ghost: var(--text-secondary);
+    --action-ghost-hover: var(--text-primary);
+    --action-disabled: #d1d5db;
 
     /* ── Team ── */
     --color-red-team: #ef4444;
@@ -35,8 +49,21 @@
 
     /* ── Semantic ── */
     --color-success: #22c55e;
+    --color-success-bg: #f0fdf4;
+    --color-success-border: #bbf7d0;
     --color-warning: #f59e0b;
+    --color-warning-bg: #fffbeb;
+    --color-warning-border: #fde68a;
     --color-error: #ef4444;
+    --color-error-bg: #fef2f2;
+    --color-error-border: #fecaca;
+
+    /* ── Border / Divider ── */
+    --border-default: #e5e7eb;
+    --border-subtle: #f1f5f9;
+    --border-focus: var(--action-primary);
+    --divider-default: #e5e7eb;
+    --divider-subtle: #f8fafc;
 
     /* ── Card ── */
     --card-radius: 16px;
@@ -52,6 +79,118 @@
     --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* ══════════════════════════════════════════
+     * 축구 게임 메타포 (Winning Eleven / FIFA Online)
+     * ══════════════════════════════════════════ */
+
+    /* ── Condition: 위닝 일레븐 5단계 컨디션 화살표 ── */
+    --condition-best: #ef4444;       /* 최상 ⬆  빨강 */
+    --condition-good: #f97316;       /* 상   ↗  주황 */
+    --condition-normal: #22c55e;     /* 보통 ➡  초록 */
+    --condition-poor: #38bdf8;       /* 하   ↘  하늘 */
+    --condition-worst: #a78bfa;      /* 최하 ⬇  보라 */
+
+    /* ── Player Card Tier: 선수 카드 등급 배경/테두리 ── */
+    --tier-bronze: #b45309;          /* 브론즈 */
+    --tier-bronze-bg: #451a03;
+    --tier-silver: #9ca3af;          /* 실버 */
+    --tier-silver-bg: #1f2937;
+    --tier-gold: #eab308;            /* 골드 */
+    --tier-gold-bg: #422006;
+    --tier-special: #c084fc;         /* 스페셜/TOTW */
+    --tier-special-bg: #2e1065;
+
+    /* ── OVR Stat Grade: 능력치 등급 아이콘 색상 ── */
+    --stat-diamond: #22d3ee;         /* OVR 80+ */
+    --stat-gold: #eab308;            /* OVR 70+ */
+    --stat-silver: #9ca3af;          /* OVR 65+ */
+    --stat-bronze: #b45309;          /* OVR 65 미만 */
+
+    /* ── Position: 포지션 컬러 ── */
+    --pos-fw: #ef4444;               /* 공격수 */
+    --pos-mf: #22c55e;               /* 미드필더 */
+    --pos-df: #3b82f6;               /* 수비수 */
+    --pos-gk: #f59e0b;               /* 골키퍼 */
+
+    /* ── Chemistry / Link: 선수 간 연결선 ── */
+    --chem-strong: #22c55e;          /* 강한 케미 */
+    --chem-weak: #ef4444;            /* 약한 케미 */
+    --chem-neutral: #6b7280;         /* 보통 케미 */
+
+    /* ── Stamina: 체력/스태미나 게이지 ── */
+    --stamina-full: #22c55e;         /* 만충 */
+    --stamina-mid: #f59e0b;          /* 중간 */
+    --stamina-low: #ef4444;          /* 고갈 */
+
+    /* ── Preferred Foot: 주발 아이콘 ── */
+    --foot-active: #5be3f0;          /* 선택된 발 */
+    --foot-inactive: #6b7280;        /* 비활성 발 */
+    --foot-stroke: #1f2937;          /* 발 윤곽선 */
+
+    /* ── Tactics Board: 전술 보드 ── */
+    --tactics-field: #166534;        /* 필드 잔디 */
+    --tactics-field-line: rgba(255, 255, 255, 0.3); /* 필드 라인 */
+    --tactics-marker: #ffffff;       /* 선수 마커 */
+
+    /* ── Data Viz: 레이더/히트맵 등 시각화 ── */
+    --viz-primary: #16a34a;          /* fcgreen 계열 기본 */
+    --viz-primary-fill: rgba(22, 163, 74, 0.18);
+    --viz-secondary: #2563eb;
+    --viz-secondary-fill: rgba(37, 99, 235, 0.16);
+    --viz-tertiary: #f59e0b;
+    --viz-tertiary-fill: rgba(245, 158, 11, 0.16);
+    --viz-danger: #ef4444;
+    --viz-danger-fill: rgba(239, 68, 68, 0.16);
+    --viz-grid: #bbf7d0;
+    --viz-label: var(--text-secondary);
+
+    /* ══════════════════════════════════════════
+     * 축구 소셜앱 메타포 (플랩풋볼 / 어반풋볼)
+     * ══════════════════════════════════════════ */
+
+    /* ── Attendance: 참석 상태 ── */
+    --attend-yes: #22c55e;           /* 참석 */
+    --attend-maybe: #f59e0b;         /* 미정 */
+    --attend-no: #ef4444;            /* 불참 */
+
+    /* ── Match Result: 경기 결과 ── */
+    --result-win: #22c55e;           /* 승리 */
+    --result-draw: #9ca3af;          /* 무승부 */
+    --result-loss: #ef4444;          /* 패배 */
+
+    /* ── Match Status: 경기 상태 배지 ── */
+    --match-upcoming: #3b82f6;       /* 예정 */
+    --match-live: #ef4444;           /* 진행 중 */
+    --match-completed: #6b7280;      /* 완료 */
+    --match-cancelled: #9ca3af;      /* 취소 */
+
+    /* ── MVP / Award: 수상 뱃지 ── */
+    --award-mvp: #eab308;            /* MVP */
+    --award-motm: #f97316;           /* Man of the Match */
+    --award-assist: #3b82f6;         /* 어시스트왕 */
+    --award-goals: #ef4444;          /* 득점왕 */
+
+    /* ── Fee / Payment: 회비 상태 ── */
+    --fee-paid: #22c55e;             /* 납부 완료 */
+    --fee-unpaid: #ef4444;           /* 미납 */
+    --fee-partial: #f59e0b;          /* 일부 납부 */
+
+    /* ── Skill Level: 실력 등급 ── */
+    --skill-beginner: #22c55e;       /* 초보 */
+    --skill-intermediate: #3b82f6;   /* 중급 */
+    --skill-advanced: #f59e0b;       /* 상급 */
+    --skill-pro: #ef4444;            /* 프로 */
+
+    /* ── Trend: 상승/하락 지표 ── */
+    --trend-up: #ef4444;             /* 상승 */
+    --trend-down: #3b82f6;           /* 하락 */
+    --trend-flat: #9ca3af;           /* 보합 */
+
+    /* ── Weather: 날씨 아이콘 배경 힌트 ── */
+    --weather-clear: #f59e0b;        /* 맑음 */
+    --weather-cloudy: #9ca3af;       /* 흐림 */
+    --weather-rain: #3b82f6;         /* 비 */
   }
 
   /* Pretendard 웹폰트 */
@@ -67,6 +206,108 @@
     text-rendering: optimizeLegibility;
     overscroll-behavior: none;
     overflow: hidden;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface-bg: #0f172a;
+      --surface-card: #111827;
+      --surface-card-hover: #1f2937;
+      --surface-elevated: #111827;
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-tertiary: #94a3b8;
+      --color-success-bg: #052e16;
+      --color-success-border: #166534;
+      --color-warning-bg: #451a03;
+      --color-warning-border: #92400e;
+      --color-error-bg: #450a0a;
+      --color-error-border: #991b1b;
+      --action-secondary: #cbd5e1;
+      --action-secondary-hover: #f8fafc;
+      --action-disabled: #475569;
+      --border-default: #334155;
+      --border-subtle: rgba(148, 163, 184, 0.22);
+      --divider-default: #334155;
+      --divider-subtle: rgba(148, 163, 184, 0.16);
+      --card-border: 1px solid rgba(148, 163, 184, 0.22);
+      --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+      --card-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.32);
+
+      /* ── 축구 게임 메타포 (다크 모드) ── */
+      --condition-best: #ef4444;
+      --condition-good: #f97316;
+      --condition-normal: #22c55e;
+      --condition-poor: #38bdf8;
+      --condition-worst: #a78bfa;
+      --tier-bronze: #b45309;
+      --tier-bronze-bg: #451a03;
+      --tier-silver: #9ca3af;
+      --tier-silver-bg: #1f2937;
+      --tier-gold: #eab308;
+      --tier-gold-bg: #422006;
+      --tier-special: #c084fc;
+      --tier-special-bg: #2e1065;
+      --stat-diamond: #22d3ee;
+      --stat-gold: #eab308;
+      --stat-silver: #9ca3af;
+      --stat-bronze: #b45309;
+      --pos-fw: #ef4444;
+      --pos-mf: #22c55e;
+      --pos-df: #3b82f6;
+      --pos-gk: #f59e0b;
+      --chem-strong: #22c55e;
+      --chem-weak: #ef4444;
+      --chem-neutral: #6b7280;
+      --stamina-full: #22c55e;
+      --stamina-mid: #f59e0b;
+      --stamina-low: #ef4444;
+      --foot-active: #5be3f0;
+      --foot-inactive: #6b7280;
+      --foot-stroke: #f8fafc;
+      --tactics-field: #166534;
+      --tactics-field-line: rgba(255, 255, 255, 0.3);
+      --tactics-marker: #ffffff;
+      --viz-primary: #22c55e;
+      --viz-primary-fill: rgba(34, 197, 94, 0.2);
+      --viz-secondary: #60a5fa;
+      --viz-secondary-fill: rgba(96, 165, 250, 0.2);
+      --viz-tertiary: #fbbf24;
+      --viz-tertiary-fill: rgba(251, 191, 36, 0.2);
+      --viz-danger: #f87171;
+      --viz-danger-fill: rgba(248, 113, 113, 0.2);
+      --viz-grid: #86efac;
+      --viz-label: var(--text-secondary);
+
+      /* ── 축구 소셜앱 메타포 (다크 모드) ── */
+      --attend-yes: #22c55e;
+      --attend-maybe: #f59e0b;
+      --attend-no: #ef4444;
+      --result-win: #22c55e;
+      --result-draw: #9ca3af;
+      --result-loss: #ef4444;
+      --match-upcoming: #3b82f6;
+      --match-live: #ef4444;
+      --match-completed: #6b7280;
+      --match-cancelled: #9ca3af;
+      --award-mvp: #eab308;
+      --award-motm: #f97316;
+      --award-assist: #3b82f6;
+      --award-goals: #ef4444;
+      --fee-paid: #22c55e;
+      --fee-unpaid: #ef4444;
+      --fee-partial: #f59e0b;
+      --skill-beginner: #22c55e;
+      --skill-intermediate: #3b82f6;
+      --skill-advanced: #f59e0b;
+      --skill-pro: #ef4444;
+      --trend-up: #ef4444;
+      --trend-down: #3b82f6;
+      --trend-flat: #9ca3af;
+      --weather-clear: #f59e0b;
+      --weather-cloudy: #9ca3af;
+      --weather-rain: #3b82f6;
+    }
   }
 }
 

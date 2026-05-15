@@ -1,13 +1,21 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { AppError } from '../types/api';
+import { DEFAULT_STATS, type UserStats } from '../types';
 import { createPrivilegedSupabaseClient } from '../lib/supabase-server';
 import type {
   AccountRow,
   ClubMembershipSummaryRow,
   MatchEventType,
+  MatchLineupEntryRow,
+  MatchLineupTeamNumber,
   MatchRow,
   MatchStatus,
   NormalizedJoinProfile,
+  PendingMembershipReviewRow,
+  PublicClubDetailRow,
+  PublicClubSummaryRow,
+  PublicMatchSummaryRow,
+  PublicSeasonSummaryRow,
   SchedulePollOptionRow,
   SchedulePollRow,
   SchedulePollStatus,
@@ -17,6 +25,7 @@ import type {
 import type { AccountMembershipRepositories } from './account-membership';
 import type { MatchResultRepositories } from './match-results';
 import type { MatchRepositories } from './matches';
+import type { PublicClubRepositories } from './public-clubs';
 import type { SchedulePollRepositories } from './schedule-polls';
 
 type MembershipDbRow = {
@@ -31,6 +40,22 @@ type MembershipDbRow = {
   weight: number | null;
   birth: string | null;
   photo_url: string | null;
+  ovr: number;
+  stats: unknown;
+  match_points: number;
+  preferred_foot: TeamMembershipRow['preferredFoot'];
+};
+
+type PendingMembershipDbRow = {
+  id: string;
+  account_id: string;
+  club_id: string;
+  profile_name: string;
+  main_position: string | null;
+  height: number | null;
+  weight: number | null;
+  preferred_foot: PendingMembershipReviewRow['preferredFoot'];
+  created_at: string;
 };
 
 type ClubMembershipDbRow = {
@@ -47,6 +72,38 @@ type AccountDbRow = {
   id: string;
   display_name: string | null;
   avatar_url: string | null;
+};
+
+type PublicClubDbRow = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  logo_url: string | null;
+};
+
+type PublicSeasonDbRow = {
+  id: string;
+  club_id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+};
+
+type PublicMatchDbRow = {
+  id: string;
+  club_id: string;
+  title: string;
+  date: string;
+  location: string;
+  type: MatchEventType;
+  status: MatchStatus;
+  our_score: number | null;
+  opp_score: number | null;
+};
+
+type PublicMembershipCountDbRow = {
+  club_id: string;
 };
 
 type SchedulePollMembershipDbRow = {
@@ -113,6 +170,21 @@ type MatchDbRow = {
   created_by: string | null;
   cancellation_reason: string | null;
   cancelled_at: string | null;
+};
+
+type MatchTeamDbRow = {
+  id: string;
+  match_id: string;
+  membership_id: string;
+  team_number: MatchLineupTeamNumber;
+  is_leader: boolean;
+  position: TeamMembershipRow['position'];
+  team_memberships: {
+    profile_name: string;
+    main_position: TeamMembershipRow['position'];
+    photo_url: string | null;
+    ovr: number;
+  } | null;
 };
 
 export function createSupabaseAccountMembershipRepositories(
@@ -187,6 +259,36 @@ export function createSupabaseAccountMembershipRepositories(
           status: row.status,
         }) satisfies ClubMembershipSummaryRow);
       },
+      async listPendingByClub(clubId) {
+        const { data, error } = await supabase
+          .from('team_memberships')
+          .select('id, account_id, club_id, profile_name, main_position, height, weight, preferred_foot, created_at')
+          .eq('club_id', clubId)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: true })
+          .returns<PendingMembershipDbRow[]>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch pending memberships.', { cause: error });
+        }
+
+        return (data ?? []).map(mapPendingMembership);
+      },
+      async listApprovedByClub(clubId) {
+        const { data, error } = await supabase
+          .from('team_memberships')
+          .select(MEMBERSHIP_SELECT)
+          .eq('club_id', clubId)
+          .eq('status', 'approved')
+          .order('profile_name', { ascending: true })
+          .returns<MembershipDbRow[]>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch approved memberships.', { cause: error });
+        }
+
+        return (data ?? []).map(mapMembership);
+      },
       async createPending(input) {
         const payload = toPendingMembershipInsert(input);
         const { data, error } = await supabase
@@ -218,6 +320,20 @@ export function createSupabaseAccountMembershipRepositories(
 
         return mapMembership(data);
       },
+      async updateRole(input) {
+        const { data, error } = await supabase
+          .from('team_memberships')
+          .update({ role: input.role })
+          .eq('id', input.membershipId)
+          .select(MEMBERSHIP_SELECT)
+          .single<MembershipDbRow>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to update membership role.', { cause: error });
+        }
+
+        return mapMembership(data);
+      },
       async updatePhoto(input) {
         const { data, error } = await supabase
           .from('team_memberships')
@@ -231,6 +347,60 @@ export function createSupabaseAccountMembershipRepositories(
         }
 
         return mapMembership(data);
+      },
+    },
+  };
+}
+
+export function createSupabasePublicClubRepositories(
+  supabase: SupabaseClient,
+  getPrivilegedClient: () => SupabaseClient = createPrivilegedSupabaseClient,
+): PublicClubRepositories {
+  return {
+    clubs: {
+      async listPublic() {
+        const { data, error } = await supabase
+          .from('clubs')
+          .select('id, name, slug, description, logo_url')
+          .order('name', { ascending: true })
+          .returns<PublicClubDbRow[]>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch public clubs.', { cause: error });
+        }
+
+        const clubIds = (data ?? []).map((club) => club.id);
+        const aggregates = await fetchPublicClubAggregates(getPrivilegedClient(), clubIds);
+
+        return (data ?? []).map((club) => mapPublicClubSummary(club, aggregates));
+      },
+
+      async findPublicDetail(clubId) {
+        const { data, error } = await supabase
+          .from('clubs')
+          .select('id, name, slug, description, logo_url')
+          .eq('id', clubId)
+          .maybeSingle<PublicClubDbRow>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch public club.', { cause: error });
+        }
+        if (!data) {
+          return null;
+        }
+
+        const privilegedSupabase = getPrivilegedClient();
+        const aggregates = await fetchPublicClubAggregates(privilegedSupabase, [clubId]);
+        const [recentMatches, upcomingMatches] = await Promise.all([
+          fetchPublicMatches(privilegedSupabase, clubId, 'recent'),
+          fetchPublicMatches(privilegedSupabase, clubId, 'upcoming'),
+        ]);
+
+        return {
+          ...mapPublicClubSummary(data, aggregates),
+          recentMatches,
+          upcomingMatches,
+        } satisfies PublicClubDetailRow;
       },
     },
   };
@@ -558,17 +728,209 @@ export function createSupabaseMatchRepositories(
         return mapMatch(data);
       },
     },
+    lineups: {
+      async listForMatch(matchId) {
+        return fetchMatchLineupByMatchId(supabase, matchId);
+      },
+
+      async replaceForMatch(input) {
+        const { error: deleteError } = await supabase
+          .from('match_teams')
+          .delete()
+          .eq('match_id', input.matchId);
+
+        if (deleteError) {
+          throw new AppError('internal_error', 'Failed to clear match lineup.', { cause: deleteError });
+        }
+
+        const { error: insertError } = await supabase
+          .from('match_teams')
+          .insert(input.entries.map((entry) => ({
+            match_id: input.matchId,
+            membership_id: entry.membershipId,
+            team_number: entry.teamNumber,
+            is_leader: entry.isLeader,
+            position: entry.position,
+          })));
+
+        if (insertError) {
+          throw new AppError('internal_error', 'Failed to save match lineup.', { cause: insertError });
+        }
+
+        const { error: matchError } = await supabase
+          .from('matches')
+          .update({
+            status: 'locker_room',
+            tactics_completed: true,
+            updated_by: input.updatedByMembershipId,
+          })
+          .eq('id', input.matchId);
+
+        if (matchError) {
+          throw new AppError('internal_error', 'Failed to publish match lineup.', { cause: matchError });
+        }
+
+        return fetchMatchLineupByMatchId(supabase, input.matchId);
+      },
+    },
   };
 }
 
+type PublicClubAggregates = {
+  memberCounts: Map<string, number>;
+  activeSeasons: Map<string, PublicSeasonSummaryRow>;
+  recentMatchCounts: Map<string, number>;
+  upcomingMatchCounts: Map<string, number>;
+};
+
+async function fetchPublicClubAggregates(
+  supabase: SupabaseClient,
+  clubIds: string[],
+): Promise<PublicClubAggregates> {
+  const emptyAggregates: PublicClubAggregates = {
+    memberCounts: new Map(),
+    activeSeasons: new Map(),
+    recentMatchCounts: new Map(),
+    upcomingMatchCounts: new Map(),
+  };
+
+  if (clubIds.length === 0) {
+    return emptyAggregates;
+  }
+
+  const nowIso = new Date().toISOString();
+  const [memberships, seasons, recentMatches, upcomingMatches] = await Promise.all([
+    supabase
+      .from('team_memberships')
+      .select('club_id')
+      .in('club_id', clubIds)
+      .eq('status', 'approved')
+      .returns<PublicMembershipCountDbRow[]>(),
+    supabase
+      .from('seasons')
+      .select('id, club_id, name, start_date, end_date')
+      .in('club_id', clubIds)
+      .eq('is_active', true)
+      .returns<PublicSeasonDbRow[]>(),
+    supabase
+      .from('matches')
+      .select('club_id')
+      .in('club_id', clubIds)
+      .lt('date', nowIso)
+      .returns<Pick<PublicMatchDbRow, 'club_id'>[]>(),
+    supabase
+      .from('matches')
+      .select('club_id')
+      .in('club_id', clubIds)
+      .gte('date', nowIso)
+      .returns<Pick<PublicMatchDbRow, 'club_id'>[]>(),
+  ]);
+
+  if (memberships.error) {
+    throw new AppError('internal_error', 'Failed to fetch public club member counts.', {
+      cause: memberships.error,
+    });
+  }
+  if (seasons.error) {
+    throw new AppError('internal_error', 'Failed to fetch public club seasons.', {
+      cause: seasons.error,
+    });
+  }
+  if (recentMatches.error) {
+    throw new AppError('internal_error', 'Failed to fetch public club recent match counts.', {
+      cause: recentMatches.error,
+    });
+  }
+  if (upcomingMatches.error) {
+    throw new AppError('internal_error', 'Failed to fetch public club upcoming match counts.', {
+      cause: upcomingMatches.error,
+    });
+  }
+
+  return {
+    memberCounts: countRowsByClub(memberships.data ?? []),
+    activeSeasons: new Map((seasons.data ?? []).map((season) => [
+      season.club_id,
+      {
+        id: season.id,
+        name: season.name,
+        startDate: season.start_date,
+        endDate: season.end_date,
+      } satisfies PublicSeasonSummaryRow,
+    ])),
+    recentMatchCounts: countRowsByClub(recentMatches.data ?? []),
+    upcomingMatchCounts: countRowsByClub(upcomingMatches.data ?? []),
+  };
+}
+
+async function fetchPublicMatches(
+  supabase: SupabaseClient,
+  clubId: string,
+  direction: 'recent' | 'upcoming',
+): Promise<PublicMatchSummaryRow[]> {
+  const nowIso = new Date().toISOString();
+  const baseQuery = supabase
+    .from('matches')
+    .select('id, club_id, title, date, location, type, status, our_score, opp_score')
+    .eq('club_id', clubId);
+
+  const query = direction === 'recent'
+    ? baseQuery.lt('date', nowIso).order('date', { ascending: false }).limit(3)
+    : baseQuery.gte('date', nowIso).order('date', { ascending: true }).limit(3);
+
+  const { data, error } = await query.returns<PublicMatchDbRow[]>();
+  if (error) {
+    throw new AppError('internal_error', 'Failed to fetch public club matches.', { cause: error });
+  }
+
+  return (data ?? []).map((match) => ({
+    id: match.id,
+    title: match.title,
+    date: match.date,
+    location: match.location,
+    type: match.type,
+    status: match.status,
+    ourScore: match.our_score,
+    oppScore: match.opp_score,
+  }));
+}
+
+function mapPublicClubSummary(
+  club: PublicClubDbRow,
+  aggregates: PublicClubAggregates,
+): PublicClubSummaryRow {
+  return {
+    id: club.id,
+    name: club.name,
+    slug: club.slug,
+    description: club.description,
+    logoUrl: club.logo_url,
+    memberCount: aggregates.memberCounts.get(club.id) ?? 0,
+    activeSeason: aggregates.activeSeasons.get(club.id) ?? null,
+    recentMatchCount: aggregates.recentMatchCounts.get(club.id) ?? 0,
+    upcomingMatchCount: aggregates.upcomingMatchCounts.get(club.id) ?? 0,
+  };
+}
+
+function countRowsByClub(rows: Array<{ club_id: string }>) {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    counts.set(row.club_id, (counts.get(row.club_id) ?? 0) + 1);
+  }
+  return counts;
+}
+
 const MEMBERSHIP_SELECT =
-  'id, account_id, club_id, role, status, profile_name, main_position, height, weight, birth, photo_url';
+  'id, account_id, club_id, role, status, profile_name, main_position, height, weight, birth, photo_url, ovr, stats, match_points, preferred_foot';
 
 const SCHEDULE_POLL_SELECT =
   'id, club_id, season_id, title, status, common_time, location, memo, closes_at, created_by, cancellation_reason, cancelled_at, promoted_match_id, schedule_poll_options(id, poll_id, option_date, sort_order), schedule_poll_votes(id, poll_id, option_id, membership_id, is_available)';
 
 const MATCH_SELECT =
   'id, club_id, season_id, round, title, date, location, type, status, our_score, opp_score, tactics_completed, memo, created_by, cancellation_reason, cancelled_at';
+
+const MATCH_LINEUP_SELECT =
+  'id, match_id, membership_id, team_number, is_leader, position, team_memberships(profile_name, main_position, photo_url, ovr)';
 
 function mapMembership(row: MembershipDbRow): TeamMembershipRow {
   return {
@@ -583,6 +945,44 @@ function mapMembership(row: MembershipDbRow): TeamMembershipRow {
     weightKg: row.weight,
     birthDate: row.birth,
     photoUrl: row.photo_url,
+    ovr: row.ovr,
+    stats: normalizeStats(row.stats),
+    matchPoints: row.match_points,
+    preferredFoot: row.preferred_foot,
+  };
+}
+
+function normalizeStats(value: unknown): UserStats {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return DEFAULT_STATS;
+  }
+
+  const stats = value as Partial<Record<keyof UserStats, unknown>>;
+  return {
+    speed: toStatNumber(stats.speed, DEFAULT_STATS.speed),
+    shooting: toStatNumber(stats.shooting, DEFAULT_STATS.shooting),
+    passing: toStatNumber(stats.passing, DEFAULT_STATS.passing),
+    defense: toStatNumber(stats.defense, DEFAULT_STATS.defense),
+    physical: toStatNumber(stats.physical, DEFAULT_STATS.physical),
+    dribble: toStatNumber(stats.dribble, DEFAULT_STATS.dribble),
+  };
+}
+
+function toStatNumber(value: unknown, fallback: number) {
+  return typeof value === 'number' ? value : fallback;
+}
+
+function mapPendingMembership(row: PendingMembershipDbRow): PendingMembershipReviewRow {
+  return {
+    id: row.id,
+    accountId: row.account_id,
+    clubId: row.club_id,
+    nickname: row.profile_name,
+    position: row.main_position,
+    heightCm: row.height,
+    weightKg: row.weight,
+    preferredFoot: row.preferred_foot,
+    createdAt: row.created_at,
   };
 }
 
@@ -605,6 +1005,9 @@ function toPendingMembershipInsert(input: {
 
   if (input.profile.position) {
     payload.main_position = input.profile.position;
+  }
+  if (input.profile.preferredFoot) {
+    payload.preferred_foot = input.profile.preferredFoot;
   }
 
   return payload;
@@ -662,6 +1065,37 @@ function mapMatch(row: MatchDbRow): MatchRow {
     createdByMembershipId: row.created_by,
     cancellationReason: row.cancellation_reason ?? null,
     cancelledAt: row.cancelled_at ?? null,
+  };
+}
+
+async function fetchMatchLineupByMatchId(supabase: SupabaseClient, matchId: string) {
+  const { data, error } = await supabase
+    .from('match_teams')
+    .select(MATCH_LINEUP_SELECT)
+    .eq('match_id', matchId)
+    .order('team_number', { ascending: true })
+    .order('created_at', { ascending: true })
+    .returns<MatchTeamDbRow[]>();
+
+  if (error) {
+    throw new AppError('internal_error', 'Failed to fetch match lineup.', { cause: error });
+  }
+
+  return (data ?? []).map(mapMatchLineupEntry);
+}
+
+function mapMatchLineupEntry(row: MatchTeamDbRow): MatchLineupEntryRow {
+  return {
+    id: row.id,
+    matchId: row.match_id,
+    membershipId: row.membership_id,
+    teamNumber: row.team_number,
+    isLeader: row.is_leader,
+    position: row.position === 'FW' || row.position === 'MF' || row.position === 'DF' ? row.position : 'MF',
+    playerName: row.team_memberships?.profile_name || '이름 없는 선수',
+    playerPosition: row.team_memberships?.main_position ?? null,
+    playerOvr: row.team_memberships?.ovr ?? 60,
+    playerPhotoUrl: row.team_memberships?.photo_url ?? null,
   };
 }
 

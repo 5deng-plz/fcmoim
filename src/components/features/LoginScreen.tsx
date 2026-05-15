@@ -1,14 +1,47 @@
 'use client';
 
-import { Eye } from 'lucide-react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { Eye, MessageCircle } from 'lucide-react';
 import FcmoimLogo from '@/components/brand/FcmoimLogo';
-import { appConfig } from '@/config/app.config';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useAppStore } from '@/stores/useAppStore';
 
+const QA_EMAILS = [
+  'qa-admin@fcmoim.test',
+  'qa-operator@fcmoim.test',
+  'qa-member1@fcmoim.test',
+  'qa-member2@fcmoim.test',
+  'qa-member3@fcmoim.test',
+  'qa-member4@fcmoim.test',
+];
+
 export default function LoginScreen() {
-  const { signInKakao, signInDevAdmin } = useAuthStore();
+  const { signInEmail, signInKakao } = useAuthStore();
   const { setAuthView, setUserStatus } = useAppStore();
+  const [isDevTestEnabled, setIsDevTestEnabled] = useState(false);
+  const [email, setEmail] = useState(QA_EMAILS[0]);
+  const [password, setPassword] = useState('');
+  const [isEmailSubmitting, setIsEmailSubmitting] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isActive = true;
+
+    fetch('/api/dev-test', {
+      headers: { Accept: 'application/json' },
+    })
+      .then((response) => response.ok ? response.json() as Promise<{ enabled?: boolean }> : { enabled: false })
+      .then((data) => {
+        if (isActive) setIsDevTestEnabled(data.enabled === true);
+      })
+      .catch(() => {
+        if (isActive) setIsDevTestEnabled(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const handleKakaoLogin = async () => {
     await signInKakao();
@@ -19,8 +52,19 @@ export default function LoginScreen() {
     setUserStatus('guest');
   };
 
-  const handleDevLogin = () => {
-    signInDevAdmin();
+  const handleEmailLogin = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setEmailError(null);
+    setIsEmailSubmitting(true);
+
+    try {
+      await signInEmail(email.trim(), password);
+    } catch (error) {
+      console.error('[FC Moim] QA email login failed:', error);
+      setEmailError('이메일 로그인을 완료하지 못했습니다.');
+    } finally {
+      setIsEmailSubmitting(false);
+    }
   };
 
   return (
@@ -38,12 +82,9 @@ export default function LoginScreen() {
         {/* 카카오 로그인 */}
         <button
           onClick={handleKakaoLogin}
-          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm transition-all active:scale-[0.98] hover:brightness-95"
-          style={{ backgroundColor: '#FEE500', color: '#191919' }}
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-award-mvp font-bold text-sm text-gray-900 transition-all active:scale-[0.98] hover:brightness-95"
         >
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M9 1C4.58 1 1 3.9 1 7.46c0 2.32 1.53 4.35 3.83 5.51l-.97 3.6c-.06.22.18.4.37.28l4.3-2.85c.16.01.31.02.47.02 4.42 0 8-2.9 8-6.46S13.42 1 9 1z" fill="#191919"/>
-          </svg>
+          <MessageCircle size={18} fill="currentColor" strokeWidth={0} aria-hidden="true" />
           카카오로 시작하기
         </button>
       </div>
@@ -54,17 +95,47 @@ export default function LoginScreen() {
         className="flex items-center gap-1.5 text-gray-400 hover:text-gray-600 transition-colors text-sm font-medium"
       >
         <Eye size={16} />
-        먼저 둘러볼게요
+        팀 둘러보기
       </button>
 
-      {appConfig.enableAdminTestBypass ? (
-        <button
-          onClick={handleDevLogin}
-          className="mt-8 rounded-lg bg-gray-100 px-3 py-2 text-xs font-bold text-gray-400 transition-colors hover:bg-gray-200 active:scale-95"
-        >
-          테스트 관리자 로그인 (Admin)
-        </button>
+      {isDevTestEnabled ? (
+        <form onSubmit={handleEmailLogin} className="w-full max-w-[280px] space-y-2">
+          <select
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-xs font-bold text-gray-700 outline-none transition-colors focus:border-green-500"
+            aria-label="QA 이메일 계정"
+          >
+            {QA_EMAILS.map((qaEmail) => (
+              <option key={qaEmail} value={qaEmail}>
+                {qaEmail}
+              </option>
+            ))}
+          </select>
+          <input
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-xs font-bold text-gray-700 outline-none transition-colors focus:border-green-500"
+            placeholder="QA password"
+            aria-label="QA 비밀번호"
+            autoComplete="current-password"
+          />
+          <button
+            type="submit"
+            disabled={isEmailSubmitting || password.length === 0}
+            className="w-full rounded-lg bg-gray-900 px-3 py-2.5 text-xs font-black text-white transition-all hover:bg-gray-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isEmailSubmitting ? '로그인 중' : 'QA 이메일 로그인'}
+          </button>
+          {emailError ? (
+            <p role="alert" className="rounded-lg border border-result-loss/20 bg-result-loss/10 px-3 py-2 text-xs font-bold text-result-loss">
+              {emailError}
+            </p>
+          ) : null}
+        </form>
       ) : null}
+
     </div>
   );
 }

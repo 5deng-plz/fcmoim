@@ -7,18 +7,25 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   children: React.ReactNode;
+  presentation?: 'sheet' | 'dialog';
 }
 
-export default function Modal({ title, isOpen, onClose, children }: ModalProps) {
+export default function Modal({ title, isOpen, onClose, children, presentation = 'sheet' }: ModalProps) {
   if (!isOpen) return null;
 
+  const isSheet = presentation === 'sheet';
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div className={`fixed inset-0 z-50 flex justify-center ${isSheet ? 'items-end sm:items-center' : 'items-center px-4'}`}>
       <div
         className="absolute inset-0 bg-black/40 animate-fadeIn"
         onClick={onClose}
       />
-      <div className="relative w-full max-w-[400px] bg-white rounded-t-2xl sm:rounded-2xl max-h-[85vh] overflow-hidden flex flex-col animate-slideUp z-10">
+      <div
+        className={`relative z-10 flex max-h-[85vh] w-full max-w-[400px] flex-col overflow-hidden bg-white animate-slideUp ${
+          isSheet ? 'rounded-t-2xl sm:rounded-2xl' : 'rounded-2xl'
+        }`}
+      >
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 className="text-lg font-black text-gray-900">{title}</h2>
           <button

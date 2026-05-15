@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import Header from '@/components/layout/Header';
 import BottomNav from '@/components/layout/BottomNav';
 import HomeTab from '@/components/tabs/HomeTab';
@@ -18,9 +18,9 @@ import LoginScreen from '@/components/features/LoginScreen';
 import GuestDashboard from '@/components/features/GuestDashboard';
 import JoinRequestForm from '@/components/features/JoinRequestForm';
 import Toast from '@/components/ui/Toast';
+import ScrollPositionRail from '@/components/ui/ScrollPositionRail';
 import { useAppStore } from '@/stores/useAppStore';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { appConfig } from '@/config/app.config';
 import { Ban, Clock4, ShieldAlert } from 'lucide-react';
 
 function PhoneFrame({ children, surface = 'white' }: { children: ReactNode; surface?: 'white' | 'soft' }) {
@@ -36,7 +36,6 @@ function PhoneFrame({ children, surface = 'white' }: { children: ReactNode; surf
 // ─── 승인 대기 화면 ───
 function PendingScreen() {
   const { setUserStatus, setAuthView } = useAppStore();
-  const { signInDevAdmin } = useAuthStore();
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[500px] text-center p-6 space-y-6">
@@ -54,16 +53,6 @@ function PendingScreen() {
         </p>
       </div>
       <div className="space-y-2 w-full max-w-[240px]">
-        {appConfig.enableAdminTestBypass ? (
-          <button
-            onClick={() => {
-              signInDevAdmin();
-            }}
-            className="w-full bg-gray-900 text-white font-bold py-3 px-6 rounded-xl text-sm hover:bg-gray-800 active:scale-95 transition-all"
-          >
-            테스트 관리자 승인 완료
-          </button>
-        ) : null}
         <button
           onClick={() => {
             setUserStatus('guest');
@@ -85,8 +74,8 @@ function MembershipBlockedScreen({ type }: { type: 'rejected' | 'suspended' }) {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[500px] text-center p-6 space-y-6">
-      <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center">
-        <Icon className="text-red-500" size={40} />
+      <div className="w-20 h-20 bg-result-loss/10 rounded-full flex items-center justify-center">
+        <Icon className="text-result-loss" size={40} />
       </div>
       <div>
         <h2 className="text-xl font-black text-gray-900 mb-2">
@@ -111,6 +100,7 @@ function MembershipBlockedScreen({ type }: { type: 'rejected' | 'suspended' }) {
 // ─── 메인 앱 쉘 (인증 완료 사용자) ───
 function AppShell() {
   const { activeTab, showMyPage, showCommunity, showJoinForm } = useAppStore();
+  const mainRef = useRef<HTMLElement | null>(null);
 
   const renderContent = () => {
     if (showJoinForm) return <JoinRequestForm />;
@@ -133,10 +123,11 @@ function AppShell() {
   return (
     <>
       <Header />
-      <main className="flex-1 overflow-y-auto no-scrollbar relative">
-        <div className="absolute inset-0 p-4 pb-[env(safe-area-inset-bottom)]">
+      <main ref={mainRef} className="flex-1 overflow-y-auto no-scrollbar relative">
+        <div className="min-h-full p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
           {renderContent()}
         </div>
+        <ScrollPositionRail containerRef={mainRef} />
       </main>
       <BottomNav />
 

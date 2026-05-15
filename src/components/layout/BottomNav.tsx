@@ -29,10 +29,7 @@ export default function BottomNav() {
   };
 
   return (
-    <nav
-      className="sticky bottom-0 z-20 bg-white/80 backdrop-blur-xl px-2 pb-[env(safe-area-inset-bottom)]"
-      style={{ boxShadow: '0 -1px 0 rgba(0,0,0,0.04), 0 -4px 16px rgba(0,0,0,0.02)' }}
-    >
+    <nav className="sticky bottom-0 z-20 bg-white/80 backdrop-blur-xl px-2 pb-[env(safe-area-inset-bottom)] shadow-sm">
       <div className="flex justify-around">
         {tabs.map(({ key, label, Icon }) => {
           const isActive = activeTab === key && !showMyPage && !showCommunity && !showJoinForm;

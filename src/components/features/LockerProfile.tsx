@@ -1,12 +1,17 @@
 'use client';
 
-import { Camera, Coins, LoaderCircle, UserCircle2 } from 'lucide-react';
+import { Coins, LoaderCircle } from 'lucide-react';
 import Image from 'next/image';
 import { useRef, useState, type ChangeEvent } from 'react';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
+import PlayerAbilityPanel from '@/components/ui/PlayerAbilityPanel';
 import { useAppStore } from '@/stores/useAppStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useToastStore } from '@/stores/useToastStore';
+import { DEFAULT_STATS } from '@/types';
+
+import PreferredFootIcon from '@/components/ui/PreferredFootIcon';
+import { calculateOvr } from '@/components/ui/PlayerAbilityPanel';
 
 export default function LockerProfile() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -19,12 +24,9 @@ export default function LockerProfile() {
   const displayName = memberProfile?.name || '프로필 준비 중';
   const hasCustomPhoto = Boolean(memberProfile?.photoUrl);
   const avatarSrc = memberProfile?.photoUrl || getFallbackAvatar(memberProfile?.name || 'member-profile');
-  const positionText = memberProfile
-    ? [memberProfile.mainPosition, memberProfile.subPosition].filter(Boolean).join(' / ')
-    : '-';
-  const physicalText = memberProfile?.height ? `${memberProfile.height}cm` : '-';
   const preferredFoot = memberProfile?.preferredFoot || '-';
-  const ovr = memberProfile?.ovr ?? 0;
+  const stats = memberProfile?.stats ?? DEFAULT_STATS;
+  const ovr = memberProfile?.ovr ?? calculateOvr(stats);
   const points = memberProfile?.matchPoints ?? 100;
 
   const handleUploadBannerClick = () => {
@@ -57,80 +59,90 @@ export default function LockerProfile() {
   };
 
   return (
-    <section className="overflow-hidden rounded-[26px] border border-green-100 bg-[linear-gradient(180deg,#f6fff8_0%,#ffffff_44%,#fbfdfb_100%)] p-5 shadow-[0_18px_48px_rgba(22,101,52,0.12)]">
-      <div className="flex gap-4">
-        <div className="shrink-0">
-          <button
-            type="button"
-            onClick={handleUploadBannerClick}
-            disabled={!activeClubId || isUploading}
-            className="group relative block h-32 w-24 overflow-hidden rounded-[22px] border border-white/80 bg-emerald-100 shadow-[inset_0_0_0_1px_rgba(22,163,74,0.12),0_12px_28px_rgba(22,163,74,0.16)]"
-          >
-            <Image
-              src={avatarSrc}
-              alt={displayName}
-              fill
-              className="object-cover"
-              unoptimized
-            />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,transparent_0%,rgba(15,23,42,0.84)_100%)] px-2 pb-3 pt-7 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-visible:opacity-100">
-              <div className="rounded-full bg-white/94 px-2.5 py-1 text-[11px] font-bold text-gray-900 shadow-sm">
-                {isUploading ? '업로드 중...' : hasCustomPhoto ? '사진 변경' : '사진 업로드'}
-              </div>
+    <section className="card relative overflow-hidden bg-gradient-to-br from-green-50 to-white shadow-sm shadow-gray-200/50">
+      {/* Decorative background accent */}
+      <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-green-200/30 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-green-200/30 blur-3xl" />
+
+      <div className="relative z-10 px-5 pt-5">
+        <div className="flex items-start justify-between">
+          {/* Left: OVR and Footprint */}
+          <div className="flex w-16 shrink-0 flex-col items-center justify-start pt-3">
+            <span className="rounded bg-fcgreen-700 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
+              OVR
+            </span>
+            <strong className="mt-1 text-5xl font-black tracking-tighter text-fcgreen-800">
+              {ovr}
+            </strong>
+            <div className="mt-2 flex h-8 items-center justify-center">
+              <PreferredFootIcon preferredFoot={preferredFoot} />
             </div>
-            {isUploading ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-white/72">
-                <LoaderCircle size={20} className="animate-spin text-green-600" />
+          </div>
+
+          {/* Right: Photo */}
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={handleUploadBannerClick}
+              disabled={!activeClubId || isUploading}
+              className="group relative block h-[152px] w-[112px] overflow-hidden rounded-xl border border-white/60 bg-white shadow-md transition-transform hover:scale-[1.02] active:scale-95"
+            >
+              <Image
+                src={avatarSrc}
+                alt={displayName}
+                fill
+                sizes="112px"
+                loading="eager"
+                priority
+                className="object-cover"
+                unoptimized
+              />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/85 to-transparent px-2 pb-3 pt-7 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-visible:opacity-100">
+                <div className="rounded-full bg-white/94 px-2.5 py-1 text-center text-[11px] font-bold text-gray-900 shadow-sm">
+                  {isUploading ? '업로드 중...' : hasCustomPhoto ? '사진 변경' : '사진 업로드'}
+                </div>
               </div>
-            ) : null}
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="sr-only"
-            onChange={handlePhotoChange}
-          />
+              {isUploading ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/72">
+                  <LoaderCircle size={20} className="animate-spin text-green-600" />
+                </div>
+              ) : null}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={handlePhotoChange}
+            />
+          </div>
         </div>
 
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="mb-2 inline-flex items-center gap-2 rounded-full bg-green-50 px-2.5 py-1 text-[11px] font-bold text-green-700">
-                <Camera size={12} />
-                {hasCustomPhoto ? '프로필 준비 완료' : '사진을 등록하면 카드가 더 살아나요'}
-              </p>
-              <h2 className="truncate text-[31px] font-black leading-none tracking-tight text-gray-950">
-                {displayName}
-              </h2>
-              <p className="mt-2 text-sm font-semibold text-gray-500">
-                {physicalText} · {positionText} · {preferredFoot}
-              </p>
-              <p className="mt-1 text-sm font-bold text-green-700">
-                OVR {ovr}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-green-100 bg-white/90 px-3 py-2 text-right shadow-sm">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-green-700/70">
-                Match Points
-              </p>
-              <p className="mt-1 flex items-center justify-end gap-1.5 text-[30px] font-black leading-none text-green-700">
-                <Coins size={19} /> {points.toLocaleString('ko-KR')}
-              </p>
-            </div>
+        {/* Name and Match Points */}
+        <div className="mt-3 flex flex-col items-end">
+          <h2 className="text-[32px] font-black tracking-tight text-gray-900">
+            {displayName}
+          </h2>
+          <div className="mt-1 flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 shadow-sm backdrop-blur-sm">
+            <Coins size={15} className="text-fcgreen-600" />
+            <span className="text-xs font-extrabold text-fcgreen-700">
+              {points.toLocaleString('ko-KR')} MP
+            </span>
           </div>
         </div>
       </div>
 
-      <div className="mt-5 rounded-2xl border border-green-100 bg-white/88 px-4 py-4 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
-        <p className="mb-3 text-[11px] font-black uppercase tracking-[0.18em] text-gray-500">
-          Equipped Badges
-        </p>
-        <div className="rounded-2xl border border-dashed border-green-100 bg-[linear-gradient(180deg,#fbfffc_0%,#f5faf6_100%)] px-4 py-6 text-center">
-          <UserCircle2 size={28} className="mx-auto mb-2 text-green-300" />
-          <p className="text-sm font-bold text-gray-600">아직 장착한 뱃지가 없어요</p>
-        </div>
+      <div className="relative z-10 px-2 pb-2">
+        <PlayerAbilityPanel
+          stats={stats}
+          ovr={ovr}
+          preferredFoot={preferredFoot}
+          birthDate={memberProfile?.birth}
+          heightCm={memberProfile?.height}
+          weightKg={memberProfile?.weight}
+          layout="stats-only"
+          className="bg-transparent border-none shadow-none"
+        />
       </div>
     </section>
   );

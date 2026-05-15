@@ -7,6 +7,7 @@ import type {
   JoinProfileInput,
   MembershipStatus,
   NormalizedJoinProfile,
+  PendingMembershipReviewRow,
   TeamMembershipRow,
 } from '../types/domain';
 
@@ -18,6 +19,8 @@ type MembershipRepository = {
   findByAccountAndClub(accountId: string, clubId: string): Promise<TeamMembershipRow | null>;
   findById(membershipId: string): Promise<TeamMembershipRow | null>;
   listClubMemberships(accountId: string): Promise<ClubMembershipSummaryRow[]>;
+  listApprovedByClub(clubId: string): Promise<TeamMembershipRow[]>;
+  listPendingByClub(clubId: string): Promise<PendingMembershipReviewRow[]>;
   createPending(input: {
     accountId: string;
     clubId: string;
@@ -27,6 +30,10 @@ type MembershipRepository = {
     membershipId: string;
     status: Exclude<MembershipStatus, 'pending'>;
     reviewedByAccountId: string;
+  }): Promise<TeamMembershipRow>;
+  updateRole(input: {
+    membershipId: string;
+    role: TeamMembershipRow['role'];
   }): Promise<TeamMembershipRow>;
   updatePhoto(input: {
     membershipId: string;
@@ -40,6 +47,38 @@ export type AccountMembershipRepositories = {
 };
 
 export function createAccountMembershipService(repositories: AccountMembershipRepositories) {
+  async function changeMembershipRole(input: {
+    auth: AuthContext;
+    clubId: string;
+    membershipId: string;
+    role: 'operator' | 'member';
+  }) {
+    const adminMembership = await repositories.memberships.findByAccountAndClub(
+      input.auth.user.id,
+      input.clubId,
+    );
+    assertCanAssignOperatorRole(adminMembership);
+
+    const target = await repositories.memberships.findById(input.membershipId);
+    if (!target || target.clubId !== input.clubId) {
+      throw new AppError('not_found', 'Membership was not found for this club.');
+    }
+    if (target.status !== 'approved') {
+      throw new AppError('conflict', 'Only approved memberships can have roles changed.');
+    }
+    if (target.role === 'admin') {
+      throw new AppError('conflict', 'Admin memberships cannot be changed here.');
+    }
+    if (target.role === input.role) {
+      return target;
+    }
+
+    return repositories.memberships.updateRole({
+      membershipId: input.membershipId,
+      role: input.role,
+    });
+  }
+
   return {
     async bootstrapProfile(input: { auth: AuthContext; clubId: string }) {
       const account = await repositories.accounts.upsertFromAuthUser({
@@ -60,6 +99,26 @@ export function createAccountMembershipService(repositories: AccountMembershipRe
 
     async listClubMemberships(input: { auth: AuthContext }) {
       return repositories.memberships.listClubMemberships(input.auth.user.id);
+    },
+
+    async listPendingMemberships(input: { auth: AuthContext; clubId: string }) {
+      const reviewerMembership = await repositories.memberships.findByAccountAndClub(
+        input.auth.user.id,
+        input.clubId,
+      );
+      assertCanReviewMembership(reviewerMembership);
+
+      return repositories.memberships.listPendingByClub(input.clubId);
+    },
+
+    async listApprovedMemberships(input: { auth: AuthContext; clubId: string }) {
+      const membership = await repositories.memberships.findByAccountAndClub(
+        input.auth.user.id,
+        input.clubId,
+      );
+      assertApprovedMembership(membership);
+
+      return repositories.memberships.listApprovedByClub(input.clubId);
     },
 
     async joinClub(input: {
@@ -105,6 +164,16 @@ export function createAccountMembershipService(repositories: AccountMembershipRe
         status: input.decision,
         reviewedByAccountId: input.auth.user.id,
       });
+    },
+
+    changeMembershipRole,
+
+    async assignOperatorRole(input: {
+      auth: AuthContext;
+      clubId: string;
+      membershipId: string;
+    }) {
+      return changeMembershipRole({ ...input, role: 'operator' });
     },
 
     async updateMembershipPhoto(input: {
@@ -165,6 +234,7 @@ function normalizeJoinProfile(profile: JoinProfileInput): NormalizedJoinProfile 
     weightKg: profile.weightKg ?? null,
     birthDate: profile.birthDate ?? null,
     photoUrl: profile.photoUrl ?? null,
+    preferredFoot: profile.preferredFoot ?? null,
   };
 }
 
@@ -196,5 +266,17 @@ function assertCanReviewMembership(membership: TeamMembershipRow | Pick<TeamMemb
     (membership.role !== 'admin' && membership.role !== 'operator')
   ) {
     throw new AppError('forbidden', 'Only approved club operators can review memberships.');
+  }
+}
+
+function assertApprovedMembership(membership: TeamMembershipRow | Pick<TeamMembershipRow, 'status'> | null) {
+  if (!membership || membership.status !== 'approved') {
+    throw new AppError('forbidden', 'Only approved club members can view memberships.');
+  }
+}
+
+function assertCanAssignOperatorRole(membership: TeamMembershipRow | Pick<TeamMembershipRow, 'role' | 'status'> | null) {
+  if (!membership || membership.status !== 'approved' || membership.role !== 'admin') {
+    throw new AppError('forbidden', 'Only approved club admins can assign operator roles.');
   }
 }

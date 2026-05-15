@@ -2,8 +2,7 @@
 
 import { Bell, Home } from 'lucide-react';
 import Image from 'next/image';
-import FcmoimLogo from '@/components/brand/FcmoimLogo';
-import { appConfig } from '@/config/app.config';
+import TeamEmblem from '@/components/brand/TeamEmblem';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import { useAppStore } from '@/stores/useAppStore';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -11,8 +10,6 @@ import { useAuthStore } from '@/stores/useAuthStore';
 export default function Header() {
   const memberProfile = useAuthStore((state) => state.memberProfile);
   const {
-    userRole,
-    setUserRole,
     userStatus,
     setShowMyPage,
     showMyPage,
@@ -26,7 +23,7 @@ export default function Header() {
   } = useAppStore();
 
   const isSubPage = showMyPage || showCommunity || showJoinForm;
-  const subPageTitle = showMyPage ? '마이페이지' : showJoinForm ? '가입 신청' : '커뮤니티';
+  const subPageTitle = showMyPage ? '마이페이지' : showJoinForm ? '입단신청' : '커뮤니티';
 
   const handleBack = () => {
     setShowMyPage(false);
@@ -35,9 +32,7 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl px-4 py-3 flex justify-between items-center min-h-[56px]"
-      style={{ boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.02)' }}
-    >
+    <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl px-4 py-3 flex justify-between items-center min-h-[56px] shadow-sm">
       {isSubPage ? (
         <>
           <button
@@ -53,28 +48,14 @@ export default function Header() {
         <>
           <h1 className="flex items-center gap-1.5 text-xl font-black tracking-tight text-gray-900">
             <span className="flex h-[36px] w-[36px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-green-100">
-              <FcmoimLogo size={44} aria-hidden="true" className="shrink-0 scale-[1.08]" />
+              <TeamEmblem teamName={teamName} size={44} className="shrink-0 scale-[1.08]" />
             </span>
             <span className="truncate">{teamName}</span>
           </h1>
           <div className="flex items-center gap-3">
-            {appConfig.enableAdminTestBypass && (
-              <select
-                value={userRole}
-                onChange={(e) =>
-                  setUserRole(e.target.value as 'admin' | 'operator' | 'member')
-                }
-                className="text-[11px] font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded-md border-none outline-none appearance-none cursor-pointer hover:bg-gray-200 transition-colors"
-              >
-                <option value="admin">Admin</option>
-                <option value="operator">Op</option>
-                <option value="member">Mem</option>
-              </select>
-            )}
-
             {/* 게스트 상태 배지 */}
             {userStatus === 'guest' && (
-              <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] font-bold bg-fee-partial/15 text-fee-partial px-2 py-0.5 rounded-full">
                 구경중 👀
               </span>
             )}
@@ -84,7 +65,7 @@ export default function Header() {
               className="relative p-1.5 hover:bg-gray-100 rounded-full active:scale-90 transition-all text-gray-500"
             >
               <Bell size={22} />
-              <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
+              <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-matchst-live rounded-full ring-2 ring-white" />
             </button>
 
             {userStatus === 'guest' ? (
@@ -92,7 +73,7 @@ export default function Header() {
                 onClick={() => setShowJoinForm(true)}
                 className="text-[11px] font-bold bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 active:scale-95 transition-all"
               >
-                가입 신청
+                입단신청
               </button>
             ) : (
               <button
@@ -104,7 +85,11 @@ export default function Header() {
                   alt="프로필"
                   width={34}
                   height={34}
-                  className="rounded-full bg-gray-200"
+                  sizes="34px"
+                  loading="eager"
+                  priority
+                  className="rounded-full bg-gray-200 object-cover"
+                  style={{ width: 34, height: 34 }}
                   unoptimized
                 />
               </button>

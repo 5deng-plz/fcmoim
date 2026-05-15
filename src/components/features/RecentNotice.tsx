@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Ban, ChevronDown, ChevronUp, Megaphone, Pin, Vote } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Ban, CalendarCheck2, ChevronDown, ChevronUp, Megaphone, Pin, Vote } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
 import { useModalStore } from '@/stores/useModalStore';
 import { useScheduleStore } from '@/stores/useScheduleStore';
@@ -22,7 +22,9 @@ export default function RecentNotice() {
     activePollsStatus,
     activePollsError,
     loadActivePolls,
+    loadUpcomingMatches,
     cancelPoll,
+    promotePoll,
     submitPollVote,
   } = useScheduleStore();
   const isAdmin = userRole === 'admin' || userRole === 'operator';
@@ -32,10 +34,14 @@ export default function RecentNotice() {
   const [selectedByPollId, setSelectedByPollId] = useState<Record<string, string[]>>({});
   const [submittingPollId, setSubmittingPollId] = useState<string | null>(null);
   const [cancellingPollId, setCancellingPollId] = useState<string | null>(null);
+  const [promotingPollId, setPromotingPollId] = useState<string | null>(null);
   const [voteErrors, setVoteErrors] = useState<Record<string, string | null>>({});
   const [cancelTargetPoll, setCancelTargetPoll] = useState<SchedulePoll | null>(null);
+  const [promoteTarget, setPromoteTarget] = useState<{ poll: SchedulePoll; option: SchedulePollOption } | null>(null);
   const [cancellationReason, setCancellationReason] = useState('');
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [promoteError, setPromoteError] = useState<string | null>(null);
+  const swipeStartXRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (activePollsStatus !== 'idle') return;
@@ -56,6 +62,19 @@ export default function RecentNotice() {
 
       return { ...prev, [pollId]: next };
     });
+  };
+
+  const handlePollSwipeEnd = (pollId: string, clientX: number | null) => {
+    if (swipeStartXRef.current === null || clientX === null) {
+      swipeStartXRef.current = null;
+      return;
+    }
+
+    const deltaX = clientX - swipeStartXRef.current;
+    swipeStartXRef.current = null;
+    if (Math.abs(deltaX) < 56) return;
+
+    setExpandedPollId(deltaX < 0 ? pollId : null);
   };
 
   const handleSubmitVote = async (poll: SchedulePoll) => {
@@ -126,10 +145,36 @@ export default function RecentNotice() {
     }
   };
 
+  const handlePromotePoll = async () => {
+    if (!promoteTarget) return;
+
+    setPromotingPollId(promoteTarget.poll.id);
+    setPromoteError(null);
+
+    try {
+      await promotePoll({
+        clubId: promoteTarget.poll.clubId,
+        pollId: promoteTarget.poll.id,
+        optionId: promoteTarget.option.id,
+      });
+      await loadUpcomingMatches(promoteTarget.poll.clubId).catch(() => {
+        // The promoted poll state is enough for immediate feedback; upcoming match reload can retry later.
+      });
+      showToast('일정 투표가 확정되었어요.');
+      setPromoteTarget(null);
+    } catch (error) {
+      const message = getSchedulePollErrorMessage(error, '일정 투표를 확정하지 못했어요.');
+      setPromoteError(message);
+      showToast(message);
+    } finally {
+      setPromotingPollId(null);
+    }
+  };
+
   return (
     <section>
       <div className="flex justify-between items-center mb-3 px-1">
-        <h2 className="text-base font-black text-gray-900">공지사항</h2>
+        <h2 className="text-base font-extrabold text-gray-900">공지사항</h2>
         <div className="flex items-center gap-2">
           {isAdmin && (
             <button
@@ -156,8 +201,8 @@ export default function RecentNotice() {
         ) : null}
 
         {activePollsStatus === 'error' && activePollsError ? (
-          <div role="alert" className="card border-red-100 bg-red-50 p-4">
-            <p className="text-sm font-bold text-red-600">{activePollsError}</p>
+          <div role="alert" className="card border-feedback-error-border bg-feedback-error-bg p-4">
+            <p className="text-sm font-bold text-feedback-error">{activePollsError}</p>
             <button
               type="button"
               onClick={() => {
@@ -165,7 +210,7 @@ export default function RecentNotice() {
                   showToast(getSchedulePollErrorMessage(error, '일정 투표를 불러오지 못했어요.'));
                 });
               }}
-              className="mt-3 rounded-lg bg-white px-3 py-2 text-xs font-bold text-red-600 shadow-sm active:scale-95"
+              className="mt-3 rounded-lg bg-white px-3 py-2 text-xs font-bold text-feedback-error shadow-sm active:scale-95"
             >
               다시 시도
             </button>
@@ -177,25 +222,33 @@ export default function RecentNotice() {
           const selectedOptionIds = selectedByPollId[poll.id] ?? [];
           const isSubmitting = submittingPollId === poll.id;
           const isCancelling = cancellingPollId === poll.id;
+          const isPromoting = promotingPollId === poll.id;
           const isCancelled = poll.status === 'cancelled';
+          const isPromoted = poll.status === 'promoted';
           const voteError = voteErrors[poll.id];
-          const submitDisabled = isCancelled || !canVote || selectedOptionIds.length === 0 || isSubmitting;
+          const submitDisabled = isCancelled || isPromoted || !canVote || selectedOptionIds.length === 0 || isSubmitting;
 
           return (
             <section key={poll.id} className="card card-gold-shimmer overflow-hidden rounded-xl">
               <button
                 type="button"
                 onClick={() => setExpandedPollId(isExpanded ? null : poll.id)}
+                onTouchStart={(event) => {
+                  swipeStartXRef.current = event.touches[0]?.clientX ?? null;
+                }}
+                onTouchEnd={(event) => {
+                  handlePollSwipeEnd(poll.id, event.changedTouches[0]?.clientX ?? null);
+                }}
                 aria-expanded={isExpanded}
                 aria-controls={`poll-options-${poll.id}`}
                 className="w-full p-4 flex items-center justify-between gap-3 text-left hover:bg-gray-50 transition-colors"
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-yellow-50 text-yellow-600">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-feedback-warning-bg text-feedback-warning">
                     <Vote size={18} />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="mb-0.5 min-w-0 text-sm font-black leading-snug text-gray-900">
+                    <h3 className="mb-0.5 min-w-0 text-sm font-bold leading-snug text-gray-900">
                       {poll.title}
                     </h3>
                     <p className="text-xs font-medium leading-snug text-gray-500">
@@ -204,7 +257,13 @@ export default function RecentNotice() {
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2 text-gray-400">
-                  {isCancelled ? (
+                  {isPromoted ? (
+                    <Badge
+                      label="확정"
+                      variant="green"
+                      className="border border-green-200 bg-green-100 text-green-700 shadow-sm"
+                    />
+                  ) : isCancelled ? (
                     <Badge
                       label="취소"
                       variant="gray"
@@ -214,7 +273,7 @@ export default function RecentNotice() {
                     <Badge
                       label="투표중"
                       variant="red"
-                      className="border border-red-200 bg-red-100 text-red-700 shadow-sm"
+                      className="border border-feedback-warning-border bg-feedback-warning-bg text-feedback-warning shadow-sm"
                     />
                   )}
                   {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -223,19 +282,23 @@ export default function RecentNotice() {
 
               {isExpanded && (
                 <div id={`poll-options-${poll.id}`} className="p-4 pt-0 border-t border-gray-50 bg-gray-50/50">
-                  {isCancelled ? (
+                  {isPromoted ? (
+                    <div className="mt-3 rounded-xl border border-green-200 bg-white px-3 py-2.5">
+                      <p className="text-xs font-bold text-green-700">확정 일정으로 전환되었어요</p>
+                    </div>
+                  ) : isCancelled ? (
                     <div className="mt-3 rounded-xl border border-gray-200 bg-white px-3 py-2.5">
-                      <p className="text-xs font-black text-gray-700">취소 사유: {poll.cancellationReason}</p>
+                      <p className="text-xs font-bold text-gray-700">취소 사유: {poll.cancellationReason}</p>
                     </div>
                   ) : null}
 
                   <div className="mt-3 grid gap-3">
                     {poll.options.map((option) => {
                       const isSelected = selectedOptionIds.includes(option.id);
-                      const optionDisabled = isCancelled || !canVote || isSubmitting;
+                      const optionDisabled = isCancelled || isPromoted || !canVote || isSubmitting || isPromoting;
 
                       return (
-                        <label
+                        <div
                           key={option.id}
                           className={`block rounded-xl border p-3 transition-all ${
                             optionDisabled
@@ -243,46 +306,61 @@ export default function RecentNotice() {
                               : 'cursor-pointer'
                           } ${
                             isSelected
-                              ? 'border-yellow-400 bg-yellow-50'
+                              ? 'border-feedback-warning bg-feedback-warning-bg'
                               : 'border-gray-200 bg-white hover:border-gray-300'
                           }`}
                         >
                           <div className="flex items-start gap-3">
-                            <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border mt-0.5 transition-colors ${isSelected ? 'border-yellow-500 bg-yellow-500' : 'border-gray-300 bg-white'}`}>
-                              {isSelected && <div className="h-2.5 w-2.5 rounded-sm bg-white" />}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="mb-2 text-sm font-bold leading-snug text-gray-900">
-                                {formatPollOption(poll, option)}
+                            <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-3">
+                              <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border mt-0.5 transition-colors ${isSelected ? 'border-feedback-warning bg-feedback-warning' : 'border-gray-300 bg-white'}`}>
+                                {isSelected && <div className="h-2.5 w-2.5 rounded-sm bg-white" />}
                               </div>
-                              <AttendeeList count={getOptionVoteCount(poll, option)} total={getOptionVoteTotal(poll, option)} />
-                            </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="mb-2 text-sm font-bold leading-snug text-gray-900">
+                                  {formatPollOption(poll, option)}
+                                </div>
+                                <AttendeeList count={getOptionVoteCount(poll, option)} total={getOptionVoteTotal(poll, option)} />
+                              </div>
+                              <input
+                                type="checkbox"
+                                className="sr-only"
+                                disabled={optionDisabled}
+                                checked={isSelected}
+                                onChange={() => handlePollSelect(poll.id, option.id)}
+                              />
+                            </label>
+                            {isAdmin && !isCancelled && !isPromoted ? (
+                              <button
+                                type="button"
+                                disabled={isPromoting || isSubmitting}
+                                onClick={() => {
+                                  setPromoteTarget({ poll, option });
+                                  setPromoteError(null);
+                                }}
+                                className="shrink-0 rounded-lg border border-green-100 bg-green-50 px-3 py-2 text-xs font-bold text-green-700 transition-all hover:bg-green-100 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                확정
+                              </button>
+                            ) : null}
                           </div>
-                          <input
-                            type="checkbox"
-                            className="sr-only"
-                            disabled={optionDisabled}
-                            checked={isSelected}
-                            onChange={() => handlePollSelect(poll.id, option.id)}
-                          />
-                        </label>
+                        </div>
                       );
                     })}
                   </div>
 
-                  {!isCancelled && !canVote ? (
+                  {!isCancelled && !isPromoted && !canVote ? (
                     <p role="status" className="mt-3 rounded-lg bg-white px-3 py-2 text-xs font-bold text-gray-500">
                       승인된 회원만 일정 투표에 참여할 수 있어요.
                     </p>
                   ) : null}
 
                   {voteError ? (
-                    <p role="alert" className="mt-3 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold text-red-600">
+                    <p role="alert" className="mt-3 rounded-lg border border-feedback-error-border bg-feedback-error-bg px-3 py-2 text-xs font-bold text-feedback-error">
                       {voteError}
                     </p>
                   ) : null}
 
-                  {!isCancelled ? (
+                  {!isCancelled && !isPromoted ? (
                     <div className="mt-4">
                       <button
                         type="button"
@@ -299,7 +377,7 @@ export default function RecentNotice() {
                     </div>
                   ) : null}
 
-                  {isAdmin && !isCancelled ? (
+                  {isAdmin && !isCancelled && !isPromoted ? (
                     <div className="mt-2">
                       <button
                         type="button"
@@ -309,7 +387,7 @@ export default function RecentNotice() {
                           setCancellationReason('');
                           setCancelError(null);
                         }}
-                        className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-red-100 bg-white px-4 py-3 text-sm font-bold text-red-600 transition-all hover:bg-red-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-feedback-error-border bg-white px-4 py-3 text-sm font-bold text-feedback-error transition-all hover:bg-feedback-error-bg active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <Ban size={16} />
                         {isCancelling ? '취소 중...' : '일정 취소'}
@@ -360,11 +438,11 @@ export default function RecentNotice() {
               onChange={(event) => setCancellationReason(event.target.value)}
               placeholder="예: 강설로 인한 취소"
               rows={3}
-              className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm transition-colors focus:border-red-400 focus:outline-none"
+              className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm transition-colors focus:border-feedback-error focus:outline-none"
             />
           </div>
           {cancelError ? (
-            <p role="alert" className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold text-red-600">
+            <p role="alert" className="rounded-lg border border-feedback-error-border bg-feedback-error-bg px-3 py-2 text-xs font-bold text-feedback-error">
               {cancelError}
             </p>
           ) : null}
@@ -372,10 +450,58 @@ export default function RecentNotice() {
             type="button"
             disabled={cancellingPollId !== null}
             onClick={() => void handleCancelPoll()}
-            className="w-full rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white transition-all hover:bg-red-700 active:scale-95 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
+            className="w-full rounded-xl bg-feedback-error px-4 py-3 text-sm font-bold text-white transition-all hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
           >
             {cancellingPollId ? '취소 중...' : '취소 처리하기'}
           </button>
+        </div>
+      </Modal>
+
+      <Modal
+        title="일정 투표 확정"
+        isOpen={promoteTarget !== null}
+        onClose={() => {
+          if (promotingPollId) return;
+          setPromoteTarget(null);
+          setPromoteError(null);
+        }}
+      >
+        <div className="space-y-4 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-green-50 text-green-600">
+            <CalendarCheck2 size={22} />
+          </div>
+          <p className="text-sm font-bold leading-relaxed text-gray-900">
+            {promoteTarget ? formatPollOption(promoteTarget.poll, promoteTarget.option) : ''}
+          </p>
+          <p className="text-xs font-semibold leading-relaxed text-gray-500">
+            이 후보 일정으로 확정 경기 일정을 만들고 투표를 종료합니다.
+          </p>
+          {promoteError ? (
+            <p role="alert" className="rounded-lg border border-feedback-error-border bg-feedback-error-bg px-3 py-2 text-xs font-bold text-feedback-error">
+              {promoteError}
+            </p>
+          ) : null}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              disabled={promotingPollId !== null}
+              onClick={() => void handlePromotePoll()}
+              className="rounded-xl bg-green-600 px-4 py-3 text-sm font-bold text-white transition-all hover:bg-green-700 active:scale-95 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
+            >
+              {promotingPollId ? '확정 중...' : '확정하기'}
+            </button>
+            <button
+              type="button"
+              disabled={promotingPollId !== null}
+              onClick={() => {
+                setPromoteTarget(null);
+                setPromoteError(null);
+              }}
+              className="rounded-xl bg-gray-100 px-4 py-3 text-sm font-bold text-gray-600 transition-all hover:bg-gray-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              닫기
+            </button>
+          </div>
         </div>
       </Modal>
     </section>

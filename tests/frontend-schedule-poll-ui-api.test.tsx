@@ -292,4 +292,55 @@ describe('RecentNotice schedule poll API participation', () => {
     expect(screen.getByText('취소 사유: 강설로 인한 취소')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '투표 제출하기' })).not.toBeInTheDocument();
   });
+
+  it('lets admins promote a poll option to a confirmed match', async () => {
+    const user = userEvent.setup();
+    useAppStore.setState({
+      userRole: 'admin',
+      userStatus: 'approved',
+    });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify([createdPoll]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        pollId: 'poll-created',
+        matchId: 'match-created-from-poll',
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<RecentNotice />);
+
+    await user.click(await screen.findByRole('button', { name: /3월 친선 경기 일정 투표/ }));
+    await user.click(screen.getAllByRole('button', { name: '확정' })[0]);
+    expect(screen.getByText('이 후보 일정으로 확정 경기 일정을 만들고 투표를 종료합니다.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '확정하기' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/schedule-polls/promote', expect.objectContaining({
+      method: 'POST',
+    }));
+
+    const requestInit = (fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1];
+    expect(JSON.parse(requestInit.body as string)).toEqual({
+      clubId: 'club-real',
+      pollId: 'poll-created',
+      optionId: 'option-1',
+    });
+    expect(await screen.findByText('확정')).toBeInTheDocument();
+    expect(screen.getByText('확정 일정으로 전환되었어요')).toBeInTheDocument();
+    expect(useToastStore.getState().message).toBe('일정 투표가 확정되었어요.');
+  });
+
+  it('does not expose poll promotion controls to members', async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify([createdPoll]), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<RecentNotice />);
+
+    await user.click(await screen.findByRole('button', { name: /3월 친선 경기 일정 투표/ }));
+
+    expect(screen.queryByRole('button', { name: '확정' })).not.toBeInTheDocument();
+  });
 });

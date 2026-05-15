@@ -29,6 +29,9 @@ type MembershipRow = {
   weightKg: number | null;
   birthDate: string | null;
   photoUrl: string | null;
+  ovr: number;
+  matchPoints: number;
+  preferredFoot: 'left' | 'right' | 'both';
 };
 
 type AccountMembershipService = {
@@ -57,6 +60,17 @@ type AccountMembershipService = {
     decision: Exclude<MembershipStatus, 'pending'>;
     authUid?: string;
   }): Promise<MembershipRow>;
+  changeMembershipRole(input: {
+    auth: AuthContext;
+    clubId: string;
+    membershipId: string;
+    role: 'operator' | 'member';
+  }): Promise<MembershipRow>;
+  listPendingMemberships(input: { auth: AuthContext; clubId: string }): Promise<Array<{
+    id: string;
+    nickname: string;
+    position: string | null;
+  }>>;
   assertApprovedMemberAction(input: {
     auth: AuthContext;
     clubId: string;
@@ -67,9 +81,31 @@ type AccountMembershipService = {
 type MembershipRepository = {
   findByAccountAndClub: ReturnType<typeof vi.fn>;
   findById: ReturnType<typeof vi.fn>;
+  listPendingByClub: ReturnType<typeof vi.fn>;
   createPending: ReturnType<typeof vi.fn>;
   updateStatus: ReturnType<typeof vi.fn>;
+  updateRole: ReturnType<typeof vi.fn>;
 };
+
+function createMembershipRow(overrides: Partial<MembershipRow> = {}): MembershipRow {
+  return {
+    id: 'membership-under-review',
+    accountId: 'joining-account',
+    clubId: 'club-1',
+    role: 'member',
+    status: 'pending',
+    nickname: 'New Player',
+    position: null,
+    heightCm: null,
+    weightKg: null,
+    birthDate: null,
+    photoUrl: null,
+    ovr: 60,
+    matchPoints: 100,
+    preferredFoot: 'right',
+    ...overrides,
+  };
+}
 
 async function loadService(repositories: {
   accounts: {
@@ -109,24 +145,24 @@ function createRepositories(options?: {
 
       return existingMembership;
     }),
-    findById: vi.fn(async () => ({
-      id: 'membership-under-review',
-      accountId: 'joining-account',
-      clubId: 'club-1',
-      role: 'member',
-      status: 'pending',
-      nickname: 'New Player',
-      position: null,
-      heightCm: null,
-      weightKg: null,
-      birthDate: null,
-      photoUrl: null,
-    })),
-    createPending: vi.fn(async (input) => ({
+    findById: vi.fn(async () => createMembershipRow()),
+    listPendingByClub: vi.fn(async () => [
+      {
+        id: 'membership-under-review',
+        accountId: 'joining-account',
+        clubId: 'club-1',
+        nickname: 'New Player',
+        position: 'MF',
+        heightCm: 175,
+        weightKg: 70,
+        preferredFoot: 'right',
+        createdAt: '2026-05-08T00:00:00.000Z',
+      },
+    ]),
+    createPending: vi.fn(async (input) => createMembershipRow({
       id: 'membership-created',
       accountId: input.accountId,
       clubId: input.clubId,
-      role: 'member',
       status: 'pending',
       nickname: input.profile.nickname,
       position: input.profile.position,
@@ -134,19 +170,16 @@ function createRepositories(options?: {
       weightKg: input.profile.weightKg,
       birthDate: input.profile.birthDate,
       photoUrl: input.profile.photoUrl,
+      preferredFoot: input.profile.preferredFoot ?? 'right',
     })),
-    updateStatus: vi.fn(async ({ membershipId, status }) => ({
+    updateStatus: vi.fn(async ({ membershipId, status }) => createMembershipRow({
       id: membershipId,
-      accountId: 'joining-account',
-      clubId: 'club-1',
-      role: 'member',
       status,
-      nickname: 'New Player',
-      position: null,
-      heightCm: null,
-      weightKg: null,
-      birthDate: null,
-      photoUrl: null,
+    })),
+    updateRole: vi.fn(async ({ membershipId, role }) => createMembershipRow({
+      id: membershipId,
+      status: 'approved',
+      role,
     })),
   };
 
@@ -215,6 +248,7 @@ describe('v1.0 Account + TeamMembership flows', () => {
         weightKg: null,
         birthDate: null,
         photoUrl: null,
+        preferredFoot: null,
       },
     });
     expect(membership).toMatchObject({
@@ -333,23 +367,141 @@ describe('v1.0 Account + TeamMembership flows', () => {
     },
   );
 
+  it('allows approved admins to grant and revoke operator role for approved members', async () => {
+    const repositories = createRepositories({
+      reviewerMembership: { role: 'admin', status: 'approved' },
+    });
+    const service = await loadService(repositories);
+
+    repositories.memberships.findById
+      .mockResolvedValueOnce(createMembershipRow({ status: 'approved', role: 'member' }))
+      .mockResolvedValueOnce(createMembershipRow({ status: 'approved', role: 'operator' }));
+
+    await expect(
+      service.changeMembershipRole({
+        auth: {
+          user: {
+            id: 'reviewer-auth-user',
+            email: 'admin@example.com',
+          },
+        },
+        clubId: 'club-1',
+        membershipId: 'membership-under-review',
+        role: 'operator',
+      }),
+    ).resolves.toMatchObject({ role: 'operator' });
+
+    await expect(
+      service.changeMembershipRole({
+        auth: {
+          user: {
+            id: 'reviewer-auth-user',
+            email: 'admin@example.com',
+          },
+        },
+        clubId: 'club-1',
+        membershipId: 'membership-under-review',
+        role: 'member',
+      }),
+    ).resolves.toMatchObject({ role: 'member' });
+
+    expect(repositories.memberships.updateRole).toHaveBeenCalledWith({
+      membershipId: 'membership-under-review',
+      role: 'operator',
+    });
+    expect(repositories.memberships.updateRole).toHaveBeenCalledWith({
+      membershipId: 'membership-under-review',
+      role: 'member',
+    });
+  });
+
+  it('denies role changes for admin target memberships', async () => {
+    const repositories = createRepositories({
+      reviewerMembership: { role: 'admin', status: 'approved' },
+    });
+    const service = await loadService(repositories);
+    repositories.memberships.findById.mockResolvedValueOnce(
+      createMembershipRow({ status: 'approved', role: 'admin' }),
+    );
+
+    await expect(
+      service.changeMembershipRole({
+        auth: {
+          user: {
+            id: 'reviewer-auth-user',
+            email: 'admin@example.com',
+          },
+        },
+        clubId: 'club-1',
+        membershipId: 'membership-under-review',
+        role: 'member',
+      }),
+    ).rejects.toMatchObject({
+      code: 'conflict',
+    });
+
+    expect(repositories.memberships.updateRole).not.toHaveBeenCalled();
+  });
+
+  it('allows approved operators to list pending membership review cards', async () => {
+    const repositories = createRepositories({
+      reviewerMembership: { role: 'operator', status: 'approved' },
+    });
+    const service = await loadService(repositories);
+
+    await expect(
+      service.listPendingMemberships({
+        auth: {
+          user: {
+            id: 'reviewer-auth-user',
+            email: 'reviewer@example.com',
+          },
+        },
+        clubId: 'club-1',
+      }),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        id: 'membership-under-review',
+        nickname: 'New Player',
+      }),
+    ]);
+
+    expect(repositories.memberships.listPendingByClub).toHaveBeenCalledWith('club-1');
+  });
+
+  it('denies pending membership list to non-operators', async () => {
+    const repositories = createRepositories({
+      reviewerMembership: { role: 'member', status: 'approved' },
+    });
+    const service = await loadService(repositories);
+
+    await expect(
+      service.listPendingMemberships({
+        auth: {
+          user: {
+            id: 'reviewer-auth-user',
+            email: 'reviewer@example.com',
+          },
+        },
+        clubId: 'club-1',
+      }),
+    ).rejects.toMatchObject({
+      code: 'forbidden',
+    });
+
+    expect(repositories.memberships.listPendingByClub).not.toHaveBeenCalled();
+  });
+
   it.each(['pending', 'rejected', 'suspended'] satisfies MembershipStatus[])(
     'denies approved-member actions while membership is %s',
     async (status) => {
       const repositories = createRepositories({
-        existingMembership: {
+        existingMembership: createMembershipRow({
           id: `${status}-membership`,
           accountId: 'auth-current-user',
-          clubId: 'club-1',
-          role: 'member',
           status,
           nickname: 'Blocked Member',
-          position: null,
-          heightCm: null,
-          weightKg: null,
-          birthDate: null,
-          photoUrl: null,
-        },
+        }),
       });
       const service = await loadService(repositories);
 

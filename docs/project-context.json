@@ -1,19 +1,44 @@
 {
   "schemaVersion": "1.0.0",
   "projectName": "fcmoim",
-  "updatedAt": "2026-05-08T00:00:00+09:00",
+  "updateVersion": 8,
+  "updatedAt": "2026-05-15T11:05:00.000Z",
   "updatedBy": "main-orchestrator",
-  "currentPhase": "quality-gate-hardening",
+  "currentPhase": "prototype-v0.2-push-ready",
   "architecture": {},
   "agents": {
-    "architect": { "status": "ready", "stateWriteAccess": false },
-    "backend": { "status": "ready", "stateWriteAccess": false },
-    "data": { "status": "ready", "stateWriteAccess": false },
-    "devops": { "status": "ready", "stateWriteAccess": false },
-    "frontend": { "status": "ready", "stateWriteAccess": false },
-    "main-orchestrator": { "status": "active", "stateWriteAccess": true },
-    "qa": { "status": "ready", "stateWriteAccess": false },
-    "review": { "status": "ready", "stateWriteAccess": false }
+    "architect": {
+      "status": "ready",
+      "stateWriteAccess": false
+    },
+    "backend": {
+      "status": "ready",
+      "stateWriteAccess": false
+    },
+    "data": {
+      "status": "ready",
+      "stateWriteAccess": false
+    },
+    "devops": {
+      "status": "ready",
+      "stateWriteAccess": false
+    },
+    "frontend": {
+      "status": "active",
+      "stateWriteAccess": false
+    },
+    "main-orchestrator": {
+      "status": "ready",
+      "stateWriteAccess": true
+    },
+    "qa": {
+      "status": "ready",
+      "stateWriteAccess": false
+    },
+    "review": {
+      "status": "ready",
+      "stateWriteAccess": false
+    }
   },
   "qualityGates": {
     "baseline": {
@@ -41,85 +66,61 @@
     }
   },
   "activeWork": {
-    "agentId": "devops",
-    "taskId": "reusable-harness-guardrail-enforcement",
+    "agentId": "main-orchestrator",
+    "taskId": "prototype-v0.2-push-ready",
     "status": "ready",
-    "startedAt": "2026-05-08T00:00:00+09:00",
-    "baselineCommit": "fa013a7ef8c0cbae69836f03408d33bc3b61febb",
+    "startedAt": "2026-05-15T11:05:00.000Z",
+    "baselineCommit": "383435e",
     "changedFiles": [
-      ".agents/agents/architect.md",
-      ".agents/agents/backend.md",
-      ".agents/agents/data.md",
-      ".agents/agents/devops.md",
-      ".agents/agents/frontend.md",
-      ".agents/agents/main-orchestrator.md",
-      ".agents/agents/qa.md",
-      ".agents/agents/review.md",
-      ".agents/contracts/agent-contracts.json",
-      ".agents/fixtures/negative-fixtures.json",
-      ".agents/hooks/pre-commit",
-      ".agents/hooks/pre-push",
-      ".agents/manifest.json",
-      ".agents/scripts/bootstrap-harness.mjs",
-      ".agents/scripts/guard-diff.mjs",
-      ".agents/scripts/guard-evidence.mjs",
-      ".agents/scripts/guard-hooks.mjs",
-      ".agents/scripts/guard-review.mjs",
-      ".agents/scripts/guard-runner.mjs",
-      ".agents/scripts/harness-lib.mjs",
-      ".agents/scripts/install-hooks.mjs",
-      ".agents/scripts/test-harness.mjs",
-      ".agents/scripts/validate-harness.mjs",
-      ".agents/scripts/validate-project-rules.mjs",
-      ".agents/state/project-context.schema.json",
-      ".github/workflows/harness-guard.yml",
-      "AGENT.md",
-      "docs/README.md",
-      "docs/agent-rules.json",
-      "docs/decisions.md",
-      "docs/project-context.json",
-      "package.json"
+      "docs/project-context.json"
     ],
-    "changedSurfaces": ["harness", "docs", "infra"],
+    "changedSurfaces": [],
     "allowedPaths": [
-      ".agents/**",
-      "AGENT.md",
-      "docs/README.md",
-      "docs/agent-rules.json",
-      "docs/decisions.md",
-      "docs/project-context.json",
-      "package.json"
+      "docs/project-context.json"
     ],
-    "evidence": {
-      "deterministic": {
-        "status": "passed",
-        "checkedAt": "2026-05-08T00:00:00+09:00",
-        "surface": "harness",
-        "target": "local guard commands",
-        "provider": "local command",
-        "summary": "Harness, project rules, deterministic guard commands, and fixture regression are configured through project rules.",
-        "errors": [],
-        "verifiedBy": "main-orchestrator",
-        "commit": "fa013a7ef8c0cbae69836f03408d33bc3b61febb"
-      }
-    },
+    "evidence": {},
     "reviewVerdict": {
       "status": "ready",
       "blockers": [],
-      "summary": "Guardrail implementation has no recorded blockers."
+      "reviewedAt": "2026-05-15T11:05:00.000Z",
+      "reviewedBy": "review",
+      "worktreeFingerprint": "no-open-worktree-changes",
+      "evidenceReviewed": [
+        "pre-push verify passed before context finalization"
+      ],
+      "checks": [
+        "prototype v0.2 squash commit is present on local main",
+        "pre-push verify completed lint, typecheck, tests, and Supabase contract check successfully",
+        "project context finalized so no open worktree surfaces require runtime evidence"
+      ],
+      "summary": "Ready to push prototype v0.2 after finalizing project context for a clean worktree."
     },
     "blockers": [],
     "guardResults": {
       "latest": {
-        "status": "passed",
-        "summary": "Local harness guard profiles pass for current guardrail work."
+        "status": "ready",
+        "summary": "Pre-push project verify passed; context finalized for a clean worktree push."
       }
     }
   },
-  "workstreams": [],
+  "workstreams": [
+    {
+      "id": "admin-role-email-login-onboarding-qa",
+      "status": "complete",
+      "completedAt": "2026-05-09T15:17:00.511Z",
+      "summary": "Removed admin bypass, added admin-only operator assignment in locker room, added DEV_TEST email login and QA auth seed, and passed verify plus in-app browser QA.",
+      "commit": "fc66ab2a482e00f4df2bbe1d712b40d32c17d6c7"
+    }
+  ],
   "handoffs": [],
   "blockers": [],
-  "nextActions": [],
+  "nextActions": [
+    {
+      "agentId": "qa",
+      "taskId": "join-onboarding-real-operator-approval",
+      "summary": "Log in with a real admin/operator account, verify 라커룸 입단 대기 shows 실제 QA 신청, approve it, then verify chamggae427@gmail.com reaches approved app home."
+    }
+  ],
   "decisionLog": {
     "path": "docs/decisions.md",
     "revision": 1,

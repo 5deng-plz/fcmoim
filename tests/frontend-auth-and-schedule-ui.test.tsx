@@ -34,6 +34,10 @@ const activePoll: SchedulePoll = {
 describe('v1.0 auth provider UI', () => {
   beforeEach(() => {
     const storage = new Map<string, string>();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ enabled: false }),
+    }));
     Object.defineProperty(window, 'localStorage', {
       configurable: true,
       value: {
@@ -46,6 +50,7 @@ describe('v1.0 auth provider UI', () => {
 
   afterEach(() => {
     cleanup();
+    vi.unstubAllGlobals();
     vi.unstubAllEnvs();
     if (typeof window.localStorage.removeItem === 'function') {
       window.localStorage.removeItem('fcmoim.devAdminSession');
@@ -64,56 +69,27 @@ describe('v1.0 auth provider UI', () => {
     expect(screen.queryByText(/Google로 시작하기/)).not.toBeInTheDocument();
   });
 
-  it('hides the Admin shortcut outside development', () => {
-    vi.stubEnv('NODE_ENV', 'production');
+  it('does not expose the removed Admin shortcut in development', () => {
+    vi.stubEnv('NODE_ENV', 'development');
 
     render(<LoginScreen />);
 
     expect(screen.queryByRole('button', { name: /테스트 관리자 로그인/ })).not.toBeInTheDocument();
   });
 
-  it('shows the Admin shortcut by default in local development', () => {
-    vi.stubEnv('NODE_ENV', 'development');
-    vi.stubEnv('NEXT_PUBLIC_ENABLE_ADMIN_TEST_BYPASS', '');
+  it('shows QA email login only when DEV_TEST is enabled by the server', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ enabled: true }),
+    } as Response);
 
     render(<LoginScreen />);
 
-    expect(screen.getByRole('button', { name: /테스트 관리자 로그인/ })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'QA 이메일 로그인' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'QA 이메일 계정' })).toHaveValue('qa-admin@fcmoim.test');
   });
 
-  it('preserves the explicit local Admin shortcut for QA', async () => {
-    const user = userEvent.setup();
-    vi.stubEnv('NODE_ENV', 'development');
-    vi.stubEnv('NEXT_PUBLIC_ENABLE_ADMIN_TEST_BYPASS', 'true');
-    useAppStore.setState({
-      isAuthenticated: false,
-      userRole: 'member',
-      userStatus: 'guest',
-      authView: 'guest',
-    });
-
-    render(<LoginScreen />);
-
-    await user.click(screen.getByRole('button', { name: /테스트 관리자 로그인/ }));
-
-    expect(useAppStore.getState()).toMatchObject({
-      isAuthenticated: true,
-      userRole: 'admin',
-      userStatus: 'approved',
-      authView: 'login',
-    });
-    expect(useAuthStore.getState().memberProfile).toMatchObject({
-      role: 'admin',
-      status: 'approved',
-    });
-    expect(window.localStorage.getItem('fcmoim.devAdminSession')).toBe('admin');
-  });
-
-  it('restores the local Admin shortcut session during auth initialization', async () => {
-    vi.stubEnv('NODE_ENV', 'development');
-    vi.stubEnv('NEXT_PUBLIC_ENABLE_ADMIN_TEST_BYPASS', 'true');
-    window.localStorage.setItem('fcmoim.devAdminSession', 'admin');
-
+  it('keeps auth initialization unauthenticated without a real Supabase user', async () => {
     useAppStore.setState({
       isAuthenticated: false,
       userRole: 'member',
@@ -130,15 +106,12 @@ describe('v1.0 auth provider UI', () => {
     await useAuthStore.getState().initialize();
 
     expect(useAppStore.getState()).toMatchObject({
-      isAuthenticated: true,
-      userRole: 'admin',
-      userStatus: 'approved',
+      isAuthenticated: false,
+      userRole: 'member',
+      userStatus: 'guest',
       authView: 'login',
     });
-    expect(useAuthStore.getState().memberProfile).toMatchObject({
-      role: 'admin',
-      status: 'approved',
-    });
+    expect(useAuthStore.getState().memberProfile).toBeNull();
   });
 });
 

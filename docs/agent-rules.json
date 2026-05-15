@@ -5,7 +5,8 @@
     "docs": {
       "readme": "docs/README.md",
       "decisions": "docs/decisions.md",
-      "context": "docs/project-context.json"
+      "context": "docs/project-context.json",
+      "designTokens": "docs/design-tokens.md"
     }
   },
   "agents": [
@@ -62,7 +63,7 @@
   ],
   "commands": {
     "baseline": "npm run verify:baseline",
-    "ci": "npm run harness:validate && npm run harness:validate-project && npm run harness:test && npm run verify",
+    "ci": "npm run verify",
     "dataCheck": "npm run db:check",
     "harnessTest": "node .agents/scripts/test-harness.mjs",
     "preCommit": "npm run lint",
@@ -70,10 +71,10 @@
     "verify": "npm run verify"
   },
   "guardProfiles": {
-    "preCommit": { "steps": ["validateHarness", "validateProject", "guardHooks", "guardDiffStaged", "projectPreCommit"] },
-    "prePush": { "steps": ["projectPrePush", "guardEvidence", "guardReview"] },
-    "ci": { "steps": ["validateHarness", "validateProject", "harnessTest", "projectCi"] },
-    "handoff": { "steps": ["guardDiff", "guardEvidence", "guardReview"] }
+    "preCommit": { "steps": ["validateHarness", "validateProject", "guardHooks", "guardDiffStaged", "guardDesignStaged", "projectPreCommit"] },
+    "prePush": { "steps": ["guardDesign", "projectPrePush", "guardEvidence", "guardReview"] },
+    "ci": { "steps": ["validateHarness", "validateProject", "harnessTest", "guardDesign", "guardEvidence", "guardReview", "projectCi"] },
+    "handoff": { "steps": ["guardDiff", "guardDesign", "guardEvidence", "guardReview"] }
   },
   "hookPolicy": {
     "requiredPath": ".agents/hooks"
@@ -81,17 +82,86 @@
   "bypassPolicy": {
     "allowedProfiles": ["preCommit"],
     "blockedProfiles": ["prePush", "ci", "handoff"],
-    "bypassableSteps": ["guardDiffStaged"],
+    "bypassableSteps": ["guardDiffStaged", "guardDesignStaged"],
     "requiredReasonEnv": "HARNESS_BYPASS_REASON"
   },
+  "coordinationPolicy": {
+    "allowedPathLeases": {
+      "enabled": true,
+      "source": "activeWork.allowedPaths",
+      "scope": "task",
+      "issuer": "main-orchestrator",
+      "cannotOverrideForbidden": true
+    }
+  },
+  "statePolicy": {
+    "updateVersionRequired": true,
+    "writer": "main-orchestrator",
+    "incrementOnWrite": true
+  },
   "evidencePolicy": {
-    "ui": { "requiredEvidence": [{ "type": "browser", "maxAgeMinutes": 1440 }], "providers": ["Browser Use"] },
+    "ui": {
+      "requiredEvidence": [
+        {
+          "type": "browser",
+          "maxAgeMinutes": 1440,
+          "requireConsoleClean": true
+        }
+      ],
+      "providers": ["Browser Use"],
+      "runtimeConsole": {
+        "required": true,
+        "maxErrors": 0,
+        "maxWarnings": 0
+      }
+    },
     "api": { "requiredEvidence": [{ "type": "api", "maxAgeMinutes": 1440 }] },
     "data": { "requiredEvidence": [{ "type": "database", "maxAgeMinutes": 1440 }], "providers": ["Supabase plugin", "tracked SQL"] }
   },
   "reviewPolicy": {
     "required": true,
     "readyStatus": "ready"
+  },
+  "designPolicy": {
+    "tokenDefinitionFiles": ["src/app/globals.css", "tailwind.config.ts"],
+    "guardedPaths": ["src/app/**", "src/components/**"],
+    "allowedTailwindColorPrefixes": [
+      "brand", "fcgreen", "action", "border", "divider",
+      "condition", "tier", "stat", "pos", "chem", "stamina", "foot", "viz",
+      "attend", "result", "matchst", "award", "fee", "skill", "trend", "feedback",
+      "gray", "slate", "green", "white", "black",
+      "red-team", "blue-team", "background", "foreground", "transparent", "current"
+    ],
+    "customSvgAllowedPaths": ["src/components/brand/**", "src/components/ui/**"],
+    "exemptPatterns": ["// design-exempt"],
+    "layoutPolicy": {
+      "forbiddenClasses": ["overflow-x-auto", "overflow-x-scroll"],
+      "forbidArbitraryMinWidth": true,
+      "runtimeEvidence": "Changed UI surfaces must fit the configured viewport without horizontal page or panel scrolling."
+    },
+    "semanticSlots": [
+      {
+        "id": "locker-room-squad-condition",
+        "description": "Locker room squad condition indicators must use the shared condition icon and condition-* tokens.",
+        "paths": ["src/components/tabs/LockerRoomTab.tsx"],
+        "requiredContent": ["ConditionIcon", "getDisplayCondition"],
+        "forbiddenContent": ["CircleCheck", "컨디션 정상"]
+      },
+      {
+        "id": "condition-icon-token-contract",
+        "description": "The shared condition icon must expose the five condition token styles.",
+        "paths": ["src/components/ui/ConditionIcon.tsx"],
+        "requiredContent": [
+          "text-condition-best",
+          "text-condition-good",
+          "text-condition-normal",
+          "text-condition-poor",
+          "text-condition-worst"
+        ],
+        "forbiddenContent": ["text-green-600", "text-red-500", "text-blue-500"]
+      }
+    ],
+    "docs": "docs/design-tokens.md"
   },
   "harnessPurity": {
     "forbiddenTokens": ["fcmoim", "npm", "src/", "tests/", "supabase", "Next.js", "Firebase", "docs/README", "docs/project-context", "docs/decisions"]

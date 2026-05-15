@@ -26,6 +26,7 @@
     "Read the root guide and project rules before each task.",
     "Read the selected role prompt before editing.",
     "Use project rules for path ownership, required commands, evidence policy, and project documents.",
+    "When project rules define designPolicy, read the referenced design token document before any UI surface work.",
     "Only the orchestrator may update project state.",
     "Worker agents emit statePatchSuggestion instead of editing project state.",
     "Run configured guard profiles before handoff.",

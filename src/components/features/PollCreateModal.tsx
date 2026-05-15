@@ -87,8 +87,8 @@ export default function PollCreateModal() {
       onClose={handleClose}
     >
       <div className="space-y-4">
-        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
-          <div className="flex items-center gap-2 text-xs font-bold text-yellow-800">
+        <div className="rounded-lg border border-feedback-warning-border bg-feedback-warning-bg p-3">
+          <div className="flex items-center gap-2 text-xs font-bold text-feedback-warning">
             <Vote size={15} />
             확정 일정이 아니라 후보 투표를 먼저 만듭니다
           </div>
@@ -160,10 +160,10 @@ export default function PollCreateModal() {
               [...selectedDates].sort((a, b) => a - b).map((day, index) => (
                 <div
                   key={day}
-                  className="rounded-2xl border border-yellow-100 bg-[linear-gradient(180deg,#fffef2_0%,#ffffff_100%)] px-3 py-3 shadow-sm"
+                  className="rounded-2xl border border-feedback-warning-border bg-feedback-warning-bg px-3 py-3 shadow-sm"
                 >
                   <div className="mb-2 flex items-center gap-2">
-                    <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-yellow-100 px-2 text-[11px] font-black text-yellow-800">
+                    <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-feedback-warning-border px-2 text-[11px] font-black text-feedback-warning">
                       {index + 1}
                     </span>
                     <p className="text-sm font-black text-gray-900">
@@ -198,7 +198,7 @@ export default function PollCreateModal() {
         </div>
 
         {submitError ? (
-          <p role="alert" className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold leading-relaxed text-red-600">
+          <p role="alert" className="rounded-lg border border-feedback-error-border bg-feedback-error-bg px-3 py-2 text-xs font-bold leading-relaxed text-feedback-error">
             {submitError}
           </p>
         ) : null}

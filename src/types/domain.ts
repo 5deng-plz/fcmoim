@@ -8,11 +8,22 @@ export type PositionCode = 'FW' | 'MF' | 'DF';
 
 export type PreferredFootCode = 'left' | 'right' | 'both';
 
+export type MembershipStats = {
+  speed: number;
+  shooting: number;
+  passing: number;
+  defense: number;
+  physical: number;
+  dribble: number;
+};
+
 export type SchedulePollStatus = 'open' | 'closed' | 'promoted' | 'cancelled';
 
 export type MatchStatus = 'scheduled' | 'locker_room' | 'finished' | 'cancelled';
 
 export type MatchEventType = 'match' | 'vote_match' | 'training' | 'seminar' | 'etc';
+
+export type MatchLineupTeamNumber = 1 | 2;
 
 export type AccountRow = {
   id: string;
@@ -29,6 +40,41 @@ export type ClubMembershipSummaryRow = {
   status: MembershipStatus;
 };
 
+export type PublicMatchSummaryRow = {
+  id: string;
+  title: string;
+  date: string;
+  location: string;
+  type: MatchEventType;
+  status: MatchStatus;
+  ourScore: number | null;
+  oppScore: number | null;
+};
+
+export type PublicSeasonSummaryRow = {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+};
+
+export type PublicClubSummaryRow = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  logoUrl: string | null;
+  memberCount: number;
+  activeSeason: PublicSeasonSummaryRow | null;
+  recentMatchCount: number;
+  upcomingMatchCount: number;
+};
+
+export type PublicClubDetailRow = PublicClubSummaryRow & {
+  recentMatches: PublicMatchSummaryRow[];
+  upcomingMatches: PublicMatchSummaryRow[];
+};
+
 export type TeamMembershipRow = {
   id: string;
   accountId: string;
@@ -41,6 +87,22 @@ export type TeamMembershipRow = {
   weightKg: number | null;
   birthDate: string | null;
   photoUrl: string | null;
+  ovr: number;
+  stats: MembershipStats;
+  matchPoints: number;
+  preferredFoot: PreferredFootCode;
+};
+
+export type PendingMembershipReviewRow = {
+  id: string;
+  accountId: string;
+  clubId: string;
+  nickname: string;
+  position: PositionCode | string | null;
+  heightCm: number | null;
+  weightKg: number | null;
+  preferredFoot: PreferredFootCode;
+  createdAt: string;
 };
 
 export type SchedulePollOptionRow = {
@@ -95,6 +157,19 @@ export type MatchRow = {
   cancelledAt: string | null;
 };
 
+export type MatchLineupEntryRow = {
+  id: string;
+  matchId: string;
+  membershipId: string;
+  teamNumber: MatchLineupTeamNumber;
+  isLeader: boolean;
+  position: PositionCode;
+  playerName: string;
+  playerPosition: PositionCode | string | null;
+  playerOvr: number;
+  playerPhotoUrl: string | null;
+};
+
 export type AuthContext = {
   user: {
     id: string;
@@ -109,6 +184,7 @@ export type JoinProfileInput = {
   weightKg?: number | null;
   birthDate?: string | null;
   photoUrl?: string | null;
+  preferredFoot?: PreferredFootCode | null;
 };
 
 export type NormalizedJoinProfile = {
@@ -118,6 +194,7 @@ export type NormalizedJoinProfile = {
   weightKg: number | null;
   birthDate: string | null;
   photoUrl: string | null;
+  preferredFoot: PreferredFootCode | null;
 };
 
 export type ApprovedMemberAction =

@@ -26,6 +26,10 @@ if (agent) {
   for (const file of files) {
     if (matchAny(file, agent.forbidden || [])) {
       errors.push(`${agent.id} cannot change forbidden path: ${file}`);
+      continue;
+    }
+    if (matchAny(file, activeAllowedPaths)) {
+      continue;
     }
     if (
       !matchAny(file, agent.owns || []) &&

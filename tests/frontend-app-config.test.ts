@@ -46,43 +46,13 @@ describe('v1.0 frontend runtime config', () => {
     expect(appConfig).not.toHaveProperty('useMockData');
   });
 
-  it('enables the local Admin shortcut by default in development', async () => {
+  it('does not expose the removed Admin shortcut config in local development', async () => {
     const { appConfig } = await loadAppConfig({
       APP_PROFILE: 'local',
       NODE_ENV: 'development',
       NEXT_PUBLIC_ENABLE_ADMIN_TEST_BYPASS: '',
     });
 
-    expect(appConfig.enableAdminTestBypass).toBe(true);
-  });
-
-  it('uses explicit local test bypass for non-development QA runs', async () => {
-    const { appConfig } = await loadAppConfig({
-      APP_PROFILE: 'local',
-      NODE_ENV: 'test',
-      NEXT_PUBLIC_ENABLE_ADMIN_TEST_BYPASS: 'true',
-    });
-
-    expect(appConfig.enableAdminTestBypass).toBe(true);
-  });
-
-  it('allows local runs to explicitly disable the Admin shortcut', async () => {
-    const { appConfig } = await loadAppConfig({
-      APP_PROFILE: 'local',
-      NODE_ENV: 'development',
-      NEXT_PUBLIC_ENABLE_ADMIN_TEST_BYPASS: 'false',
-    });
-
-    expect(appConfig.enableAdminTestBypass).toBe(false);
-  });
-
-  it('keeps the admin shortcut disabled for production profile even when the flag is present', async () => {
-    const { appConfig } = await loadAppConfig({
-      APP_PROFILE: 'prod',
-      NODE_ENV: 'development',
-      NEXT_PUBLIC_ENABLE_ADMIN_TEST_BYPASS: 'true',
-    });
-
-    expect(appConfig.enableAdminTestBypass).toBe(false);
+    expect(appConfig).not.toHaveProperty('enableAdminTestBypass');
   });
 });

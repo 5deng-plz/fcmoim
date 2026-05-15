@@ -5,12 +5,12 @@ export default function CardMarket() {
     <section>
       <div className="flex items-center justify-between mb-3 px-1">
         <h3 className="font-bold text-gray-900 flex items-center gap-1.5">
-          <ShoppingBag size={18} className="text-pink-500" /> 라커룸 상점
+          <ShoppingBag size={18} className="text-award-motm" /> 라커룸 상점
         </h3>
       </div>
       <div className="card p-4 mb-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-pink-50 text-pink-500">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-award-motm/10 text-award-motm">
             <ShoppingBag size={20} />
           </div>
           <div>

@@ -41,6 +41,8 @@ function runStep(step) {
   else if (step === 'guardDiff') runCommand(`node .agents/scripts/guard-diff.mjs${agentArg}${taskArg}`, step);
   else if (step === 'guardDiffStaged') runCommand(`node .agents/scripts/guard-diff.mjs --staged${agentArg}${taskArg}`, step);
   else if (step === 'guardEvidence') runCommand(`node .agents/scripts/guard-evidence.mjs${taskArg}`, step);
+  else if (step === 'guardDesign') runCommand('node .agents/scripts/guard-design.mjs', step);
+  else if (step === 'guardDesignStaged') runCommand('node .agents/scripts/guard-design.mjs --staged', step);
   else if (step === 'guardReview') runCommand(`node .agents/scripts/guard-review.mjs${taskArg}`, step);
   else if (step === 'harnessTest') runCommand(commands.harnessTest, step);
   else if (step === 'projectPreCommit') runCommand(commands.preCommit, step);

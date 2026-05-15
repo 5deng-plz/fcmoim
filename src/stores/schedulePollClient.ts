@@ -62,6 +62,17 @@ export type CancelSchedulePollRequest = {
   cancellationReason: string;
 };
 
+export type PromoteSchedulePollRequest = {
+  clubId: string;
+  pollId: string;
+  optionId: string;
+};
+
+export type PromoteSchedulePollResponse = {
+  pollId: string;
+  matchId: string;
+};
+
 type ApiErrorBody = {
   error?: {
     code?: string;
@@ -151,6 +162,25 @@ export async function cancelSchedulePoll(
   }
 
   return response.json() as Promise<SchedulePoll>;
+}
+
+export async function promoteSchedulePoll(
+  input: PromoteSchedulePollRequest,
+): Promise<PromoteSchedulePollResponse> {
+  const response = await fetch('/api/schedule-polls/promote', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    throw await buildApiError(response, '일정 투표를 확정하지 못했어요.');
+  }
+
+  return response.json() as Promise<PromoteSchedulePollResponse>;
 }
 
 export function getSchedulePollErrorMessage(error: unknown, fallback: string) {

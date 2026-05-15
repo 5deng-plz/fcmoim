@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { cancelMatch, fetchUpcomingMatches, type UpcomingMatch } from '../src/stores/matchClient';
+import {
+  cancelMatch,
+  fetchMatchLineup,
+  fetchUpcomingMatches,
+  saveMatchLineup,
+  type MatchLineupEntry,
+  type UpcomingMatch,
+} from '../src/stores/matchClient';
 
 const apiMatch: UpcomingMatch = {
   id: 'match-1',
@@ -19,6 +26,19 @@ const apiMatch: UpcomingMatch = {
   cancellationReason: null,
   cancelledAt: null,
 };
+
+const apiLineup: MatchLineupEntry[] = [{
+  id: 'lineup-1',
+  matchId: 'match-1',
+  membershipId: 'member-red',
+  teamNumber: 1,
+  isLeader: true,
+  position: 'FW',
+  playerName: 'Red Player',
+  playerPosition: 'FW',
+  playerOvr: 70,
+  playerPhotoUrl: null,
+}];
 
 describe('frontend match API client', () => {
   beforeEach(() => {
@@ -67,6 +87,53 @@ describe('frontend match API client', () => {
       clubId: 'club-1',
       matchId: 'match-1',
       cancellationReason: '강설로 인한 취소',
+    });
+    expect(body).not.toHaveProperty('authUid');
+  });
+
+  it('fetches match lineup by club and match id', async () => {
+    const fetchMock = vi.fn(async () => (
+      new Response(JSON.stringify(apiLineup), { status: 200 })
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(fetchMatchLineup({ clubId: 'club 1', matchId: 'match 1' })).resolves.toEqual(apiLineup);
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/matches/lineup?clubId=club+1&matchId=match+1', expect.objectContaining({
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    }));
+  });
+
+  it('posts lineup entries without client authUid', async () => {
+    const fetchMock = vi.fn(async () => (
+      new Response(JSON.stringify(apiLineup), { status: 200 })
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await saveMatchLineup({
+      clubId: 'club-1',
+      matchId: 'match-1',
+      entries: [
+        { membershipId: 'member-red', teamNumber: 1, isLeader: true, position: 'FW' },
+        { membershipId: 'member-blue', teamNumber: 2, isLeader: true, position: 'DF' },
+      ],
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/matches/lineup', expect.objectContaining({
+      method: 'POST',
+    }));
+
+    const requestInit = (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1];
+    const body = JSON.parse(requestInit.body as string);
+
+    expect(body).toEqual({
+      clubId: 'club-1',
+      matchId: 'match-1',
+      entries: [
+        { membershipId: 'member-red', teamNumber: 1, isLeader: true, position: 'FW' },
+        { membershipId: 'member-blue', teamNumber: 2, isLeader: true, position: 'DF' },
+      ],
     });
     expect(body).not.toHaveProperty('authUid');
   });

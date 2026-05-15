@@ -1,12 +1,13 @@
 'use client';
 
 import { appConfig } from '../config/app.config';
-import { DEFAULT_STATS, type Position, type User, type UserRole, type UserStatus } from '../types';
+import { DEFAULT_STATS, type Position, type User, type UserRole, type UserStats, type UserStatus } from '../types';
 import type { AuthUser } from '../lib/auth';
 import type { ClubOption } from './useAppStore';
 
 type MembershipStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 export type ApiMembershipState = 'new' | MembershipStatus;
+export type PreferredFootCode = 'left' | 'right' | 'both';
 
 type ApiAccount = {
   id: string;
@@ -27,6 +28,10 @@ export type ApiMembership = {
   weightKg: number | null;
   birthDate: string | null;
   photoUrl: string | null;
+  ovr: number;
+  stats: UserStats;
+  matchPoints: number;
+  preferredFoot: PreferredFootCode;
 };
 
 export type MembershipSnapshot = {
@@ -50,6 +55,7 @@ export type JoinProfileRequest = {
   weightKg: number | null;
   birthDate: string | null;
   photoUrl: string | null;
+  preferredFoot: PreferredFootCode | null;
 };
 
 export type JoinFormValues = {
@@ -57,9 +63,59 @@ export type JoinFormValues = {
   mainPosition: Position;
   height: string;
   weight: string;
+  preferredFoot: '왼발' | '오른발' | '양발';
   birthYear: string;
   birthMonth: string;
 };
+
+export type PublicSeasonSummary = {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+};
+
+export type PublicMatchSummary = {
+  id: string;
+  title: string;
+  date: string;
+  location: string;
+  type: string;
+  status: string;
+  ourScore: number | null;
+  oppScore: number | null;
+};
+
+export type PublicClubSummary = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  logoUrl: string | null;
+  memberCount: number;
+  activeSeason: PublicSeasonSummary | null;
+  recentMatchCount: number;
+  upcomingMatchCount: number;
+};
+
+export type PublicClubDetail = PublicClubSummary & {
+  recentMatches: PublicMatchSummary[];
+  upcomingMatches: PublicMatchSummary[];
+};
+
+export type PendingMembershipReview = {
+  id: string;
+  accountId: string;
+  clubId: string;
+  nickname: string;
+  position: Position | string | null;
+  heightCm: number | null;
+  weightKg: number | null;
+  preferredFoot: PreferredFootCode;
+  createdAt: string;
+};
+
+export type ApprovedMembership = ApiMembership;
 
 export function membershipStateToUserStatus(state: ApiMembershipState): UserStatus {
   return state === 'new' ? 'guest' : state;
@@ -77,7 +133,34 @@ export function buildJoinProfileRequest(formData: JoinFormValues): JoinProfileRe
     weightKg: parseOptionalPositiveInt(formData.weight),
     birthDate: buildBirthDate(formData.birthYear, formData.birthMonth),
     photoUrl: null,
+    preferredFoot: mapPreferredFoot(formData.preferredFoot),
   };
+}
+
+export async function fetchPublicClubs(): Promise<PublicClubSummary[]> {
+  const response = await fetch('/api/public/clubs', {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw new Error(await getApiErrorMessage(response, '팀 목록을 불러오지 못했습니다.'));
+  }
+
+  return response.json() as Promise<PublicClubSummary[]>;
+}
+
+export async function fetchPublicClubDetail(clubId: string): Promise<PublicClubDetail> {
+  const response = await fetch(`/api/public/clubs/${encodeURIComponent(clubId)}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw new Error(await getApiErrorMessage(response, '팀 정보를 불러오지 못했습니다.'));
+  }
+
+  return response.json() as Promise<PublicClubDetail>;
 }
 
 export async function fetchMembershipSnapshot(clubId = appConfig.defaultClubId): Promise<MembershipSnapshot> {
@@ -149,6 +232,85 @@ export async function patchMembershipPhoto(input: { clubId: string; photoUrl: st
   return response.json() as Promise<ApiMembership>;
 }
 
+export async function fetchPendingMemberships(clubId = appConfig.defaultClubId) {
+  const response = await fetch(`/api/membership/pending?clubId=${encodeURIComponent(clubId)}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw new Error(await getApiErrorMessage(response, '입단 대기 목록을 불러오지 못했습니다.'));
+  }
+
+  return response.json() as Promise<PendingMembershipReview[]>;
+}
+
+export async function fetchApprovedMemberships(clubId = appConfig.defaultClubId) {
+  const response = await fetch(`/api/membership/approved?clubId=${encodeURIComponent(clubId)}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw new Error(await getApiErrorMessage(response, '스쿼드 명단을 불러오지 못했습니다.'));
+  }
+
+  return response.json() as Promise<ApprovedMembership[]>;
+}
+
+export async function reviewMembership(input: {
+  clubId: string;
+  membershipId: string;
+  decision: Exclude<MembershipStatus, 'pending'>;
+}) {
+  const response = await fetch('/api/membership/review', {
+    method: 'PATCH',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getApiErrorMessage(response, '입단신청 심사를 처리하지 못했습니다.'));
+  }
+
+  return response.json() as Promise<ApiMembership>;
+}
+
+export async function assignOperatorRole(input: {
+  clubId: string;
+  membershipId: string;
+}) {
+  return updateMembershipRole({ ...input, role: 'operator' });
+}
+
+export async function updateMembershipRole(input: {
+  clubId: string;
+  membershipId: string;
+  role: 'operator' | 'member';
+}) {
+  const response = await fetch('/api/membership/role', {
+    method: 'PATCH',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      clubId: input.clubId,
+      membershipId: input.membershipId,
+      role: input.role,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getApiErrorMessage(response, '멤버십 권한을 변경하지 못했습니다.'));
+  }
+
+  return response.json() as Promise<ApiMembership>;
+}
+
 export function mapMembershipSnapshotToUser(
   snapshot: MembershipSnapshot,
   authUser: AuthUser,
@@ -167,19 +329,25 @@ export function mapMembershipSnapshotToUser(
     name: membership.nickname,
     mainPosition,
     subPosition: null,
-    ovr: 60,
-    stats: DEFAULT_STATS,
-    matchPoints: 100,
+    ovr: membership.ovr,
+    stats: membership.stats ?? DEFAULT_STATS,
+    matchPoints: membership.matchPoints,
     photoUrl: membership.photoUrl ?? snapshot.account.avatarUrl ?? null,
     role: membership.role,
     status: membership.status,
     height: membership.heightCm,
     weight: membership.weightKg,
     birth: membership.birthDate ? new Date(membership.birthDate) : null,
-    preferredFoot: '오른발',
+    preferredFoot: formatPreferredFoot(membership.preferredFoot),
     createdAt: now,
     updatedAt: now,
   };
+}
+
+function formatPreferredFoot(foot: PreferredFootCode): '왼발' | '오른발' | '양발' {
+  if (foot === 'left') return '왼발';
+  if (foot === 'both') return '양발';
+  return '오른발';
 }
 
 function normalizePosition(position: Position | string | null): Position {
@@ -217,6 +385,12 @@ function buildBirthDate(year: string, month: string): string | null {
   }
 
   return `${parsedYear.toString().padStart(4, '0')}-${parsedMonth.toString().padStart(2, '0')}-01`;
+}
+
+function mapPreferredFoot(foot: JoinFormValues['preferredFoot']): PreferredFootCode {
+  if (foot === '왼발') return 'left';
+  if (foot === '양발') return 'both';
+  return 'right';
 }
 
 async function getApiErrorMessage(response: Response, fallback: string) {

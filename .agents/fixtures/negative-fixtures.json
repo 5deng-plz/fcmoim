@@ -4,19 +4,53 @@
     {
       "id": "forbidden-path",
       "command": "node .agents/scripts/guard-diff.mjs --agent=writer",
-      "mutations": [{ "path": "app/blocked/change.txt", "content": "change" }],
+      "mutations": [
+        {
+          "path": "app/blocked/change.txt",
+          "content": "change"
+        }
+      ],
+      "expectedExit": 1
+    },
+    {
+      "id": "active-allowed-path-cannot-override-forbidden",
+      "command": "node .agents/scripts/guard-diff.mjs --agent=writer",
+      "mutations": [
+        {
+          "path": "app/blocked/explicitly-allowed.txt",
+          "content": "change"
+        }
+      ],
+      "statePatch": {
+        "activeWork": {
+          "allowedPaths": [
+            "app/blocked/explicitly-allowed.txt",
+            "docs/state.json"
+          ]
+        }
+      },
       "expectedExit": 1
     },
     {
       "id": "missing-evidence",
       "command": "node .agents/scripts/guard-evidence.mjs",
-      "mutations": [{ "path": "app/view/change.txt", "content": "change" }],
+      "mutations": [
+        {
+          "path": "app/view/change.txt",
+          "content": "change"
+        }
+      ],
       "expectedExit": 1
     },
     {
       "id": "stale-evidence",
       "command": "node .agents/scripts/guard-evidence.mjs",
-      "mutations": [{ "path": "app/view/change.txt", "content": "change" }],
+      "mutations": [
+        {
+          "path": "app/view/change.txt",
+          "content": "change"
+        }
+      ],
       "statePatch": {
         "activeWork": {
           "evidence": {
@@ -37,13 +71,101 @@
       "expectedExit": 1
     },
     {
+      "id": "missing-evidence-artifact",
+      "command": "node .agents/scripts/guard-evidence.mjs",
+      "mutations": [
+        {
+          "path": "app/view/change.txt",
+          "content": "change"
+        }
+      ],
+      "statePatch": {
+        "activeWork": {
+          "evidence": {
+            "visual": {
+              "status": "passed",
+              "checkedAt": "2026-01-02T00:00:00.000Z",
+              "surface": "interface",
+              "target": "fixture",
+              "provider": "fixture",
+              "summary": "fixture",
+              "errors": [],
+              "verifiedBy": "fixture",
+              "worktreeFingerprint": "fixture",
+              "commit": "__BASELINE_COMMIT__"
+            }
+          }
+        }
+      },
+      "expectedExit": 1
+    },
+    {
+      "id": "console-warning-evidence",
+      "command": "node .agents/scripts/guard-evidence.mjs",
+      "mutations": [
+        {
+          "path": "app/view/change.txt",
+          "content": "change"
+        }
+      ],
+      "statePatch": {
+        "activeWork": {
+          "evidence": {
+            "visual": {
+              "status": "passed",
+              "checkedAt": "2026-01-02T00:00:00.000Z",
+              "surface": "interface",
+              "target": "fixture",
+              "provider": "fixture",
+              "summary": "fixture",
+              "errors": [],
+              "artifacts": [
+                {
+                  "kind": "browser-console",
+                  "target": "fixture",
+                  "summary": "console errors: 0, warnings: 1",
+                  "consoleErrors": 0,
+                  "consoleWarnings": 1
+                }
+              ],
+              "verifiedBy": "fixture",
+              "worktreeFingerprint": "fixture",
+              "commit": "__BASELINE_COMMIT__"
+            }
+          }
+        }
+      },
+      "expectedExit": 1
+    },
+    {
       "id": "blocked-review",
       "command": "node .agents/scripts/guard-review.mjs",
       "statePatch": {
         "activeWork": {
           "reviewVerdict": {
             "status": "blocked",
-            "blockers": ["fixture blocker"]
+            "blockers": [
+              "fixture blocker"
+            ]
+          }
+        }
+      },
+      "expectedExit": 1
+    },
+    {
+      "id": "self-reviewed-verdict",
+      "command": "node .agents/scripts/guard-review.mjs",
+      "statePatch": {
+        "activeWork": {
+          "reviewVerdict": {
+            "status": "ready",
+            "reviewedAt": "2026-01-02T00:00:00.000Z",
+            "reviewedBy": "writer",
+            "worktreeFingerprint": "fixture",
+            "evidenceReviewed": ["visual"],
+            "checks": ["fixture check"],
+            "blockers": [],
+            "summary": "fixture"
           }
         }
       },
@@ -52,6 +174,80 @@
     {
       "id": "missing-hook-config",
       "command": "node .agents/scripts/guard-hooks.mjs",
+      "expectedExit": 1
+    },
+    {
+      "id": "missing-state-update-version",
+      "description": "validate-project-rules rejects state without updateVersion when statePolicy requires it",
+      "command": "node .agents/scripts/validate-project-rules.mjs",
+      "statePatch": {
+        "updateVersion": null
+      },
+      "expectedExit": 1
+    },
+    {
+      "id": "invalid-allowed-path-lease-policy",
+      "description": "validate-project-rules rejects malformed allowed path lease policy",
+      "command": "node .agents/scripts/validate-project-rules.mjs",
+      "rulesPatch": {
+        "coordinationPolicy": {
+          "allowedPathLeases": {
+            "source": "activeWork.changedFiles"
+          }
+        }
+      },
+      "expectedExit": 1
+    },
+    {
+      "id": "design-guard-hardcoded-hex",
+      "description": "guard-design rejects hardcoded hex color in guarded path",
+      "command": "node .agents/scripts/guard-design.mjs",
+      "mutations": [
+        {
+          "path": "app/view/Widget.tsx",
+          "content": "export default function Widget() { return <div style={{ color: '#ff0000' }}>test</div>; }"
+        }
+      ],
+      "statePatch": {},
+      "expectedExit": 1
+    },
+    {
+      "id": "design-guard-all-mode-hardcoded-hex",
+      "description": "guard-design --all scans the full guarded file set instead of only changed files",
+      "command": "node .agents/scripts/guard-design.mjs --all",
+      "mutations": [
+        {
+          "path": "app/view/AllWidget.tsx",
+          "content": "export default function AllWidget() { return <div style={{ color: '#ff0000' }}>test</div>; }"
+        }
+      ],
+      "statePatch": {},
+      "expectedExit": 1
+    },
+    {
+      "id": "design-guard-semantic-slot-condition",
+      "description": "guard-design rejects a condition UI slot that keeps a generic green check icon",
+      "command": "node .agents/scripts/guard-design.mjs",
+      "mutations": [
+        {
+          "path": "app/view/Locker.tsx",
+          "content": "import { CircleCheck } from 'lucide-react';\nexport default function Locker() { return <div><span>컨디션</span><CircleCheck className=\"text-green-600\" aria-label=\"컨디션 정상\" /></div>; }"
+        }
+      ],
+      "statePatch": {},
+      "expectedExit": 1
+    },
+    {
+      "id": "design-guard-horizontal-scroll",
+      "description": "guard-design rejects horizontal scroll utilities and arbitrary min-width in guarded paths",
+      "command": "node .agents/scripts/guard-design.mjs",
+      "mutations": [
+        {
+          "path": "app/view/WideTable.tsx",
+          "content": "export default function WideTable() { return <div className=\"overflow-x-auto\"><div className=\"min-w-[620px]\">wide</div></div>; }"
+        }
+      ],
+      "statePatch": {},
       "expectedExit": 1
     }
   ]

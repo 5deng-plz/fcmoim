@@ -3,6 +3,7 @@ import {
   createSchedulePoll,
   cancelSchedulePoll,
   fetchActiveSchedulePolls,
+  promoteSchedulePoll,
   SchedulePollApiError,
   voteSchedulePoll,
   type SchedulePoll,
@@ -138,6 +139,36 @@ describe('frontend schedule poll API client', () => {
       clubId: 'club-1',
       pollId: 'poll-1',
       cancellationReason: '강설로 인한 취소',
+    });
+    expect(body).not.toHaveProperty('authUid');
+  });
+
+  it('posts poll promotion without client authUid', async () => {
+    const fetchMock = vi.fn(async () => (
+      new Response(JSON.stringify({
+        pollId: 'poll-1',
+        matchId: 'match-created-from-poll',
+      }), { status: 200 })
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await promoteSchedulePoll({
+      clubId: 'club-1',
+      pollId: 'poll-1',
+      optionId: 'option-1',
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/schedule-polls/promote', expect.objectContaining({
+      method: 'POST',
+    }));
+
+    const requestInit = (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1];
+    const body = JSON.parse(requestInit.body as string);
+
+    expect(body).toEqual({
+      clubId: 'club-1',
+      pollId: 'poll-1',
+      optionId: 'option-1',
     });
     expect(body).not.toHaveProperty('authUid');
   });

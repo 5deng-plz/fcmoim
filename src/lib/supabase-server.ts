@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { appConfig } from '../config/app.config';
@@ -14,8 +14,11 @@ export async function createSupabaseServerClient(): Promise<SupabaseClient> {
   }
 
   const cookieStore = await cookies();
+  const headerStore = await headers();
+  const authorization = headerStore.get('authorization') ?? undefined;
 
   return createServerClient(appConfig.supabase.url, appConfig.supabase.publishableKey, {
+    global: authorization ? { headers: { Authorization: authorization } } : undefined,
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -39,6 +42,11 @@ export async function getRequiredServerAuthContext(
   const { data, error } = await supabase.auth.getClaims();
 
   if (error || !data?.claims?.sub) {
+    const bearerAuth = await getBearerAuthContext(supabase);
+    if (bearerAuth) {
+      return bearerAuth;
+    }
+
     const e2eAuth = getE2ETestAuthContext();
     if (e2eAuth) {
       return e2eAuth;
@@ -56,6 +64,39 @@ export async function getRequiredServerAuthContext(
       email: typeof data.claims.email === 'string' ? data.claims.email : null,
     },
   };
+}
+
+async function getBearerAuthContext(supabase: SupabaseClient): Promise<AuthContext | null> {
+  const headerStore = await getRequestHeadersOrNull();
+  if (!headerStore) {
+    return null;
+  }
+
+  const authorization = headerStore.get('authorization');
+  const token = authorization?.match(/^Bearer\s+(.+)$/i)?.[1];
+  if (!token) {
+    return null;
+  }
+
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user) {
+    return null;
+  }
+
+  return {
+    user: {
+      id: data.user.id,
+      email: data.user.email ?? null,
+    },
+  };
+}
+
+async function getRequestHeadersOrNull() {
+  try {
+    return await headers();
+  } catch {
+    return null;
+  }
 }
 
 export function isE2ETestAuthBypassEnabled() {

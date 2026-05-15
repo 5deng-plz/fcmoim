@@ -19,7 +19,9 @@ export default function Avatar({
       alt={alt}
       width={size}
       height={size}
+      sizes={`${size}px`}
       className={`rounded-full bg-gray-200 object-cover ${className}`}
+      style={{ width: size, height: size }}
       unoptimized
     />
   );

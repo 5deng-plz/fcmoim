@@ -556,11 +556,16 @@ begin
     raise exception 'Membership account and club cannot be changed.';
   end if;
 
+  if new.role is distinct from old.role
+    and not private.has_club_role(old.club_id, array['admin']::public.user_role[])
+  then
+    raise exception 'Only club admins can change membership roles.';
+  end if;
+
   if (select auth.uid()) = old.account_id
     and not private.has_club_role(old.club_id, array['admin', 'operator']::public.user_role[])
     and (
-      new.role is distinct from old.role
-      or new.status is distinct from old.status
+      new.status is distinct from old.status
       or new.ovr is distinct from old.ovr
       or new.stats is distinct from old.stats
       or new.match_points is distinct from old.match_points
@@ -657,7 +662,8 @@ alter table public.point_ledger enable row level security;
 alter table public.reward_badges enable row level security;
 alter table public.membership_badges enable row level security;
 
-grant usage on schema public to authenticated;
+grant usage on schema public to anon, authenticated;
+grant select on public.clubs to anon;
 grant select, insert, update, delete on all tables in schema public to authenticated;
 
 drop policy if exists "Accounts can read own account" on public.accounts;
@@ -680,9 +686,10 @@ create policy "Accounts can update own account"
   with check (private.is_current_account(id));
 
 drop policy if exists "Authenticated users can read club catalog" on public.clubs;
-create policy "Authenticated users can read club catalog"
+drop policy if exists "Anyone can read club catalog" on public.clubs;
+create policy "Anyone can read club catalog"
   on public.clubs for select
-  to authenticated
+  to anon, authenticated
   using (true);
 
 drop policy if exists "Authenticated users can create clubs" on public.clubs;
@@ -702,7 +709,14 @@ drop policy if exists "Members can read club memberships" on public.team_members
 create policy "Members can read club memberships"
   on public.team_memberships for select
   to authenticated
-  using (private.is_current_membership(id) or private.is_member_of_club(club_id));
+  using (
+    account_id = (select auth.uid())
+    or private.has_club_role(club_id, array['admin', 'operator']::public.user_role[])
+    or (
+      status = 'approved'::public.membership_status
+      and private.is_member_of_club(club_id)
+    )
+  );
 
 drop policy if exists "Users can request membership or operators can add members" on public.team_memberships;
 create policy "Users can request membership or operators can add members"
@@ -713,6 +727,11 @@ create policy "Users can request membership or operators can add members"
       private.is_current_account(account_id)
       and role = 'member'::public.user_role
       and status = 'pending'::public.membership_status
+      and exists (
+        select 1
+        from public.clubs c
+        where c.id = team_memberships.club_id
+      )
     )
     or private.has_club_role(club_id, array['admin', 'operator']::public.user_role[])
   );
@@ -722,12 +741,10 @@ create policy "Users can update own profile or operators can manage memberships"
   on public.team_memberships for update
   to authenticated
   using (
-    private.is_current_membership(id)
-    or private.has_club_role(club_id, array['admin', 'operator']::public.user_role[])
+    private.has_club_role(club_id, array['admin']::public.user_role[])
   )
   with check (
-    private.is_current_membership(id)
-    or private.has_club_role(club_id, array['admin', 'operator']::public.user_role[])
+    private.has_club_role(club_id, array['admin']::public.user_role[])
   );
 
 drop policy if exists "Club operators can delete memberships" on public.team_memberships;
@@ -1369,11 +1386,15 @@ grant execute on function public.save_match_result_atomically(uuid, jsonb, jsonb
 insert into public.clubs (id, name, slug, description)
 values (
   '00000000-0000-0000-0000-000000000001',
-  'FC Moim',
-  'fcmoim',
-  'FC Moim default club for Stage 1 setup.'
+  'FC Guppy',
+  'fc-guppy',
+  'FC Guppy default club for Stage 1 setup.'
 )
-on conflict (id) do nothing;
+on conflict (id) do update
+set
+  name = excluded.name,
+  slug = excluded.slug,
+  description = excluded.description;
 
 insert into public.seasons (id, club_id, name, start_date, end_date, is_active)
 values (

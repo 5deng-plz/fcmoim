@@ -25,7 +25,6 @@ export interface AppConfig {
   supabase: SupabaseConfig;
   vapidKey: string;
   defaultClubId: string;
-  readonly enableAdminTestBypass: boolean;
 }
 
 function parseJsonConfig<T extends object>(value: string | undefined, fallback: T): T {
@@ -65,17 +64,6 @@ const defaultClubId =
   process.env.NEXT_PUBLIC_DEFAULT_CLUB_ID ||
   '00000000-0000-0000-0000-000000000001';
 
-function isAdminTestBypassEnabled(profile: AppProfile) {
-  const explicitFlag = process.env.NEXT_PUBLIC_ENABLE_ADMIN_TEST_BYPASS;
-
-  return (
-    profile === 'local' &&
-    process.env.NODE_ENV !== 'production' &&
-    (process.env.NODE_ENV === 'development' || explicitFlag === 'true') &&
-    explicitFlag !== 'false'
-  );
-}
-
 const localConfig: AppConfig = {
   profile: 'local',
   firebase: {
@@ -88,9 +76,6 @@ const localConfig: AppConfig = {
   supabase: supabasePublicConfig,
   vapidKey: firebasePublicConfig.vapidKey || '',
   defaultClubId,
-  get enableAdminTestBypass() {
-    return isAdminTestBypassEnabled('local');
-  },
 };
 
 const prodConfig: AppConfig = {
@@ -105,9 +90,6 @@ const prodConfig: AppConfig = {
   supabase: supabasePublicConfig,
   vapidKey: firebasePublicConfig.vapidKey || '',
   defaultClubId,
-  get enableAdminTestBypass() {
-    return isAdminTestBypassEnabled('prod');
-  },
 };
 
 const profiles: Record<AppProfile, AppConfig> = {

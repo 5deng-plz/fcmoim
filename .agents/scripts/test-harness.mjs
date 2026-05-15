@@ -60,7 +60,7 @@ function setupFixture(directory, fixture) {
   execFileSync('git', ['config', 'user.email', 'fixture@example.invalid'], { cwd: directory });
   execFileSync('git', ['config', 'user.name', 'Fixture'], { cwd: directory });
 
-  const rules = createRules();
+  const rules = mergeDeep(createRules(), fixture.rulesPatch || {});
   fs.writeFileSync(path.join(directory, 'docs/agent-rules.json'), JSON.stringify(rules, null, 2));
 
   const state = createState();
@@ -104,7 +104,7 @@ function createRules() {
       verify: 'node .agents/scripts/validate-harness.mjs'
     },
     evidencePolicy: {
-      interface: { requiredEvidence: [{ type: 'visual', maxAgeMinutes: 1440 }] }
+      interface: { requiredEvidence: [{ type: 'visual', maxAgeMinutes: 1440, requireConsoleClean: true }] }
     },
     reviewPolicy: { required: true, readyStatus: 'ready' },
     hookPolicy: { requiredPath: '.agents/hooks' },
@@ -114,6 +114,38 @@ function createRules() {
       bypassableSteps: ['guardDiffStaged'],
       requiredReasonEnv: 'HARNESS_BYPASS_REASON'
     },
+    coordinationPolicy: {
+      allowedPathLeases: {
+        enabled: true,
+        source: 'activeWork.allowedPaths',
+        scope: 'task',
+        issuer: 'main-orchestrator',
+        cannotOverrideForbidden: true
+      }
+    },
+    statePolicy: {
+      updateVersionRequired: true,
+      writer: 'main-orchestrator',
+      incrementOnWrite: true
+    },
+    designPolicy: {
+      tokenDefinitionFiles: ['app/styles/tokens.css'],
+      guardedPaths: ['app/view/**'],
+      allowedTailwindColorPrefixes: ['gray'],
+      exemptPatterns: [],
+      layoutPolicy: {
+        forbiddenClasses: ['overflow-x-auto', 'overflow-x-scroll'],
+        forbidArbitraryMinWidth: true
+      },
+      semanticSlots: [
+        {
+          id: 'fixture-condition-slot',
+          paths: ['app/view/Locker.tsx'],
+          requiredContent: ['ConditionIcon', 'level="normal"'],
+          forbiddenContent: ['CircleCheck', '컨디션 정상']
+        }
+      ]
+    },
     harnessPurity: { forbiddenTokens: [] }
   };
 }
@@ -122,6 +154,7 @@ function createState() {
   return {
     schemaVersion: '1.0.0',
     projectName: 'fixture',
+    updateVersion: 0,
     updatedAt: new Date().toISOString(),
     updatedBy: 'main-orchestrator',
     currentPhase: 'fixture',

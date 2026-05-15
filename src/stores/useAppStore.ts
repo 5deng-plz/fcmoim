@@ -11,6 +11,8 @@ export interface ClubOption {
   role: UserRole;
 }
 
+const SELECTED_JOIN_CLUB_KEY = 'fcmoim.selectedJoinClubId';
+
 interface AppState {
   // ─── 탭 네비게이션 ───
   activeTab: Tab;
@@ -43,6 +45,8 @@ interface AppState {
   // ─── 팀 정보 ───
   activeClubId: string;
   setActiveClubId: (clubId: string) => void;
+  selectedJoinClubId: string;
+  setSelectedJoinClubId: (clubId: string) => void;
   teamName: string;
   setTeamName: (name: string) => void;
   availableClubs: ClubOption[];
@@ -81,8 +85,29 @@ export const useAppStore = create<AppState>((set) => ({
   // ─── 팀 정보 ───
   activeClubId: appConfig.defaultClubId,
   setActiveClubId: (clubId) => set({ activeClubId: clubId }),
+  selectedJoinClubId: readSelectedJoinClubId(),
+  setSelectedJoinClubId: (clubId) => {
+    persistSelectedJoinClubId(clubId);
+    set({ selectedJoinClubId: clubId });
+  },
   teamName: 'FC Moim',
   setTeamName: (name) => set({ teamName: name }),
   availableClubs: [],
   setAvailableClubs: (clubs) => set({ availableClubs: clubs }),
 }));
+
+function readSelectedJoinClubId() {
+  if (typeof window === 'undefined') {
+    return appConfig.defaultClubId;
+  }
+
+  return window.sessionStorage.getItem(SELECTED_JOIN_CLUB_KEY) || appConfig.defaultClubId;
+}
+
+function persistSelectedJoinClubId(clubId: string) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.sessionStorage.setItem(SELECTED_JOIN_CLUB_KEY, clubId);
+}

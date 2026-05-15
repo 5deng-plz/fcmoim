@@ -13,10 +13,10 @@ export interface CalendarEvent {
 
 const dotColor: Record<string, string> = {
   match: 'bg-green-500',
-  training: 'bg-orange-500',
-  seminar: 'bg-purple-500',
+  poll: 'bg-award-mvp',
+  seminar: 'bg-result-loss',
+  training: 'bg-matchst-upcoming',
   etc: 'bg-gray-500',
-  poll: 'bg-yellow-500',
 };
 
 interface CalendarViewProps {
@@ -107,7 +107,7 @@ export default function CalendarView({
 
       <div className="grid grid-cols-7 gap-1 text-center mb-2">
         {['일', '월', '화', '수', '목', '금', '토'].map((d, i) => (
-          <div key={d} className={`text-[11px] font-bold ${i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-gray-400'}`}>
+          <div key={d} className={`text-[11px] font-bold ${i === 0 ? 'text-result-loss' : i === 6 ? 'text-pos-df' : 'text-gray-400'}`}>
             {d}
           </div>
         ))}
@@ -131,9 +131,9 @@ export default function CalendarView({
           const textColor = isSelected
             ? 'text-white'
             : isRedDay
-            ? 'text-red-500'
+            ? 'text-result-loss'
             : isBlueDay
-            ? 'text-blue-500'
+            ? 'text-pos-df'
             : 'text-gray-700';
 
           return (
@@ -172,20 +172,20 @@ export default function CalendarView({
             <span>경기</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-            <span>전지훈련</span>
+            <div className="w-1.5 h-1.5 rounded-full bg-award-mvp" />
+            <span>투표중</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+            <div className="w-1.5 h-1.5 rounded-full bg-result-loss" />
             <span>정신교육</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-1.5 h-1.5 rounded-full bg-matchst-upcoming" />
+            <span>전지훈련</span>
           </div>
           <div className="flex items-center gap-1">
             <div className="w-1.5 h-1.5 rounded-full bg-gray-500" />
             <span>기타</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
-            <span>투표중</span>
           </div>
         </div>
       )}

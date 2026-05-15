@@ -26,3 +26,10 @@ This file starts clean for `prototype v0.1`.
 - Hooks must read project commands from `docs/agent-rules.json`; they must not hard-code project-specific commands.
 - CI must run the project rules `commands.ci` guard path, so local hook bypass cannot be the final quality gate.
 - Local bypass requires an explicit reason and is not accepted for pre-push, CI, or handoff guards.
+
+### Design Token Enforcement
+
+- UI surface colors must use the allowed palette documented in `docs/design-tokens.md`.
+- `guard-design.mjs` blocks hardcoded component colors, inline SVG paths, and disallowed Tailwind color prefixes on changed UI lines.
+- Frontend and Review Agent outputs must include design token compliance evidence before handoff is considered ready.
+- Semantic design slots in `docs/agent-rules.json` are binding contracts; matching files must contain required semantic markers and avoid forbidden generic substitutes.

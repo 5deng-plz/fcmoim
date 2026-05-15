@@ -31,6 +31,32 @@ export type CancelMatchRequest = {
   cancellationReason: string;
 };
 
+export type MatchLineupEntry = {
+  id: string;
+  matchId: string;
+  membershipId: string;
+  teamNumber: 1 | 2;
+  isLeader: boolean;
+  position: 'FW' | 'MF' | 'DF';
+  playerName: string;
+  playerPosition: string | null;
+  playerOvr: number;
+  playerPhotoUrl: string | null;
+};
+
+export type SaveMatchLineupEntry = {
+  membershipId: string;
+  teamNumber: 1 | 2;
+  isLeader: boolean;
+  position: 'FW' | 'MF' | 'DF';
+};
+
+export type SaveMatchLineupRequest = {
+  clubId: string;
+  matchId: string;
+  entries: SaveMatchLineupEntry[];
+};
+
 type ApiErrorBody = {
   error?: {
     code?: string;
@@ -68,6 +94,43 @@ export async function cancelMatch(input: CancelMatchRequest): Promise<UpcomingMa
   }
 
   return response.json() as Promise<UpcomingMatch>;
+}
+
+export async function fetchMatchLineup(input: {
+  clubId: string;
+  matchId: string;
+}): Promise<MatchLineupEntry[]> {
+  const params = new URLSearchParams({
+    clubId: input.clubId,
+    matchId: input.matchId,
+  });
+  const response = await fetch(`/api/matches/lineup?${params.toString()}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw await buildApiError(response, '라인업을 불러오지 못했어요.');
+  }
+
+  return response.json() as Promise<MatchLineupEntry[]>;
+}
+
+export async function saveMatchLineup(input: SaveMatchLineupRequest): Promise<MatchLineupEntry[]> {
+  const response = await fetch('/api/matches/lineup', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    throw await buildApiError(response, '라인업을 저장하지 못했어요.');
+  }
+
+  return response.json() as Promise<MatchLineupEntry[]>;
 }
 
 async function buildApiError(response: Response, fallback: string) {

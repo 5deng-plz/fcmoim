@@ -1,12 +1,12 @@
 import Image from 'next/image';
-import HexagonRadar from '@/components/features/HexagonRadar';
+import HexagonRadar from '@/components/ui/HexagonRadar';
 import Heatmap from '@/components/features/Heatmap';
 import type { Position } from '@/types';
 import { Target, Zap, Award } from 'lucide-react';
 
 interface BadgeData {
   name: string;
-  color: string; // 'amber' | 'sky' | 'emerald' | 'purple' | 'red'
+  color: string;
 }
 
 interface MemberDetailProps {
@@ -24,50 +24,50 @@ interface MemberDetailProps {
 // ─── 배지 색상 매핑 ───
 const badgeStyles: Record<string, { border: string; shadow: string; gradient: string; text: string; icon: typeof Target }> = {
   amber: {
-    border: 'border-amber-400',
-    shadow: 'shadow-[0_0_12px_rgba(251,191,36,0.25)]',
-    gradient: 'from-amber-300 to-yellow-600',
-    text: 'text-amber-400',
+    border: 'border-award-mvp',
+    shadow: 'shadow-sm',
+    gradient: 'from-award-mvp to-fee-partial',
+    text: 'text-award-mvp',
     icon: Target,
   },
   sky: {
-    border: 'border-sky-400',
-    shadow: 'shadow-[0_0_12px_rgba(56,189,248,0.25)]',
-    gradient: 'from-sky-300 to-blue-600',
-    text: 'text-sky-400',
+    border: 'border-condition-poor',
+    shadow: 'shadow-sm',
+    gradient: 'from-condition-poor to-pos-df',
+    text: 'text-condition-poor',
     icon: Zap,
   },
   emerald: {
-    border: 'border-emerald-400',
-    shadow: 'shadow-[0_0_12px_rgba(52,211,153,0.25)]',
-    gradient: 'from-emerald-300 to-green-600',
-    text: 'text-emerald-400',
+    border: 'border-fcgreen-500',
+    shadow: 'shadow-sm',
+    gradient: 'from-fcgreen-500 to-green-600',
+    text: 'text-fcgreen-500',
     icon: Award,
   },
   purple: {
-    border: 'border-purple-400',
-    shadow: 'shadow-[0_0_12px_rgba(168,85,247,0.25)]',
-    gradient: 'from-purple-300 to-purple-600',
-    text: 'text-purple-400',
+    border: 'border-tier-special',
+    shadow: 'shadow-sm',
+    gradient: 'from-tier-special to-tier-special',
+    text: 'text-tier-special',
     icon: Award,
   },
   red: {
-    border: 'border-red-400',
-    shadow: 'shadow-[0_0_12px_rgba(239,68,68,0.25)]',
-    gradient: 'from-red-300 to-red-600',
-    text: 'text-red-400',
+    border: 'border-result-loss',
+    shadow: 'shadow-sm',
+    gradient: 'from-result-loss to-chem-weak',
+    text: 'text-result-loss',
     icon: Target,
   },
 };
 
 // ─── 특성카드 색상 (재미 요소) ───
 const traitColorMap: Record<string, string> = {
-  '유리멘탈': 'bg-red-500/15 text-red-400 border-red-500/30',
-  '저질체력': 'bg-orange-500/15 text-orange-400 border-orange-500/30',
-  '5연패': 'bg-purple-500/15 text-purple-400 border-purple-500/30',
-  '철의 폐활량': 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-  '패스 마스터': 'bg-sky-500/15 text-sky-400 border-sky-500/30',
-  '왼발만': 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+  '유리멘탈': 'bg-result-loss/15 text-result-loss border-result-loss/30',
+  '저질체력': 'bg-fee-partial/15 text-fee-partial border-fee-partial/30',
+  '5연패': 'bg-tier-special/15 text-tier-special border-tier-special/30',
+  '철의 폐활량': 'bg-stamina-full/15 text-stamina-full border-stamina-full/30',
+  '패스 마스터': 'bg-condition-poor/15 text-condition-poor border-condition-poor/30',
+  '왼발만': 'bg-award-mvp/15 text-award-mvp border-award-mvp/30',
 };
 const defaultTraitColor = 'bg-slate-500/15 text-slate-400 border-slate-500/30';
 
@@ -76,13 +76,14 @@ export default function MemberDetail({ member: m }: MemberDetailProps) {
     <div className="p-4 sm:p-5 text-white animate-fadeIn">
       {/* ─── 상단: 프로필 카드 + 특성/뱃지 ─── */}
       <div className="flex gap-4 mb-5">
-        <div className="w-24 h-32 bg-[#1e293b] rounded-lg overflow-hidden border-2 border-[#334155] relative shadow-lg shrink-0">
+        <div className="w-24 h-32 bg-slate-800 rounded-lg overflow-hidden border-2 border-viz-grid relative shadow-lg shrink-0">
           <Image
             src={m.photo}
             alt={m.name}
             width={96}
             height={128}
             className="w-full h-full object-cover"
+            style={{ width: '100%', height: '100%' }}
             unoptimized
           />
           <div className="absolute bottom-1 w-full flex flex-col items-center drop-shadow-lg">
@@ -119,7 +120,7 @@ export default function MemberDetail({ member: m }: MemberDetailProps) {
                 return (
                   <div
                     key={idx}
-                    className={`flex items-center gap-1 px-2 py-1 rounded-md bg-[#1e293b] border ${style.border} ${style.shadow}`}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-md bg-slate-800 border ${style.border} ${style.shadow}`}
                   >
                     <IconComp size={10} className={style.text} />
                     <span className={`text-[9px] font-black ${style.text}`}>
@@ -134,18 +135,18 @@ export default function MemberDetail({ member: m }: MemberDetailProps) {
       </div>
 
       {/* ─── 하단: 능력치 차트 + 히트맵 ─── */}
-      <div className="flex items-center gap-4 bg-[#1e293b]/50 rounded-xl p-3 border border-[#334155]">
+      <div className="flex items-center gap-4 rounded-xl border border-green-100 bg-green-50/60 p-3">
         <div className="flex-1">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2 text-center">
+          <span className="text-[10px] font-bold uppercase tracking-widest block mb-2 text-center text-gray-500">
             Abilities (OVR 산정)
           </span>
           <div className="w-full max-w-[140px] mx-auto">
             <HexagonRadar data={m.radar} />
           </div>
         </div>
-        <div className="w-px h-28 bg-[#334155]"></div>
+        <div className="w-px h-28 bg-green-100"></div>
         <div className="flex-1 flex flex-col items-center">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">
+          <span className="text-[10px] font-bold uppercase tracking-widest block mb-2 text-gray-500">
             Heatmap
           </span>
           <Heatmap type={m.heatmap} />

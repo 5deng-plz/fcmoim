@@ -44,7 +44,9 @@ FC Moim is a mobile-first web app prototype for football and futsal club operati
 - `docs/README.md`: consolidated project overview, scope, and current direction
 - `docs/agent-rules.json`: project-specific Agent ownership, command map, surface classification, and evidence policy
 - `docs/decisions.md`: durable decision log
+- `docs/design-tokens.md`: allowed UI color token palette and design guard policy
 - `docs/project-context.json`: current project state for Agent recovery
+- `docs/user/design-harness-workflow.md`: design harness philosophy, workflow, gates, evidence, and review standard
 
 ## Agent Workflow
 

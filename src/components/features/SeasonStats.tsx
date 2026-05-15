@@ -9,17 +9,17 @@ const iconMap: Record<string, LucideIcon> = {
 };
 
 const seasonStats = [
-  { label: '승', value: '0', icon: 'trophy', color: 'text-yellow-500' },
+  { label: '승', value: '0', icon: 'trophy', color: 'text-result-win' },
   { label: '무', value: '0', icon: 'minus-circle', color: 'text-gray-400' },
-  { label: '패', value: '0', icon: 'x-circle', color: 'text-red-400' },
-  { label: '승률', value: '0%', icon: 'pie-chart', color: 'text-blue-500' },
+  { label: '패', value: '0', icon: 'x-circle', color: 'text-result-loss' },
+  { label: '승률', value: '0%', icon: 'pie-chart', color: 'text-pos-df' },
 ];
 
 export default function SeasonStats() {
   return (
     <section>
       <div className="flex justify-between items-center mb-3 px-1">
-        <h2 className="text-base font-black text-gray-900">현재 시즌 기록</h2>
+        <h2 className="text-base font-extrabold text-gray-900">현재 시즌 기록</h2>
       </div>
       <div className="card p-4">
         <div className="grid grid-cols-4 gap-y-5 gap-x-2 divide-x divide-gray-50">
@@ -37,7 +37,7 @@ export default function SeasonStats() {
                   </span>
                 </div>
                 <div className="flex items-baseline">
-                  <span className="text-2xl font-black text-gray-900 transition-colors">
+                  <span className="text-2xl font-extrabold text-gray-900 transition-colors">
                     {stat.value}
                   </span>
                 </div>

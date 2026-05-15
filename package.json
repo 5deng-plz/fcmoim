@@ -23,6 +23,7 @@
     "harness:guard:prepush": "node .agents/scripts/guard-runner.mjs pre-push",
     "harness:test": "node .agents/scripts/test-harness.mjs",
     "harness:ci": "node .agents/scripts/guard-runner.mjs ci",
+    "qa:seed-auth": "node scripts/seed-qa-auth-users.mjs",
     "db:check": "node scripts/check-supabase-contract.mjs",
     "verify:baseline": "npm run harness:validate && npm run lint && npm run typecheck && npm run test",
     "verify": "npm run verify:baseline && npm run db:check"

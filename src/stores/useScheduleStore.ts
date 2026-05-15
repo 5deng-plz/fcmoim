@@ -4,9 +4,12 @@ import {
   createSchedulePoll,
   fetchActiveSchedulePolls,
   getSchedulePollErrorMessage,
+  promoteSchedulePoll,
   voteSchedulePoll,
   type CancelSchedulePollRequest,
   type CreateSchedulePollRequest,
+  type PromoteSchedulePollRequest,
+  type PromoteSchedulePollResponse,
   type SchedulePoll,
   type VoteSchedulePollRequest,
 } from './schedulePollClient';
@@ -35,6 +38,7 @@ interface ScheduleState {
   createPoll: (input: CreateSchedulePollRequest) => Promise<SchedulePoll>;
   submitPollVote: (input: VoteSchedulePollRequest) => Promise<SchedulePoll>;
   cancelPoll: (input: CancelSchedulePollRequest) => Promise<SchedulePoll>;
+  promotePoll: (input: PromoteSchedulePollRequest) => Promise<PromoteSchedulePollResponse>;
   cancelUpcomingMatch: (input: CancelMatchRequest) => Promise<UpcomingMatch>;
 }
 
@@ -86,6 +90,19 @@ export const useScheduleStore = create<ScheduleState>((set) => ({
       activePollsError: null,
     }));
     return poll;
+  },
+  promotePoll: async (input) => {
+    const result = await promoteSchedulePoll(input);
+    set((state) => ({
+      activePolls: state.activePolls.map((poll) => (
+        poll.id === input.pollId
+          ? { ...poll, status: 'promoted', promotedMatchId: result.matchId }
+          : poll
+      )),
+      activePollsStatus: 'ready',
+      activePollsError: null,
+    }));
+    return result;
   },
   loadUpcomingMatches: async (clubId) => {
     set({ upcomingMatchesStatus: 'loading', upcomingMatchesError: null });

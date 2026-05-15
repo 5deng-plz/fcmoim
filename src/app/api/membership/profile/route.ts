@@ -1,5 +1,5 @@
 import { appErrorResponse } from '../../../../types/api';
-import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../../lib/supabase-server';
+import { createPrivilegedSupabaseClient, createSupabaseServerClient, getRequiredServerAuthContext } from '../../../../lib/supabase-server';
 import { createAccountMembershipService } from '../../../../services/account-membership';
 import { createSupabaseAccountMembershipRepositories } from '../../../../services/supabase-repositories';
 
@@ -17,7 +17,7 @@ export async function PATCH(request: Request) {
     const supabase = await createSupabaseServerClient();
     const auth = await getRequiredServerAuthContext(supabase);
     const service = createAccountMembershipService(
-      createSupabaseAccountMembershipRepositories(supabase),
+      createSupabaseAccountMembershipRepositories(createPrivilegedSupabaseClient()),
     );
 
     return Response.json(await service.updateMembershipPhoto({

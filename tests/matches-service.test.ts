@@ -13,6 +13,10 @@ async function loadService(repositories: {
     findById: ReturnType<typeof vi.fn>;
     cancel: ReturnType<typeof vi.fn>;
   };
+  lineups: {
+    listForMatch: ReturnType<typeof vi.fn>;
+    replaceForMatch: ReturnType<typeof vi.fn>;
+  };
 }) {
   const { createMatchService } = await import('../src/services/matches');
 
@@ -62,6 +66,10 @@ function createRepositories(options?: {
         cancellationReason: input.cancellationReason,
         cancelledAt: '2026-03-20T10:00:00.000Z',
       })),
+    },
+    lineups: {
+      listForMatch: vi.fn(async () => []),
+      replaceForMatch: vi.fn(async () => []),
     },
   };
 }
@@ -142,5 +150,111 @@ describe('match cancellation service', () => {
       }),
     ).rejects.toMatchObject({ code: 'bad_request' });
     expect(repositories.matches.cancel).not.toHaveBeenCalled();
+  });
+});
+
+describe('match lineup service', () => {
+  it('allows an approved operator to publish a Red/Blue lineup', async () => {
+    const repositories = createRepositories();
+    const service = await loadService(repositories);
+
+    await expect(
+      service.saveMatchLineup({
+        auth: {
+          user: {
+            id: 'operator-auth-user',
+            email: 'operator@example.com',
+          },
+        },
+        clubId: 'club-1',
+        matchId: 'match-1',
+        entries: [
+          { membershipId: 'red-player', teamNumber: 1, isLeader: true, position: 'FW' },
+          { membershipId: 'blue-player', teamNumber: 2, isLeader: true, position: 'DF' },
+        ],
+      }),
+    ).resolves.toEqual([]);
+
+    expect(repositories.lineups.replaceForMatch).toHaveBeenCalledWith({
+      matchId: 'match-1',
+      updatedByMembershipId: 'operator-membership',
+      entries: [
+        { membershipId: 'red-player', teamNumber: 1, isLeader: true, position: 'FW' },
+        { membershipId: 'blue-player', teamNumber: 2, isLeader: true, position: 'DF' },
+      ],
+    });
+  });
+
+  it('lets approved members read a published lineup', async () => {
+    const repositories = createRepositories({ role: 'member' });
+    const service = await loadService(repositories);
+
+    await expect(
+      service.getMatchLineup({
+        auth: {
+          user: {
+            id: 'member-auth-user',
+            email: 'member@example.com',
+          },
+        },
+        clubId: 'club-1',
+        matchId: 'match-1',
+      }),
+    ).resolves.toEqual([]);
+
+    expect(repositories.lineups.listForMatch).toHaveBeenCalledWith('match-1');
+  });
+
+  it.each([
+    ['member', 'approved', 'scheduled', 'forbidden'],
+    ['operator', 'pending', 'scheduled', 'forbidden'],
+    ['operator', 'approved', 'finished', 'conflict'],
+  ] satisfies Array<[MembershipRole, MembershipStatus, MatchStatus, string]>)(
+    'denies lineup publishing for %s/%s on %s matches',
+    async (role, membershipStatus, matchStatus, code) => {
+      const repositories = createRepositories({ role, membershipStatus, matchStatus });
+      const service = await loadService(repositories);
+
+      await expect(
+        service.saveMatchLineup({
+          auth: {
+            user: {
+              id: 'operator-auth-user',
+              email: 'operator@example.com',
+            },
+          },
+          clubId: 'club-1',
+          matchId: 'match-1',
+          entries: [
+            { membershipId: 'red-player', teamNumber: 1, isLeader: true, position: 'FW' },
+            { membershipId: 'blue-player', teamNumber: 2, isLeader: true, position: 'DF' },
+          ],
+        }),
+      ).rejects.toMatchObject({ code });
+      expect(repositories.lineups.replaceForMatch).not.toHaveBeenCalled();
+    },
+  );
+
+  it('requires both teams and unique members', async () => {
+    const repositories = createRepositories();
+    const service = await loadService(repositories);
+
+    await expect(
+      service.saveMatchLineup({
+        auth: {
+          user: {
+            id: 'operator-auth-user',
+            email: 'operator@example.com',
+          },
+        },
+        clubId: 'club-1',
+        matchId: 'match-1',
+        entries: [
+          { membershipId: 'same-player', teamNumber: 1, isLeader: true, position: 'FW' },
+          { membershipId: 'same-player', teamNumber: 2, isLeader: true, position: 'DF' },
+        ],
+      }),
+    ).rejects.toMatchObject({ code: 'bad_request' });
+    expect(repositories.lineups.replaceForMatch).not.toHaveBeenCalled();
   });
 });

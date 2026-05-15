@@ -31,6 +31,7 @@ const requiredFiles = [
   '.agents/hooks/pre-push',
   '.agents/manifest.json',
   '.agents/scripts/bootstrap-harness.mjs',
+  '.agents/scripts/guard-design.mjs',
   '.agents/scripts/guard-diff.mjs',
   '.agents/scripts/guard-evidence.mjs',
   '.agents/scripts/guard-hooks.mjs',
@@ -61,6 +62,7 @@ const expectedDirectoryEntries = {
   '.agents/hooks': ['pre-commit', 'pre-push'],
   '.agents/scripts': [
     'bootstrap-harness.mjs',
+    'guard-design.mjs',
     'guard-diff.mjs',
     'guard-evidence.mjs',
     'guard-hooks.mjs',
