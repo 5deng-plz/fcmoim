@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Plus, ShieldCheck, UserCheck, UserCog, UserX, Users, Medal } from 'lucide-react';
+import { ChevronDown, ShieldCheck, UserCheck, UserCog, UserX, Users, Medal } from 'lucide-react';
 import Image from 'next/image';
-import CardMarket from '@/components/features/CardMarket';
 import Modal from '@/components/ui/Modal';
 
 import ConditionIcon from '@/components/ui/ConditionIcon';
@@ -12,9 +11,12 @@ import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import PlayerAbilityPanel from '@/components/ui/PlayerAbilityPanel';
 import {
   fetchApprovedMemberships,
+  fetchClubSettings,
   fetchPendingMemberships,
+  patchClubSettings,
   reviewMembership,
   updateMembershipRole,
+  withdrawMembership,
   type ApprovedMembership,
   type PendingMembershipReview,
 } from '@/stores/membershipClient';
@@ -32,20 +34,22 @@ export default function LockerRoomTab() {
   const [isLoadingPending, setIsLoadingPending] = useState(false);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [changingRoleId, setChangingRoleId] = useState<string | null>(null);
+  const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
+  const [clubDescription, setClubDescription] = useState('');
+  const [isClubPublic, setIsClubPublic] = useState(true);
+  const [isSavingClubSettings, setIsSavingClubSettings] = useState(false);
   const squadCount = squadMembers.length;
   const canReview = userRole === 'admin' || userRole === 'operator';
   const canAssignOperator = userRole === 'admin';
   const topMatchPointRanks = useMemo(() => buildTopMatchPointRanks(squadMembers), [squadMembers]);
-  const adminMember = useMemo(() => squadMembers.find((member) => member.role === 'admin'), [squadMembers]);
-  const operatorMembers = useMemo(() => squadMembers.filter((member) => member.role === 'operator'), [squadMembers]);
-  const roleGrantCandidates = useMemo(() => squadMembers.filter((member) => member.role === 'member'), [squadMembers]);
   const sortedSquadMembers = useMemo(
     () => sortSquadMembers(squadMembers, topMatchPointRanks),
     [squadMembers, topMatchPointRanks],
   );
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
   const [photoMember, setPhotoMember] = useState<ApprovedMembership | null>(null);
-  const [roleModal, setRoleModal] = useState<RoleModalState>(null);
+  const [memberActionModal, setMemberActionModal] = useState<MemberActionModalState>(null);
+  const [withdrawConfirmName, setWithdrawConfirmName] = useState('');
 
   useEffect(() => {
     let isActive = true;
@@ -95,6 +99,26 @@ export default function LockerRoomTab() {
     };
   }, [activeClubId, canReview, showToast]);
 
+  useEffect(() => {
+    if (!canReview) return;
+
+    let isActive = true;
+    fetchClubSettings(activeClubId)
+      .then((club) => {
+        if (!isActive) return;
+        setClubDescription(club.description ?? '');
+        setIsClubPublic(club.isPublic);
+      })
+      .catch((error) => {
+        console.error('[FC Moim] Club settings load failed:', error);
+        showToast('팀 설정을 불러오지 못했습니다.');
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [activeClubId, canReview, showToast]);
+
   const handleReview = async (membershipId: string, decision: 'approved' | 'rejected') => {
     try {
       setReviewingId(membershipId);
@@ -125,57 +149,100 @@ export default function LockerRoomTab() {
     }
   };
 
-  const handleConfirmRoleChange = async () => {
-    if (!roleModal || roleModal.mode === 'select') return;
+  const handleSaveClubSettings = async () => {
+    try {
+      setIsSavingClubSettings(true);
+      const club = await patchClubSettings({
+        clubId: activeClubId,
+        description: clubDescription,
+        isPublic: isClubPublic,
+      });
+      setClubDescription(club.description ?? '');
+      setIsClubPublic(club.isPublic);
+      showToast('팀 공개 설정을 저장했어요.');
+    } catch (error) {
+      console.error('[FC Moim] Club settings save failed:', error);
+      showToast(error instanceof Error ? error.message : '팀 설정을 저장하지 못했습니다.');
+    } finally {
+      setIsSavingClubSettings(false);
+    }
+  };
 
-    await handleChangeRole(roleModal.member.id, roleModal.mode === 'grant' ? 'operator' : 'member');
-    setRoleModal(null);
+  const handleWithdrawMembership = async (member: ApprovedMembership) => {
+    try {
+      setWithdrawingId(member.id);
+      await withdrawMembership({ clubId: activeClubId, membershipId: member.id });
+      setSquadMembers((members) => members.filter((item) => item.id !== member.id));
+      showToast(`${member.nickname} 회원을 탈퇴처리했어요.`);
+    } catch (error) {
+      console.error('[FC Moim] Membership withdrawal failed:', error);
+      showToast(error instanceof Error ? error.message : '회원 탈퇴처리를 완료하지 못했습니다.');
+    } finally {
+      setWithdrawingId(null);
+    }
+  };
+
+  const handleConfirmMemberAction = async () => {
+    if (!memberActionModal) return;
+
+    if (memberActionModal.mode === 'withdraw') {
+      await handleWithdrawMembership(memberActionModal.member);
+    } else {
+      await handleChangeRole(
+        memberActionModal.member.id,
+        memberActionModal.mode === 'grant-operator' ? 'operator' : 'member',
+      );
+    }
+    setMemberActionModal(null);
+    setWithdrawConfirmName('');
   };
 
   return (
     <div className="space-y-4 animate-fadeIn pb-20">
       {/* ─── 스쿼드 ─── */}
       <div className="flex justify-between items-center mb-2 px-1">
-        <h2 className="text-lg font-extrabold text-gray-900 flex items-center gap-2">
-          <Users size={20} className="text-green-600" /> 스쿼드
+        <h2 className="text-lg font-extrabold text-primary flex items-center gap-2">
+          <Users size={20} className="text-brand-primary" /> 스쿼드
         </h2>
-        <span className="text-[10px] font-bold text-gray-600 bg-gray-200 px-2.5 py-1.5 rounded-md">
+        <span className="text-[10px] font-bold text-secondary bg-surface-hover px-2.5 py-1.5 rounded-md">
           총 {squadCount}명
         </span>
       </div>
 
       <div className="card overflow-hidden">
-        <div className="flex w-full items-center gap-2 px-3 py-3 bg-gray-50 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-          <div className="flex w-10 shrink-0 items-center justify-center gap-1">
+        <div className="flex min-h-[40px] w-full items-center gap-2 bg-surface-bg px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-secondary border-b border-border">
+          <div className="flex w-12 shrink-0 items-center justify-center gap-1">
             <span className="w-[14px] shrink-0" />
-            <span className="text-fcgreen-600">OVR</span>
+            <span className="text-brand-primary">OVR</span>
           </div>
           <div className="w-[44px] shrink-0" />
           <div className="flex-1 text-left">이름</div>
           <div className="w-10 text-center">컨디션</div>
-          <div className="w-14 text-right">경기P</div>
+          <div className="w-[74px] text-right">경기 Point</div>
           <div className="w-[14px] shrink-0" />
         </div>
         {isLoadingSquad ? (
-          <div className="px-4 py-10 text-center text-xs font-bold text-gray-400">
+          <div className="px-4 py-10 text-center text-xs font-bold text-tertiary">
             스쿼드 명단을 불러오는 중입니다
           </div>
         ) : squadMembers.length > 0 ? (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-border">
             {sortedSquadMembers.map((member) => (
               <div key={member.id}>
-                <div className="relative flex w-full items-center gap-2 px-3 py-4 transition-colors hover:bg-gray-50/50 active:bg-gray-50">
+                <div className="relative flex h-[50px] min-h-[50px] w-full items-center gap-2 px-3 py-0 transition-colors hover:bg-surface-hover/50 active:bg-surface-hover">
                   <button
                     type="button"
                     onClick={() => setExpandedMemberId((current) => (current === member.id ? null : member.id))}
-                    className="absolute inset-0 z-0 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-green-500"
+                    className="absolute inset-0 z-0 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-primary"
                     aria-expanded={expandedMemberId === member.id}
                     aria-controls={`member-detail-${member.id}`}
                     aria-label={`${member.nickname} 상세 정보`}
                   />
-                  <div className="pointer-events-none relative z-0 flex w-10 shrink-0 items-center justify-center gap-1 text-center">
+                  <div className="pointer-events-none relative z-0 flex w-12 shrink-0 items-center justify-center gap-1 text-center">
                     <MatchPointAward rank={topMatchPointRanks.get(member.id)} />
-                    <span className="text-sm font-extrabold text-fcgreen-600">{member.ovr}</span>
+                    <span className="text-brand-primary font-extrabold text-sm">
+                      {member.ovr}
+                    </span>
                   </div>
                   <button
                     type="button"
@@ -183,192 +250,215 @@ export default function LockerRoomTab() {
                     className="relative z-10 shrink-0 rounded-full transition-transform active:scale-95"
                     aria-label={`${member.nickname} 프로필 사진 크게 보기`}
                   >
-                    <RoleAvatar member={member} size={44} />
+                    <RoleAvatar member={member} size={38} />
                   </button>
                   <div className="pointer-events-none relative z-0 flex min-w-0 flex-1 items-center gap-2 text-left">
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-bold text-gray-900">{member.nickname}</p>
+                      <p className="truncate text-sm font-bold text-primary">{member.nickname}</p>
                     </div>
                     <div className="flex w-10 justify-center">
                       <ConditionIcon level={getDisplayCondition(member)} size={18} />
                     </div>
-                    <div className="w-14 text-right text-[11px] font-bold text-gray-700">
+                    <div className="w-[74px] text-right">
+                      <span className="inline-flex items-center rounded-full bg-feedback-success-bg px-2 py-0.5 text-[11px] font-black text-feedback-success border border-feedback-success-border/30">
                       {member.matchPoints.toLocaleString('ko-KR')}
+                      </span>
                     </div>
                     <ChevronDown
                       size={14}
-                      className={`shrink-0 text-gray-400 transition-transform ${expandedMemberId === member.id ? 'rotate-180' : ''}`}
+                      className={`shrink-0 text-tertiary transition-transform ${expandedMemberId === member.id ? 'rotate-180' : ''}`}
                       aria-hidden="true"
                     />
                   </div>
                 </div>
                 {expandedMemberId === member.id ? (
-                  <MemberProfileAccordion member={member} />
+                  <MemberProfileAccordion
+                    member={member}
+                    canManageMembers={canAssignOperator}
+                    isSelf={member.id === memberProfile?.id}
+                    changingRoleId={changingRoleId}
+                    withdrawingId={withdrawingId}
+                    onRoleAction={(target, mode) => {
+                      setWithdrawConfirmName('');
+                      setMemberActionModal({ mode, member: target });
+                    }}
+                    onWithdrawAction={(target) => {
+                      setWithdrawConfirmName('');
+                      setMemberActionModal({ mode: 'withdraw', member: target });
+                    }}
+                  />
                 ) : null}
               </div>
             ))}
           </div>
         ) : (
           <div className="px-4 py-10 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-50 text-gray-400">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-surface-bg text-tertiary">
               <Users size={22} />
             </div>
-            <p className="text-sm font-bold text-gray-700">등록된 스쿼드가 없어요</p>
+            <p className="text-sm font-bold text-primary">등록된 스쿼드가 없어요</p>
           </div>
         )}
       </div>
 
-      {/* ─── 상점 ─── */}
-      <CardMarket />
-
       {canReview ? (
-        <section className="rounded-xl border border-green-100 bg-white p-4">
+        <section className="rounded-xl border border-border bg-surface-card p-4">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-lg font-extrabold text-gray-900">
-              <ShieldCheck size={20} className="text-green-600" />
-              입단 대기
+            <h2 className="flex items-center gap-2 text-lg font-extrabold text-primary">
+              <ShieldCheck size={20} className="text-brand-primary" />
+              팀 관리
             </h2>
-            <span className="rounded-md bg-green-50 px-2.5 py-1 text-[10px] font-bold text-green-700">
-              {pendingMembers.length}명
+            <span className={`rounded-md px-2.5 py-1 text-[10px] font-bold ${
+              isClubPublic
+                ? 'bg-feedback-success-bg text-feedback-success border border-feedback-success-border/20'
+                : 'border border-border bg-surface-hover text-tertiary'
+            }`}>
+              {isClubPublic ? '공개' : '비공개'}
             </span>
           </div>
 
-          {isLoadingPending ? (
-            <p className="py-6 text-center text-xs font-bold text-gray-400">신청자를 확인하는 중입니다</p>
-          ) : pendingMembers.length > 0 ? (
-            <div className="space-y-3">
-              {pendingMembers.map((member) => (
-                <div key={member.id} className="rounded-xl bg-gray-50 p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-gray-900">{member.nickname}</p>
-                      <p className="mt-1 text-xs font-bold text-gray-500">
-                        {member.position || 'MF'} · {formatBody(member)} · {formatFoot(member.preferredFoot)}
-                      </p>
-                      <p className="mt-1 text-[11px] font-medium text-gray-400">
-                        {new Date(member.createdAt).toLocaleDateString('ko-KR')} 신청
-                      </p>
+          <div className="space-y-3">
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-bold text-secondary">팀 소개</span>
+              <textarea
+                value={clubDescription}
+                onChange={(event) => setClubDescription(event.target.value)}
+                className="min-h-24 w-full resize-none rounded-xl border border-border bg-surface-bg px-3 py-3 text-sm font-medium leading-relaxed text-primary outline-none transition-colors focus:border-brand-primary focus:bg-surface-card"
+                maxLength={500}
+              />
+            </label>
+
+            <label className="flex items-center justify-between rounded-xl bg-surface-bg px-3 py-3">
+              <span className="text-sm font-bold text-primary">팀 둘러보기 공개</span>
+              <input
+                type="checkbox"
+                checked={isClubPublic}
+                onChange={(event) => setIsClubPublic(event.target.checked)}
+                className="h-5 w-5 accent-brand-primary"
+              />
+            </label>
+
+            <button
+              type="button"
+              disabled={isSavingClubSettings}
+              onClick={() => void handleSaveClubSettings()}
+              className="w-full rounded-xl bg-brand-primary px-4 py-3 text-sm font-bold text-white transition-all hover:bg-brand-primary-hover active:scale-[0.98] disabled:opacity-50"
+            >
+              {isSavingClubSettings ? '저장 중' : '팀 설정 저장'}
+            </button>
+
+            <div className="rounded-xl bg-surface-bg p-3">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-sm font-black text-primary">입단 대기</h3>
+                <span className="rounded-md bg-surface-card px-2.5 py-1 text-[10px] font-bold text-brand-primary">
+                  {pendingMembers.length}명
+                </span>
+              </div>
+
+              {isLoadingPending ? (
+                <p className="py-6 text-center text-xs font-bold text-tertiary">신청자를 확인하는 중입니다</p>
+              ) : pendingMembers.length > 0 ? (
+                <div className="space-y-3">
+                  {pendingMembers.map((member) => (
+                    <div key={member.id} className="rounded-xl bg-surface-card border border-border p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold text-primary">{member.nickname}</p>
+                          <p className="mt-1 text-xs font-bold text-secondary">
+                            {formatBody(member)} · {formatFoot(member.preferredFoot)}
+                          </p>
+                          <p className="mt-1 text-[11px] font-medium text-tertiary">
+                            {new Date(member.createdAt).toLocaleDateString('ko-KR')} 신청
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 gap-1">
+                          <button
+                            type="button"
+                            disabled={reviewingId === member.id}
+                            onClick={() => void handleReview(member.id, 'approved')}
+                            className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-primary text-white transition-all hover:bg-brand-primary-hover active:scale-95 disabled:opacity-50"
+                            aria-label={`${member.nickname} 승인`}
+                            title="승인"
+                          >
+                            <UserCheck size={17} />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={reviewingId === member.id}
+                            onClick={() => void handleReview(member.id, 'rejected')}
+                            className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-hover text-secondary transition-all hover:bg-border/30 active:scale-95 disabled:opacity-50"
+                            aria-label={`${member.nickname} 반려`}
+                            title="반려"
+                          >
+                            <UserX size={17} />
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex shrink-0 gap-1">
-                      <button
-                        type="button"
-                        disabled={reviewingId === member.id}
-                        onClick={() => void handleReview(member.id, 'approved')}
-                        className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-600 text-white transition-all hover:bg-green-700 active:scale-95 disabled:opacity-50"
-                        aria-label={`${member.nickname} 승인`}
-                        title="승인"
-                      >
-                        <UserCheck size={17} />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={reviewingId === member.id}
-                        onClick={() => void handleReview(member.id, 'rejected')}
-                        className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-200 text-gray-600 transition-all hover:bg-gray-300 active:scale-95 disabled:opacity-50"
-                        aria-label={`${member.nickname} 반려`}
-                        title="반려"
-                      >
-                        <UserX size={17} />
-                      </button>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                <p className="rounded-xl bg-surface-card px-4 py-6 text-center text-xs font-bold text-tertiary border border-border">
+                  대기 중인 입단신청이 없어요
+                </p>
+              )}
             </div>
-          ) : (
-            <p className="rounded-xl bg-gray-50 px-4 py-6 text-center text-xs font-bold text-gray-400">
-              대기 중인 입단신청이 없어요
-            </p>
-          )}
-        </section>
-      ) : null}
-
-      {canAssignOperator ? (
-        <section className="rounded-xl border border-green-100 bg-white p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-lg font-extrabold text-gray-900">
-              <UserCog size={20} className="text-green-600" />
-              권한 관리
-            </h2>
           </div>
-
-          {isLoadingSquad ? (
-            <p className="py-6 text-center text-xs font-bold text-gray-400">팀 권한을 확인하는 중입니다</p>
-          ) : squadMembers.length > 0 ? (
-            <RoleSlotRow
-              admin={adminMember ?? null}
-              operators={buildOperatorSlots(operatorMembers)}
-              changingRoleId={changingRoleId}
-              onEmptyClick={() => setRoleModal({ mode: 'select' })}
-              onMemberClick={(member) => setRoleModal({ mode: 'revoke', member })}
-            />
-          ) : (
-            <p className="rounded-xl bg-gray-50 px-4 py-6 text-center text-xs font-bold text-gray-400">
-              관리할 팀원이 없어요
-            </p>
-          )}
         </section>
       ) : null}
       <Modal
-        title={getRoleModalTitle(roleModal)}
-        isOpen={roleModal !== null}
-        onClose={() => setRoleModal(null)}
+        title={getMemberActionModalTitle(memberActionModal)}
+        isOpen={memberActionModal !== null}
+        onClose={() => {
+          setMemberActionModal(null);
+          setWithdrawConfirmName('');
+        }}
         presentation="dialog"
       >
-        {roleModal?.mode === 'select' ? (
-          <div className="space-y-3">
-            <p className="text-sm font-bold text-gray-600">운영진으로 지정할 팀원을 선택하세요.</p>
-            {roleGrantCandidates.length > 0 ? (
-              <div className="space-y-2">
-                {roleGrantCandidates.map((member) => (
-                  <button
-                    key={`grant-${member.id}`}
-                    type="button"
-                    onClick={() => setRoleModal({ mode: 'grant', member })}
-                    className="flex w-full items-center gap-3 rounded-xl bg-gray-50 p-3 text-left transition-all hover:bg-green-50 active:scale-[0.99]"
-                  >
-                    <RoleAvatar member={member} size={44} />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-gray-900">{member.nickname}</p>
-                      <p className="text-xs font-bold text-gray-400">
-                        {member.position || 'MF'} · {formatRole(member.role)}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="rounded-xl bg-gray-50 px-4 py-6 text-center text-xs font-bold text-gray-400">
-                운영진으로 지정할 수 있는 회원이 없어요
-              </p>
-            )}
-          </div>
-        ) : roleModal ? (
+        {memberActionModal ? (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 rounded-xl bg-gray-50 p-3">
-              <RoleAvatar member={roleModal.member} size={48} />
+            <div className="flex items-center gap-3 rounded-xl bg-surface-bg p-3">
+              <RoleAvatar member={memberActionModal.member} size={48} />
               <div className="min-w-0">
-                <p className="truncate text-sm font-bold text-gray-900">{roleModal.member.nickname}</p>
-                <p className="text-xs font-bold text-gray-400">
-                  {roleModal.mode === 'grant' ? '운영진 권한을 부여합니다' : '운영진 권한을 회수합니다'}
+                <p className="truncate text-sm font-bold text-primary">{memberActionModal.member.nickname}</p>
+                <p className="text-xs font-bold text-tertiary">
+                  {getMemberActionModalDescription(memberActionModal)}
                 </p>
               </div>
             </div>
+            {memberActionModal.mode === 'withdraw' ? (
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-bold text-feedback-error">
+                  확인을 위해 회원 이름을 입력해주세요
+                </span>
+                <input
+                  type="text"
+                  value={withdrawConfirmName}
+                  onChange={(event) => setWithdrawConfirmName(event.target.value)}
+                  placeholder={memberActionModal.member.nickname}
+                  className="w-full rounded-xl border border-feedback-error-border bg-feedback-error-bg px-3 py-2.5 text-sm font-bold text-primary outline-none transition-colors focus:border-feedback-error focus:bg-surface-card"
+                  aria-label="탈퇴 처리 회원 이름 확인"
+                />
+              </label>
+            ) : null}
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => setRoleModal(null)}
-                className="rounded-xl bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-600 transition-all hover:bg-gray-200 active:scale-95"
+                onClick={() => setMemberActionModal(null)}
+                className="rounded-xl bg-surface-hover px-4 py-3 text-sm font-semibold text-secondary transition-all hover:bg-border/30 active:scale-95"
               >
                 취소
               </button>
               <button
                 type="button"
-                disabled={changingRoleId === roleModal.member.id}
-                onClick={() => void handleConfirmRoleChange()}
-                className="rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-green-700 active:scale-95 disabled:opacity-50"
+                disabled={
+                  isMemberActionBusy(memberActionModal, changingRoleId, withdrawingId) ||
+                  (memberActionModal.mode === 'withdraw' && withdrawConfirmName !== memberActionModal.member.nickname)
+                }
+                onClick={() => void handleConfirmMemberAction()}
+                className={`${getMemberActionConfirmClass(memberActionModal)} rounded-xl px-4 py-3 text-sm font-semibold text-white transition-all active:scale-95 disabled:cursor-not-allowed disabled:bg-action-disabled disabled:text-tertiary`}
               >
-                {roleModal.mode === 'grant' ? '부여' : '회수'}
+                {getMemberActionConfirmLabel(memberActionModal)}
               </button>
             </div>
           </div>
@@ -381,7 +471,7 @@ export default function LockerRoomTab() {
         presentation="dialog"
       >
         {photoMember ? (
-          <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-gray-50">
+          <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-surface-bg">
             <Image
               src={photoMember.photoUrl || avatarSrcFor(photoMember)}
               alt={photoMember.nickname}
@@ -399,25 +489,20 @@ export default function LockerRoomTab() {
   );
 }
 
-type RoleModalState =
-  | { mode: 'select' }
-  | { mode: 'grant'; member: ApprovedMembership }
-  | { mode: 'revoke'; member: ApprovedMembership }
+type MemberActionMode = 'grant-operator' | 'revoke-operator' | 'withdraw';
+
+type MemberActionModalState =
+  | { mode: MemberActionMode; member: ApprovedMembership }
   | null;
 
 function avatarSrcFor(member: ApprovedMembership) {
   return getFallbackAvatar(member.nickname || member.id);
 }
 
-function formatRole(role: ApprovedMembership['role']) {
-  if (role === 'admin') return '관리자';
-  if (role === 'operator') return '운영진';
-  return '회원';
-}
 
 function formatBody(member: PendingMembershipReview) {
-  const height = member.heightCm ? `${member.heightCm}cm` : '키 미입력';
-  const weight = member.weightKg ? `${member.weightKg}kg` : '몸무게 미입력';
+  const height = member.heightCm ? `${member.heightCm}cm` : '-';
+  const weight = member.weightKg ? `${member.weightKg}kg` : '-';
   return `${height} / ${weight}`;
 }
 
@@ -467,9 +552,29 @@ function getDisplayCondition(member: ApprovedMembership): ConditionLevel {
   return 'worst';
 }
 
-function MemberProfileAccordion({ member }: { member: ApprovedMembership }) {
+function MemberProfileAccordion({
+  member,
+  canManageMembers,
+  isSelf,
+  changingRoleId,
+  withdrawingId,
+  onRoleAction,
+  onWithdrawAction,
+}: {
+  member: ApprovedMembership;
+  canManageMembers: boolean;
+  isSelf: boolean;
+  changingRoleId: string | null;
+  withdrawingId: string | null;
+  onRoleAction: (member: ApprovedMembership, mode: Extract<MemberActionMode, 'grant-operator' | 'revoke-operator'>) => void;
+  onWithdrawAction: (member: ApprovedMembership) => void;
+}) {
+  const canChangeRole = canManageMembers && member.role !== 'admin';
+  const canWithdraw = canManageMembers && member.role !== 'admin' && !isSelf;
+  const roleMode = member.role === 'operator' ? 'revoke-operator' : 'grant-operator';
+
   return (
-    <div id={`member-detail-${member.id}`} className="border-t border-green-100 bg-green-50/55 px-4 py-4">
+    <div id={`member-detail-${member.id}`} className="border-t border-border bg-surface-bg/30 px-4 py-4">
       <PlayerAbilityPanel
         stats={member.stats}
         ovr={member.ovr}
@@ -477,107 +582,71 @@ function MemberProfileAccordion({ member }: { member: ApprovedMembership }) {
         birthDate={member.birthDate}
         heightCm={member.heightCm}
         weightKg={member.weightKg}
-      />
+      >
+        {canChangeRole || canWithdraw ? (
+          <div className="grid grid-cols-2 gap-2">
+            {canChangeRole ? (
+              <button
+                type="button"
+                disabled={changingRoleId === member.id}
+                onClick={() => onRoleAction(member, roleMode)}
+                className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold text-white transition-all active:scale-95 disabled:opacity-50 ${
+                  roleMode === 'grant-operator'
+                    ? 'bg-brand-primary hover:bg-brand-primary-hover'
+                    : 'bg-feedback-warning hover:brightness-110'
+                }`}
+              >
+                <UserCog size={15} />
+                {roleMode === 'grant-operator' ? '운영진 권한 부여' : '운영진 권한 회수'}
+              </button>
+            ) : null}
+            {canWithdraw ? (
+              <button
+                type="button"
+                disabled={withdrawingId === member.id}
+                onClick={() => onWithdrawAction(member)}
+                className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-feedback-error px-3 py-2 text-xs font-bold text-white transition-all hover:brightness-110 active:scale-95 disabled:opacity-50"
+              >
+                <UserX size={15} />
+                탈퇴 처리
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </PlayerAbilityPanel>
     </div>
   );
 }
 
-function buildOperatorSlots(members: ApprovedMembership[]) {
-  return Array.from({ length: 3 }, (_, index) => members[index] ?? null);
+function getMemberActionModalTitle(modal: MemberActionModalState) {
+  if (!modal) return '팀원 관리';
+  if (modal.mode === 'withdraw') return '회원 탈퇴처리';
+  return modal.mode === 'grant-operator' ? '운영진 권한 부여' : '운영진 권한 회수';
 }
 
-function getRoleModalTitle(roleModal: RoleModalState) {
-  if (!roleModal) return '권한 관리';
-  if (roleModal.mode === 'select') return '운영진 선택';
-  return roleModal.mode === 'grant' ? '운영진 부여' : '운영진 회수';
+function getMemberActionModalDescription(modal: Exclude<MemberActionModalState, null>) {
+  if (modal.mode === 'withdraw') return '이 회원을 탈퇴처리합니다';
+  return modal.mode === 'grant-operator' ? '운영진 권한을 부여합니다' : '운영진 권한을 회수합니다';
 }
 
-function RoleSlotRow({
-  admin,
-  operators,
-  changingRoleId,
-  onEmptyClick,
-  onMemberClick,
-}: {
-  admin: ApprovedMembership | null;
-  operators: Array<ApprovedMembership | null>;
-  changingRoleId: string | null;
-  onEmptyClick: () => void;
-  onMemberClick: (member: ApprovedMembership) => void;
-}) {
-  const slots = [
-    { label: '관리자', member: admin, emptyLabel: '비어 있음', onClick: undefined },
-    ...operators.map((member, index) => ({
-      label: `운영진${index + 1}`,
-      member,
-      emptyLabel: '추가',
-      onClick: member ? () => onMemberClick(member) : onEmptyClick,
-    })),
-  ];
-
-  return (
-    <div className="grid grid-cols-4 gap-2">
-      {slots.map((slot, index) => (
-        <RoleSlot
-          key={slot.member?.id ?? `role-slot-${index}`}
-          label={slot.label}
-          member={slot.member}
-          disabled={slot.member ? changingRoleId === slot.member.id : false}
-          emptyLabel={slot.emptyLabel}
-          onClick={slot.onClick}
-        />
-      ))}
-    </div>
-  );
+function getMemberActionConfirmLabel(modal: Exclude<MemberActionModalState, null>) {
+  if (modal.mode === 'withdraw') return '탈퇴처리';
+  return modal.mode === 'grant-operator' ? '부여' : '회수';
 }
 
-function RoleSlot({
-  label,
-  member,
-  disabled,
-  emptyLabel,
-  onClick,
-}: {
-  label: string;
-  member: ApprovedMembership | null;
-  disabled: boolean;
-  emptyLabel: string;
-  onClick?: () => void;
-}) {
-  const content = (
-    <>
-      {member ? (
-        <RoleAvatar member={member} size={42} />
-      ) : (
-        <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-dashed border-gray-300 bg-gray-50 text-gray-400">
-          <Plus size={18} />
-        </span>
-      )}
-      <span className="mt-1.5 text-[9px] font-semibold text-gray-400">{label}</span>
-      <span className="mt-0.5 max-w-full truncate text-[10px] font-bold text-gray-900">
-        {member?.nickname ?? emptyLabel}
-      </span>
-    </>
-  );
+function getMemberActionConfirmClass(modal: Exclude<MemberActionModalState, null>) {
+  if (modal.mode === 'withdraw') return 'bg-feedback-error hover:brightness-110';
+  if (modal.mode === 'grant-operator') return 'bg-brand-primary hover:bg-brand-primary-hover';
+  return 'bg-feedback-warning hover:brightness-110';
+}
 
-  if (!onClick) {
-    return (
-      <div className="flex min-w-0 flex-col items-center rounded-xl bg-gray-50 px-1.5 py-2.5">
-        {content}
-      </div>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className="flex min-w-0 flex-col items-center rounded-xl bg-gray-50 px-1.5 py-2.5 transition-all hover:bg-green-50 active:scale-95 disabled:opacity-50"
-    >
-      {content}
-    </button>
-  );
+function isMemberActionBusy(
+  modal: Exclude<MemberActionModalState, null>,
+  changingRoleId: string | null,
+  withdrawingId: string | null,
+) {
+  if (modal.mode === 'withdraw') return withdrawingId === modal.member.id;
+  return changingRoleId === modal.member.id;
 }
 
 function RoleAvatar({ member, size }: { member: ApprovedMembership; size: number }) {
@@ -591,7 +660,7 @@ function RoleAvatar({ member, size }: { member: ApprovedMembership; size: number
         sizes={`${size}px`}
         loading="eager"
         priority
-        className="rounded-full bg-gray-100 object-cover"
+        className="rounded-full bg-surface-hover object-cover"
         style={{ width: size, height: size }}
         unoptimized
       />
@@ -608,7 +677,7 @@ function RoleMark({ role }: { role: ApprovedMembership['role'] }) {
 
   return (
     <span
-      className="absolute -left-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white text-green-600 shadow-sm ring-1 ring-green-100"
+      className="absolute -left-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-surface-elevated text-brand-primary shadow-sm ring-1 ring-brand-primary/20"
       aria-label={label}
     >
       <Icon size={10} aria-hidden="true" />

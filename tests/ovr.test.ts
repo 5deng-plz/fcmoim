@@ -2,18 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { calculateOVR, getOvrGradeNameOnly } from '../src/utils/ovr';
 
 describe('OVR utilities', () => {
-  it('calculates weighted OVR by position', () => {
+  it('calculates OVR as a simple average', () => {
     const stats = {
-      speed: 70,
-      shooting: 80,
-      passing: 60,
+      attack: 80,
       defense: 50,
-      physical: 75,
-      dribble: 85,
+      stamina: 75,
+      mentality: 60,
+      speed: 70,
+      manner: 85,
     };
 
-    expect(calculateOVR(stats, 'FW')).toBe(75);
-    expect(calculateOVR(stats, 'DF')).toBe(67);
+    expect(calculateOVR(stats)).toBe(70);
   });
 
   it('maps OVR to grade names', () => {

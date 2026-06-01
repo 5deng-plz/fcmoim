@@ -113,11 +113,10 @@
 
 ## Harness Implementation Plan
 
-1. `architect`: 이 PRD와 구현 순서, acceptance criteria를 유지한다.
-2. `data`: Supabase RLS/SQL contract와 신규 유저 pending insert 실패를 먼저 수정한다.
-3. `backend`: public clubs API, pending list API, membership create/review service contract를 구현한다.
-4. `frontend`: 랜딩, 팀 탐색, 공개 프로필, 입단신청 폼, 라커룸 심사 UI를 구현한다.
-5. `qa`: `DEV_TEST=true` 이메일 로그인으로 실제 Supabase Auth 세션과 Supabase DB 상태를 검증한다.
+1. `infra`: 이 PRD와 구현 순서, acceptance criteria를 유지한다.
+2. `builder`: Supabase RLS/SQL contract, public clubs API, pending list API, membership create/review service contract를 구현한다.
+3. `builder`: 랜딩, 팀 탐색, 공개 프로필, 입단신청 폼, 라커룸 심사 UI를 구현한다.
+4. `verifier`: `DEV_TEST=true` 이메일 로그인으로 실제 Supabase Auth 세션과 Supabase DB 상태를 검증한다.
 
 실제 신규 유저 QA 시 dev server는 auth bypass를 끄고 `DEV_TEST=true` 이메일 로그인만 사용한다.
 

@@ -5,7 +5,7 @@ import { DEFAULT_STATS, type Position, type User, type UserRole, type UserStats,
 import type { AuthUser } from '../lib/auth';
 import type { ClubOption } from './useAppStore';
 
-type MembershipStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
+type MembershipStatus = 'pending' | 'approved' | 'rejected' | 'suspended' | 'withdrawn';
 export type ApiMembershipState = 'new' | MembershipStatus;
 export type PreferredFootCode = 'left' | 'right' | 'both';
 
@@ -27,6 +27,7 @@ export type ApiMembership = {
   heightCm: number | null;
   weightKg: number | null;
   birthDate: string | null;
+  residence: string | null;
   photoUrl: string | null;
   ovr: number;
   stats: UserStats;
@@ -56,6 +57,9 @@ export type JoinProfileRequest = {
   birthDate: string | null;
   photoUrl: string | null;
   preferredFoot: PreferredFootCode | null;
+  residence?: string | null;
+  stats?: UserStats | null;
+  ovr?: number | null;
 };
 
 export type JoinFormValues = {
@@ -64,8 +68,11 @@ export type JoinFormValues = {
   height: string;
   weight: string;
   preferredFoot: '왼발' | '오른발' | '양발';
-  birthYear: string;
-  birthMonth: string;
+  birthDate?: string;
+  birthYear?: string;
+  birthMonth?: string;
+  residence?: string;
+  photoUrl?: string | null;
 };
 
 export type PublicSeasonSummary = {
@@ -84,6 +91,8 @@ export type PublicMatchSummary = {
   status: string;
   ourScore: number | null;
   oppScore: number | null;
+  attendeeCount: number;
+  attendeeTotal: number;
 };
 
 export type PublicClubSummary = {
@@ -92,6 +101,7 @@ export type PublicClubSummary = {
   slug: string;
   description: string | null;
   logoUrl: string | null;
+  isPublic: boolean;
   memberCount: number;
   activeSeason: PublicSeasonSummary | null;
   recentMatchCount: number;
@@ -117,6 +127,26 @@ export type PendingMembershipReview = {
 
 export type ApprovedMembership = ApiMembership;
 
+export type MatchPointLedgerEntry = {
+  id: string;
+  amount: number;
+  reason: string;
+  sourceType: string;
+  sourceId: string | null;
+  createdAt: string;
+};
+
+export type MembershipProfilePatchRequest = {
+  clubId: string;
+  nickname?: string | null;
+  heightCm?: number | null;
+  weightKg?: number | null;
+  birthDate?: string | null;
+  residence?: string | null;
+  photoUrl?: string | null;
+  preferredFoot?: PreferredFootCode | null;
+};
+
 export function membershipStateToUserStatus(state: ApiMembershipState): UserStatus {
   return state === 'new' ? 'guest' : state;
 }
@@ -125,16 +155,36 @@ export function shouldShowJoinRequest(state: ApiMembershipState) {
   return state === 'new';
 }
 
-export function buildJoinProfileRequest(formData: JoinFormValues): JoinProfileRequest {
-  return {
+export function buildJoinProfileRequest(formData: JoinFormValues, stats?: UserStats): JoinProfileRequest {
+  let birthDateVal: string | null = null;
+  if (formData.birthDate) {
+    birthDateVal = formData.birthDate.trim() || null;
+  } else if (formData.birthYear && formData.birthMonth) {
+    birthDateVal = buildBirthDate(formData.birthYear, formData.birthMonth);
+  }
+
+  const request: JoinProfileRequest = {
     nickname: formData.name.trim(),
     position: formData.mainPosition || null,
     heightCm: parseOptionalPositiveInt(formData.height),
     weightKg: parseOptionalPositiveInt(formData.weight),
-    birthDate: buildBirthDate(formData.birthYear, formData.birthMonth),
-    photoUrl: null,
+    birthDate: birthDateVal,
+    photoUrl: formData.photoUrl ?? null,
     preferredFoot: mapPreferredFoot(formData.preferredFoot),
   };
+
+  if (formData.residence !== undefined) {
+    request.residence = formData.residence.trim() || null;
+  }
+
+  if (stats) {
+    request.stats = stats;
+    // calculate OVR
+    const total = Object.values(stats).reduce((sum, val) => sum + val, 0);
+    request.ovr = Math.round(total / 6);
+  }
+
+  return request;
 }
 
 export async function fetchPublicClubs(): Promise<PublicClubSummary[]> {
@@ -174,6 +224,19 @@ export async function fetchMembershipSnapshot(clubId = appConfig.defaultClubId):
   }
 
   return response.json() as Promise<MembershipSnapshot>;
+}
+
+export async function fetchMatchPointLedger(clubId = appConfig.defaultClubId): Promise<MatchPointLedgerEntry[]> {
+  const response = await fetch(`/api/membership/points?clubId=${encodeURIComponent(clubId)}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw new Error(await getApiErrorMessage(response, '경기 Point 내역을 불러오지 못했습니다.'));
+  }
+
+  return response.json() as Promise<MatchPointLedgerEntry[]>;
 }
 
 export async function submitJoinRequest(profile: JoinProfileRequest, clubId = appConfig.defaultClubId) {
@@ -216,6 +279,10 @@ export async function fetchClubMemberships(): Promise<ClubOption[]> {
 }
 
 export async function patchMembershipPhoto(input: { clubId: string; photoUrl: string | null }) {
+  return patchMembershipProfile(input);
+}
+
+export async function patchMembershipProfile(input: MembershipProfilePatchRequest) {
   const response = await fetch('/api/membership/profile', {
     method: 'PATCH',
     headers: {
@@ -226,7 +293,57 @@ export async function patchMembershipPhoto(input: { clubId: string; photoUrl: st
   });
 
   if (!response.ok) {
-    throw new Error(await getApiErrorMessage(response, '프로필 사진을 저장하지 못했습니다.'));
+    throw new Error(await getApiErrorMessage(response, '프로필 정보를 저장하지 못했습니다.'));
+  }
+
+  return response.json() as Promise<ApiMembership>;
+}
+
+export async function patchClubSettings(input: { clubId: string; description: string | null; isPublic: boolean }) {
+  const response = await fetch('/api/clubs/settings', {
+    method: 'PATCH',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getApiErrorMessage(response, '팀 설정을 저장하지 못했습니다.'));
+  }
+
+  return response.json() as Promise<PublicClubSummary>;
+}
+
+export async function fetchClubSettings(clubId: string) {
+  const response = await fetch(`/api/clubs/settings?clubId=${encodeURIComponent(clubId)}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw new Error(await getApiErrorMessage(response, '팀 설정을 불러오지 못했습니다.'));
+  }
+
+  return response.json() as Promise<PublicClubSummary>;
+}
+
+export async function withdrawMembership(input: { clubId: string; membershipId: string }) {
+  const response = await fetch('/api/membership/status', {
+    method: 'PATCH',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      ...input,
+      status: 'withdrawn',
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getApiErrorMessage(response, '회원 탈퇴처리를 완료하지 못했습니다.'));
   }
 
   return response.json() as Promise<ApiMembership>;
@@ -338,6 +455,7 @@ export function mapMembershipSnapshotToUser(
     height: membership.heightCm,
     weight: membership.weightKg,
     birth: membership.birthDate ? new Date(membership.birthDate) : null,
+    residence: membership.residence,
     preferredFoot: formatPreferredFoot(membership.preferredFoot),
     createdAt: now,
     updatedAt: now,
@@ -396,8 +514,31 @@ function mapPreferredFoot(foot: JoinFormValues['preferredFoot']): PreferredFootC
 async function getApiErrorMessage(response: Response, fallback: string) {
   try {
     const data = await response.json() as { error?: { message?: string } };
-    return data.error?.message || fallback;
+    return translateApiErrorMessage(data.error?.message) || fallback;
   } catch {
     return fallback;
+  }
+}
+
+function translateApiErrorMessage(message?: string) {
+  switch (message) {
+    case 'Height is out of range.':
+      return '키는 100cm 이상 230cm 이하로 입력해주세요.';
+    case 'Weight is out of range.':
+      return '몸무게는 30kg 이상 180kg 이하로 입력해주세요.';
+    case 'No profile fields were provided.':
+      return '저장할 프로필 정보가 없습니다.';
+    case 'Birth date must be YYYY-MM-DD.':
+      return '생년월일은 YYYY-MM-DD 형식으로 입력해주세요.';
+    case 'Birth date is invalid.':
+      return '올바른 생년월일을 입력해주세요.';
+    case 'Residence is too long.':
+      return '거주지는 80자 이하로 입력해주세요.';
+    case 'Profile photo is too large.':
+      return '프로필 사진 용량이 너무 큽니다.';
+    case 'Failed to create pending membership.':
+      return '이미 입단신청이 접수되었거나 가입할 수 없는 팀입니다.';
+    default:
+      return message;
   }
 }

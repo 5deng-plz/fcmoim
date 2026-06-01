@@ -1,188 +1,66 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { exists, fail, loadRules, root } from './harness-lib.mjs';
 
-const root = process.cwd();
 const harnessRoot = path.join(root, '.agents');
 const errors = [];
 
-const requiredAgentIds = [
-  'architect',
-  'backend',
-  'data',
-  'devops',
-  'frontend',
-  'main-orchestrator',
-  'qa',
-  'review'
-];
-
-const requiredFiles = [
-  '.agents/agents/architect.md',
-  '.agents/agents/backend.md',
-  '.agents/agents/data.md',
-  '.agents/agents/devops.md',
-  '.agents/agents/frontend.md',
-  '.agents/agents/main-orchestrator.md',
-  '.agents/agents/qa.md',
-  '.agents/agents/review.md',
-  '.agents/contracts/agent-contracts.json',
-  '.agents/fixtures/negative-fixtures.json',
-  '.agents/hooks/pre-commit',
-  '.agents/hooks/pre-push',
-  '.agents/manifest.json',
-  '.agents/scripts/bootstrap-harness.mjs',
-  '.agents/scripts/guard-design.mjs',
-  '.agents/scripts/guard-diff.mjs',
-  '.agents/scripts/guard-evidence.mjs',
-  '.agents/scripts/guard-hooks.mjs',
-  '.agents/scripts/guard-review.mjs',
-  '.agents/scripts/guard-runner.mjs',
-  '.agents/scripts/harness-lib.mjs',
-  '.agents/scripts/install-hooks.mjs',
-  '.agents/scripts/test-harness.mjs',
-  '.agents/scripts/validate-harness.mjs',
-  '.agents/scripts/validate-project-rules.mjs',
-  '.agents/state/project-context.schema.json'
-];
-
-const expectedDirectoryEntries = {
-  '.agents': ['agents', 'contracts', 'fixtures', 'hooks', 'manifest.json', 'scripts', 'state'],
-  '.agents/agents': [
-    'architect.md',
-    'backend.md',
-    'data.md',
-    'devops.md',
-    'frontend.md',
-    'main-orchestrator.md',
-    'qa.md',
-    'review.md'
-  ],
-  '.agents/contracts': ['agent-contracts.json'],
-  '.agents/fixtures': ['negative-fixtures.json'],
-  '.agents/hooks': ['pre-commit', 'pre-push'],
-  '.agents/scripts': [
-    'bootstrap-harness.mjs',
-    'guard-design.mjs',
-    'guard-diff.mjs',
-    'guard-evidence.mjs',
-    'guard-hooks.mjs',
-    'guard-review.mjs',
-    'guard-runner.mjs',
-    'harness-lib.mjs',
-    'install-hooks.mjs',
-    'test-harness.mjs',
-    'validate-harness.mjs',
-    'validate-project-rules.mjs'
-  ],
-  '.agents/state': ['project-context.schema.json']
-};
-
-const exists = (relativePath) => fs.existsSync(path.join(root, relativePath));
-const readJson = (relativePath) => JSON.parse(fs.readFileSync(path.join(root, relativePath), 'utf8'));
-const isNonEmptyArray = (value) => Array.isArray(value) && value.length > 0;
-const isNonEmptyString = (value) => typeof value === 'string' && value.trim().length > 0;
-
-for (const file of requiredFiles) {
-  if (!exists(file)) errors.push(`Missing required file: ${file}`);
+// ── 1. Manifest ─────────────────────────────────────────────────────────
+const manifestPath = '.agents/manifest.json';
+if (!exists(manifestPath)) {
+  console.error('FAIL  manifest.json missing');
+  process.exit(1);
 }
 
-for (const [directory, expectedEntries] of Object.entries(expectedDirectoryEntries)) {
-  if (!exists(directory)) {
-    errors.push(`Missing required directory: ${directory}`);
-    continue;
-  }
-  const actualEntries = fs.readdirSync(path.join(root, directory)).sort();
-  const expected = [...expectedEntries].sort();
-  if (JSON.stringify(actualEntries) !== JSON.stringify(expected)) {
-    errors.push(`${directory} entries must be exactly: ${expected.join(', ')}`);
-  }
-}
-
-let contracts;
 let manifest;
-let schema;
-
 try {
-  contracts = readJson('.agents/contracts/agent-contracts.json');
+  manifest = JSON.parse(fs.readFileSync(path.join(root, manifestPath), 'utf8'));
 } catch (error) {
-  errors.push(`Invalid contracts JSON: ${error.message}`);
+  console.error(`FAIL  manifest.json invalid JSON: ${error.message}`);
+  process.exit(1);
 }
 
-try {
-  manifest = readJson('.agents/manifest.json');
-} catch (error) {
-  errors.push(`Invalid manifest JSON: ${error.message}`);
-}
+if (!manifest.schemaVersion) errors.push('manifest.schemaVersion missing');
 
-try {
-  schema = readJson('.agents/state/project-context.schema.json');
-} catch (error) {
-  errors.push(`Invalid project context schema JSON: ${error.message}`);
-}
-
-if (contracts) {
-  for (const id of requiredAgentIds) {
-    const contract = contracts.agents?.[id];
-    if (!contract) {
-      errors.push(`Contracts missing Agent: ${id}`);
-      continue;
-    }
-
-    for (const key of ['capabilities', 'requiredOutputs']) {
-      if (!isNonEmptyArray(contract[key])) {
-        errors.push(`Contract ${id}.${key} must be a non-empty array`);
-      }
-    }
+// ── 2. Agent prompt files ───────────────────────────────────────────────
+for (const agent of manifest.agents || []) {
+  if (!agent.id) { errors.push('Manifest agent missing id'); continue; }
+  if (!agent.prompt) { errors.push(`Manifest agent ${agent.id} missing prompt path`); continue; }
+  const promptPath = path.join(root, agent.prompt);
+  if (!fs.existsSync(promptPath)) {
+    errors.push(`Missing prompt file for agent "${agent.id}": ${agent.prompt}`);
+  } else if (fs.readFileSync(promptPath, 'utf8').trim().length === 0) {
+    errors.push(`Empty prompt file for agent "${agent.id}": ${agent.prompt}`);
   }
 }
 
-if (manifest) {
-  for (const [key, value] of Object.entries(manifest.sourceOfTruth || {})) {
-    if (!isNonEmptyString(value)) {
-      errors.push(`manifest.sourceOfTruth.${key} must be a non-empty path`);
-    } else if (!exists(value)) {
-      errors.push(`manifest.sourceOfTruth.${key} path missing: ${value}`);
-    }
-  }
-
-  const manifestAgentIds = new Set((manifest.agents || []).map((agent) => agent.id));
-  for (const id of requiredAgentIds) {
-    if (!manifestAgentIds.has(id)) errors.push(`Manifest missing Agent: ${id}`);
-  }
-
-  const requiredGateIds = [
-    'baseline',
-    'deterministic-verify',
-    'independent-review',
-    'runtime-evidence'
-  ];
-  const manifestGateIds = new Set((manifest.qualityGates || []).map((gate) => gate.id));
-  for (const id of requiredGateIds) {
-    if (!manifestGateIds.has(id)) errors.push(`Manifest missing quality gate: ${id}`);
-  }
-
-  for (const agent of manifest.agents || []) {
-    if (!agent.prompt || !exists(agent.prompt)) errors.push(`Manifest Agent prompt missing: ${agent.id}`);
-    if (agent.id === 'main-orchestrator' && agent.mayUpdateProjectState !== true) {
-      errors.push('main-orchestrator must be allowed to update project state');
-    }
-    if (agent.id !== 'main-orchestrator' && agent.mayUpdateProjectState !== false) {
-      errors.push(`Worker Agent mayUpdateProjectState must be false: ${agent.id}`);
-    }
+// ── 3. Source of truth files ────────────────────────────────────────────
+for (const [key, value] of Object.entries(manifest.sourceOfTruth || {})) {
+  if (typeof value !== 'string' || !value.trim()) {
+    errors.push(`manifest.sourceOfTruth.${key} must be a non-empty path`);
+  } else if (!exists(value)) {
+    errors.push(`manifest.sourceOfTruth.${key} path missing: ${value}`);
   }
 }
 
-if (schema) {
-  const requiredStateFields = ['activeWork', 'agents', 'currentPhase', 'schemaVersion', 'updatedAt', 'updatedBy'];
-  for (const field of requiredStateFields) {
-    if (!schema.required?.includes(field)) errors.push(`Project context schema must require ${field}`);
-  }
+// ── 4. Contracts file ───────────────────────────────────────────────────
+const contractsPath = manifest.sourceOfTruth?.contracts;
+if (contractsPath && exists(contractsPath)) {
+  try { JSON.parse(fs.readFileSync(path.join(root, contractsPath), 'utf8')); }
+  catch { errors.push('Contracts file is not valid JSON.'); }
 }
 
-const projectRulesPath = path.join(root, 'docs/agent-rules.json');
-const forbiddenTokens = fs.existsSync(projectRulesPath)
-  ? (JSON.parse(fs.readFileSync(projectRulesPath, 'utf8')).harnessPurity?.forbiddenTokens || [])
-  : [];
+// ── 5. State schema ─────────────────────────────────────────────────────
+const schemaPath = manifest.sourceOfTruth?.stateSchema;
+if (schemaPath && exists(schemaPath)) {
+  try { JSON.parse(fs.readFileSync(path.join(root, schemaPath), 'utf8')); }
+  catch { errors.push('State schema is not valid JSON.'); }
+}
+
+// ── 6. Harness purity ───────────────────────────────────────────────────
+let rules;
+try { rules = loadRules(); } catch { rules = null; }
+const forbiddenTokens = rules?.harnessPurity?.forbiddenTokens || [];
 
 for (const file of walk(harnessRoot)) {
   const content = fs.readFileSync(file, 'utf8').toLowerCase();
@@ -193,18 +71,102 @@ for (const file of walk(harnessRoot)) {
   }
 }
 
-if (errors.length > 0) {
-  console.error('Harness validation failed:');
-  for (const error of errors) console.error(`- ${error}`);
-  process.exit(1);
+// ── 7. Project rules validation ─────────────────────────────────────────
+if (rules) {
+  // Required top-level fields
+  for (const field of ['schemaVersion', 'project', 'agents', 'surfaces', 'commands', 'evidencePolicy', 'reviewPolicy']) {
+    if (!(field in rules)) errors.push(`Project rules missing: ${field}`);
+  }
+
+  // Agents match manifest
+  const manifestIds = new Set((manifest.agents || []).map(a => a.id));
+  const rulesIds = new Set((rules.agents || []).map(a => a.id));
+  for (const id of manifestIds) {
+    if (!rulesIds.has(id)) errors.push(`Manifest agent "${id}" not in project rules`);
+  }
+  for (const agent of rules.agents || []) {
+    if (!agent.id) errors.push('Agent rule missing id');
+    if (!Array.isArray(agent.owns)) errors.push(`Agent ${agent.id} owns must be an array`);
+    if (!Array.isArray(agent.forbidden)) errors.push(`Agent ${agent.id} forbidden must be an array`);
+  }
+
+  // Commands
+  for (const cmd of ['baseline', 'verify']) {
+    if (typeof rules.commands?.[cmd] !== 'string') errors.push(`commands.${cmd} must be configured`);
+  }
+
+  // State policy
+  if (rules.statePolicy && typeof rules.statePolicy.writer !== 'string') {
+    errors.push('statePolicy.writer must be a string');
+  }
+
+  // Review policy
+  const rp = rules.reviewPolicy;
+  if (rp) {
+    if (typeof rp.required !== 'boolean') errors.push('reviewPolicy.required must be a boolean');
+    if (typeof rp.readyStatus !== 'string') errors.push('reviewPolicy.readyStatus must be a string');
+  }
+
+  // Design policy structure
+  if (rules.designPolicy) {
+    const dp = rules.designPolicy;
+    if (!Array.isArray(dp.allowedTailwindColorPrefixes) || dp.allowedTailwindColorPrefixes.length === 0) {
+      errors.push('designPolicy.allowedTailwindColorPrefixes must be a non-empty array');
+    }
+    if (!Array.isArray(dp.guardedPaths) || dp.guardedPaths.length === 0) {
+      errors.push('designPolicy.guardedPaths must be a non-empty array');
+    }
+    if (dp.semanticSlots) {
+      for (const slot of dp.semanticSlots) {
+        if (!slot.id) errors.push('designPolicy.semanticSlots[].id must be non-empty');
+        if (!Array.isArray(slot.paths)) errors.push(`designPolicy.semanticSlots.${slot.id || '?'}.paths must be an array`);
+      }
+    }
+  }
+
+  // Documentation policy line limits
+  const docPol = rules.documentationPolicy;
+  if (docPol && Number.isInteger(docPol.maxLines) && Array.isArray(docPol.targetPatterns)) {
+    const excluded = docPol.excludePaths || [];
+    for (const file of listRepositoryFiles()) {
+      if (!matchDocPattern(file, docPol.targetPatterns)) continue;
+      if (excluded.some(ex => matchDocPattern(file, [ex]))) continue;
+      const lineCount = fs.readFileSync(path.join(root, file), 'utf8').split(/\r?\n/).length;
+      if (lineCount > docPol.maxLines) {
+        errors.push(`Documentation file exceeds ${docPol.maxLines} lines: ${file} (${lineCount})`);
+      }
+    }
+  }
 }
 
+fail(errors, 'Harness validation failed');
 console.log('Harness validation passed.');
 
+// ── Helpers ─────────────────────────────────────────────────────────────
 function walk(directory) {
-  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const absolutePath = path.join(directory, entry.name);
-    if (entry.isDirectory()) return walk(absolutePath);
-    return [absolutePath];
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+    const abs = path.join(directory, entry.name);
+    if (entry.isDirectory()) return walk(abs);
+    return [abs];
+  });
+}
+
+function listRepositoryFiles() {
+  const files = [];
+  (function recurse(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (['.git', 'node_modules', '.next'].includes(entry.name)) continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) recurse(full);
+      else files.push(path.relative(root, full).replaceAll(path.sep, '/'));
+    }
+  })(root);
+  return files;
+}
+
+function matchDocPattern(file, patterns) {
+  return patterns.some(p => {
+    const regex = new RegExp('^' + p.replace(/\./g, '\\.').replace(/\*\*/g, '.*').replace(/(?<!\.)\*/g, '[^/]*') + '$');
+    return regex.test(file);
   });
 }

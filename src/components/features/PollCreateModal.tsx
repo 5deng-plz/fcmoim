@@ -1,6 +1,6 @@
 'use client';
 
-import { Clock3, MapPin, Vote } from 'lucide-react';
+import { Clock3, MapPin } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import Modal from '@/components/ui/Modal';
 import { useAppStore } from '@/stores/useAppStore';
@@ -29,7 +29,7 @@ export default function PollCreateModal() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const pollCalendarEvents = useMemo(() => buildPollCalendarEvents(activePolls), [activePolls]);
 
-  const isValid = Boolean(title.trim() && selectedDates.length >= 2 && time && location.trim());
+  const isValid = Boolean(title.trim() && selectedDates.length >= 1 && time && location.trim());
   const canSubmit = isValid && !isSubmitting;
 
   const resetForm = () => {
@@ -87,13 +87,6 @@ export default function PollCreateModal() {
       onClose={handleClose}
     >
       <div className="space-y-4">
-        <div className="rounded-lg border border-feedback-warning-border bg-feedback-warning-bg p-3">
-          <div className="flex items-center gap-2 text-xs font-bold text-feedback-warning">
-            <Vote size={15} />
-            확정 일정이 아니라 후보 투표를 먼저 만듭니다
-          </div>
-        </div>
-
         <div>
           <label className="mb-1 block text-xs font-bold text-gray-500">투표 제목</label>
           <input
@@ -105,7 +98,7 @@ export default function PollCreateModal() {
 
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <label className="block text-xs font-bold text-gray-500">후보 날짜 선택 (2~4개)</label>
+            <label className="block text-xs font-bold text-gray-500">후보 날짜 선택 (1~4개)</label>
             <span className="text-xs font-bold text-green-600">{selectedDates.length}/4 선택됨</span>
           </div>
           <div className="-mx-5 sm:mx-0">
@@ -129,7 +122,7 @@ export default function PollCreateModal() {
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-bold text-gray-500">일괄 적용 시간</label>
+            <label className="mb-1 block text-xs font-bold text-gray-500">시간</label>
             <input
               type="time"
               value={time}
@@ -150,11 +143,11 @@ export default function PollCreateModal() {
         </div>
 
         <div>
-          <label className="mb-2 block text-xs font-bold text-gray-500">선택된 항목 요약</label>
+          <label className="mb-2 block text-xs font-bold text-gray-500">요약</label>
           <div className="space-y-2">
             {selectedDates.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-4 text-center text-xs font-medium text-gray-400">
-                캘린더에서 날짜를 2개 이상 선택해주세요
+                캘린더에서 날짜를 선택해주세요
               </div>
             ) : (
               [...selectedDates].sort((a, b) => a - b).map((day, index) => (
@@ -187,12 +180,12 @@ export default function PollCreateModal() {
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-bold text-gray-500">메모 (선택)</label>
+          <label className="mb-1 block text-xs font-bold text-gray-500">투표 안내사항</label>
           <textarea
             value={memo}
             onChange={(event) => setMemo(event.target.value)}
             rows={2}
-            placeholder="투표 안내사항"
+            placeholder="이번주 수요일까지 부탁드립니다~"
             className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm transition-colors focus:border-green-500 focus:outline-none"
           />
         </div>

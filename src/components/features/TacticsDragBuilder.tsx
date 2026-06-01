@@ -1,16 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Shirt, GripVertical } from 'lucide-react';
+import { Check, Plus, Send } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
-import { saveMatchLineup, type MatchLineupEntry } from '@/stores/matchClient';
+import { addMatchAttendee, saveMatchLineup, confirmMatchLineup, publishMatchLineup, type MatchAttendee, type MatchLineupEntry, type UpcomingMatch } from '@/stores/matchClient';
+import { fetchApprovedMemberships, type ApprovedMembership } from '@/stores/membershipClient';
+import { useAuthStore } from '@/stores/useAuthStore';
 import { useToastStore } from '@/stores/useToastStore';
 import Modal from '@/components/ui/Modal';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
+import SoccerPitch from './SoccerPitch';
 import {
   DndContext,
   closestCenter,
+  pointerWithin,
+  type CollisionDetection,
   PointerSensor,
   TouchSensor,
   useSensor,
@@ -22,7 +27,7 @@ import {
 } from '@dnd-kit/core';
 import {
   SortableContext,
-  verticalListSortingStrategy,
+  rectSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -31,18 +36,31 @@ export interface Player {
   id: string;
   name: string;
   ovr: number;
-  position: string;
+  matchPoints: number;
   photo: string;
+  isLeader?: boolean;
+  slotIndex?: number;
 }
 
 const initialPlayers: Player[] = [];
+const TACTICS_SLOT_COUNT = 18;
+const TACTICS_COLUMNS = 6;
+const SVG_REPO_ICONS = {
+  lock: 'https://www.svgrepo.com/show/43277/lock.svg',
+  tactics: 'https://www.svgrepo.com/show/146798/tactics.svg',
+} as const;
 type TeamState = { id: 'red' | 'blue'; name: string; color: 'red' | 'blue'; players: Player[] };
-type TeamClasses = {
-  bg: string;
-  border: string;
-  text: string;
-  fill: string;
-  emptyText: string;
+export type MatchAnticipationStage = 'waitingRoster' | 'drafting' | 'redReady' | 'blueReady' | 'finalizing';
+export type MatchAnticipationMemberState = 'notAttending' | 'bench' | 'red' | 'blue';
+
+export type MatchAnticipationState = {
+  stage: MatchAnticipationStage;
+  memberState: MatchAnticipationMemberState;
+  redCount: number;
+  blueCount: number;
+  benchCount: number;
+  redReady: boolean;
+  blueReady: boolean;
 };
 
 interface TacticsDragBuilderProps {
@@ -51,11 +69,30 @@ interface TacticsDragBuilderProps {
   players?: Player[];
   lineup?: MatchLineupEntry[];
   readOnly?: boolean;
-  onCompleted?: () => void;
+  embedded?: boolean;
+  onLineupUpdated?: (nextLineup: MatchLineupEntry[]) => void;
+  onPlayersUpdated?: (nextPlayers: Player[]) => void;
+  match?: UpcomingMatch;
+  onMatchUpdated?: (nextMatch: UpcomingMatch) => void;
 }
 
-// ─── 드래그 가능 선수 카드 ───
-function DraggablePlayerCard({ player, zone }: { player: Player; zone: string }) {
+function DraggablePlayerAvatar({
+  player,
+  zone,
+  disabled = false,
+  stackIndex = 1,
+  slotIndex,
+  isSelected = false,
+  onSelect,
+}: {
+  player: Player;
+  zone: string;
+  disabled?: boolean;
+  stackIndex?: number;
+  slotIndex?: number;
+  isSelected?: boolean;
+  onSelect?: (playerId: string) => void;
+}) {
   const {
     attributes,
     listeners,
@@ -63,111 +100,487 @@ function DraggablePlayerCard({ player, zone }: { player: Player; zone: string })
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: player.id, data: { zone } });
+  } = useSortable({ id: player.id, data: { zone, slotIndex }, disabled });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 30 : stackIndex,
   };
+
+  const badgeClassName = zone === 'red'
+    ? 'bg-red-team'
+    : zone === 'blue'
+      ? 'bg-blue-team'
+      : 'bg-award-mvp';
+
+  return (
+    <button
+      type="button"
+      ref={setNodeRef}
+      style={style}
+      {...(!disabled ? attributes : {})}
+      {...(!disabled ? listeners : {})}
+      onClick={(event) => {
+        if (disabled || !onSelect) return;
+        event.stopPropagation();
+        onSelect(player.id);
+      }}
+      aria-label={player.name}
+      aria-pressed={isSelected}
+      className={`group relative -m-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 bg-white shadow-sm transition-[box-shadow,transform,opacity] ${getAvatarBorderClass(zone)} ${
+        disabled ? 'cursor-default' : 'cursor-grab active:cursor-grabbing active:scale-105'
+      } ${
+        isDragging || isSelected ? 'shadow-xl ring-2 ring-fcgreen-500' : 'hover:shadow-md'
+      }`}
+    >
+      <Image
+        src={getPlayerPhotoSrc(player)}
+        alt={player.name}
+        width={32}
+        height={32}
+        sizes="32px"
+        className="rounded-full bg-gray-100"
+        style={{ width: 32, height: 32 }}
+        unoptimized
+      />
+      {player.isLeader ? (
+        <span className={`absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] font-black text-white shadow-sm ${badgeClassName}`}>
+          C
+        </span>
+      ) : null}
+      <span className="pointer-events-none absolute -top-7 left-1/2 z-40 min-w-max -translate-x-1/2 rounded-lg bg-slate-900 px-2 py-1 text-[10px] font-black leading-none text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+        {player.name}
+      </span>
+    </button>
+  );
+}
+
+function TacticsSlot({
+  teamId,
+  index,
+  player,
+  canDrag,
+  selectedPlayerId,
+  onSelectPlayer,
+  onPlacePlayer,
+}: {
+  teamId: 'red' | 'blue';
+  index: number;
+  player?: Player;
+  canDrag: boolean;
+  selectedPlayerId: string | null;
+  onSelectPlayer: (playerId: string) => void;
+  onPlacePlayer: (teamId: 'red' | 'blue', slotIndex: number) => void;
+}) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: `slot-${teamId}-${index}`,
+    data: { zone: teamId, slotIndex: index },
+    disabled: !canDrag,
+  });
 
   return (
     <div
       ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className={`flex items-center gap-2 bg-white rounded-lg p-2 border border-gray-100 cursor-grab active:cursor-grabbing active:shadow-md active:scale-[1.02] transition-[box-shadow,background-color,transform] ${
-        isDragging ? 'shadow-xl ring-2 ring-green-300' : 'shadow-sm'
-      }`}
+      className={`flex h-9 w-8 items-center justify-center rounded-full transition-colors ${isOver ? 'bg-white/25 ring-1 ring-white/60' : ''}`}
+      data-testid={`${teamId}-tactics-slot-${index}`}
+      onClick={() => {
+        if (!canDrag || !selectedPlayerId) return;
+        onPlacePlayer(teamId, index);
+      }}
     >
-      <GripVertical size={14} className="text-gray-300 flex-shrink-0" />
-      <Image
-        src={getFallbackAvatar(player.photo)}
-        alt={player.name}
-        width={28}
-        height={28}
-        sizes="28px"
-        className="rounded-full bg-gray-100"
-        style={{ width: 28, height: 28 }}
-        unoptimized
-      />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1">
-          <span className="text-xs font-bold text-gray-900 truncate block">{player.name}</span>
-          <span className="text-[9px] text-gray-400">{player.position}</span>
-        </div>
-        <span className="block text-[10px] font-bold text-fcgreen-600">OVR {player.ovr}</span>
-      </div>
+      {player ? (
+        <DraggablePlayerAvatar
+          player={player}
+          zone={teamId}
+          disabled={!canDrag}
+          stackIndex={Math.floor(index / TACTICS_COLUMNS) + 1}
+          slotIndex={index}
+          isSelected={selectedPlayerId === player.id}
+          onSelect={onSelectPlayer}
+        />
+      ) : null}
     </div>
   );
 }
 
-// ─── 오버레이 카드 (드래그 중 표시) ───
 function PlayerOverlay({ player }: { player: Player }) {
   return (
-    <div className="flex items-center gap-2 bg-white rounded-lg p-2 border-2 border-green-400 shadow-xl cursor-grabbing scale-105">
-      <GripVertical size={14} className="text-green-400 flex-shrink-0" />
+    <div className="flex h-9 w-9 scale-110 cursor-grabbing items-center justify-center rounded-full border-2 border-fcgreen-500 bg-white shadow-xl">
       <Image
-        src={getFallbackAvatar(player.photo)}
+        src={getPlayerPhotoSrc(player)}
         alt={player.name}
-        width={28}
-        height={28}
-        sizes="28px"
+        width={32}
+        height={32}
+        sizes="32px"
         className="rounded-full bg-gray-100"
-        style={{ width: 28, height: 28 }}
+        style={{ width: 32, height: 32 }}
         unoptimized
       />
-      <span className="text-xs font-bold text-gray-900">{player.name}</span>
+    </div>
+  );
+}
+
+function MatchAnticipationPanel({
+  match,
+  players,
+  lineup,
+  currentMembershipId,
+}: {
+  match: UpcomingMatch | undefined;
+  players: Player[];
+  lineup: MatchLineupEntry[];
+  currentMembershipId: string | null;
+}) {
+  const state = buildMatchAnticipationState({
+    match,
+    players,
+    lineup,
+    currentMembershipId,
+  });
+  const memberCopy = getMemberAnticipationCopy(state.memberState);
+
+  return (
+    <section
+      className="relative overflow-hidden rounded-2xl border border-event-match-border bg-event-match-bg p-3 shadow-sm animate-fadeIn"
+      data-testid="match-anticipation-panel"
+      aria-label="프리매치 라인업 티저"
+    >
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-card shadow-xs">
+          <Image
+            src={SVG_REPO_ICONS.tactics}
+            alt=""
+            width={22}
+            height={22}
+            className="h-[22px] w-[22px] object-contain"
+            style={{ width: 22, height: 22 }}
+            unoptimized
+          />
+        </span>
+        <span
+          className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-black ${getMemberBadgeClass(state.memberState)}`}
+          aria-label={`내 프리매치 상태: ${memberCopy.label}`}
+        >
+          {memberCopy.label}
+        </span>
+      </div>
+
+      <SoccerPitch testId="match-anticipation-field" className="max-h-[132px]">
+        <div className="relative grid h-full grid-cols-2 blur-[2px]">
+          <AnticipationFieldSide team="red" count={state.redCount} ready={state.redReady} />
+          <AnticipationFieldSide team="blue" count={state.blueCount} ready={state.blueReady} />
+        </div>
+        <div className="pointer-events-none absolute inset-2 flex items-center justify-center rounded-2xl border border-white/30 bg-white/15 shadow-inner backdrop-blur-sm">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/35 bg-surface-elevated/85 shadow-lg">
+            <Image
+              src={SVG_REPO_ICONS.lock}
+              alt=""
+              width={30}
+              height={30}
+              className="h-[30px] w-[30px] object-contain"
+              unoptimized
+            />
+            <span className="sr-only">라인업 잠금</span>
+          </div>
+        </div>
+      </SoccerPitch>
+    </section>
+  );
+}
+
+function AnticipationFieldSide({
+  team,
+  count,
+  ready,
+}: {
+  team: 'red' | 'blue';
+  count: number;
+  ready: boolean;
+}) {
+  const visibleCount = Math.max(3, Math.min(count, 6));
+  const glowClass = ready
+    ? team === 'red'
+      ? 'ring-2 ring-red-team/70 shadow-lg'
+      : 'ring-2 ring-blue-team/70 shadow-lg'
+    : 'ring-1 ring-white/25';
+  return (
+    <div className={`relative ${team === 'red' ? 'rounded-l-2xl' : 'rounded-r-2xl'}`} aria-hidden="true">
+      <div className={`grid h-full grid-cols-3 grid-rows-2 content-center gap-2 p-3 ${team === 'red' ? 'justify-items-start' : 'justify-items-end'}`}>
+        {Array.from({ length: visibleCount }, (_, index) => (
+          <span
+            key={`${team}-teaser-${index}`}
+            className={`h-5 w-5 rounded-full border border-white/50 bg-surface-elevated/80 shadow-md motion-safe:animate-pulse motion-reduce:animate-none ${glowClass}`}
+          />
+        ))}
+      </div>
     </div>
   );
 }
 
 function TeamDropZone({
   team,
-  cls,
   canEdit,
+  canArrange,
+  selectedPlayerId,
+  onSelectPlayer,
+  onPlacePlayer,
 }: {
   team: TeamState;
-  cls: TeamClasses;
   canEdit: boolean;
+  canArrange: boolean;
+  selectedPlayerId: string | null;
+  onSelectPlayer: (playerId: string) => void;
+  onPlacePlayer: (teamId: 'red' | 'blue', slotIndex: number) => void;
 }) {
   const { isOver, setNodeRef } = useDroppable({
     id: `team-${team.id}`,
     data: { zone: team.id },
-    disabled: !canEdit,
+    disabled: !canEdit || !canArrange,
   });
 
   return (
     <div
       ref={setNodeRef}
-      className={`${cls.bg} rounded-xl p-3 border ${cls.border} min-h-[120px] transition-[box-shadow,background-color,transform] ${
-        isOver ? 'scale-[1.01] bg-white shadow-lg ring-2 ring-green-300' : ''
-      }`}
+      data-testid={`${team.id}-tactics-zone`}
+      className={`relative flex-1 px-2 py-1.5 transition-[box-shadow,background-color,transform] ${
+        team.id === 'red' ? 'rounded-l-2xl' : 'rounded-r-2xl'
+      } ${isOver ? 'scale-[1.01] bg-white/25 shadow-lg ring-2 ring-fcgreen-500' : ''}`}
     >
-      <h4 className={`text-[11px] font-bold ${cls.text} mb-2 border-b ${cls.border} pb-1 flex items-center justify-between`}>
-        <span className="flex items-center gap-1">
-          <Shirt size={14} className={cls.fill} /> {team.name}
-        </span>
-        <span className="text-gray-500 font-medium">{team.players.length}명</span>
-      </h4>
-      <SortableContext items={team.players.map((p) => p.id)} strategy={verticalListSortingStrategy}>
-        <div className="space-y-1.5">
-          {team.players.length === 0 && (
-            <div className={`rounded-lg border border-dashed ${cls.border} text-center py-4 text-[10px] ${cls.emptyText} font-medium transition-colors ${
-              isOver ? 'bg-white/80' : ''
-            }`}>
-              선수를 드래그해서 배치
-            </div>
-          )}
-          {team.players.map((player) => (
-            <DraggablePlayerCard key={player.id} player={player} zone={team.id} />
+      <SortableContext items={team.players.map((p) => p.id)} strategy={rectSortingStrategy}>
+        <div
+          className={`grid h-full min-h-[92px] grid-cols-6 grid-rows-3 content-start gap-x-0 gap-y-0 rounded-xl p-1.5 ${
+            team.id === 'red' ? 'justify-items-start' : 'justify-items-end'
+          }`}
+          aria-label={`${team.name} 6x3 배치 구획`}
+        >
+          {Array.from({ length: TACTICS_SLOT_COUNT }, (_, index) => (
+            <TacticsSlot
+              key={`${team.id}-${index}`}
+              teamId={team.id}
+              index={index}
+              player={getPlayerInSlot(team.players, index)}
+              canDrag={canEdit && canArrange}
+              selectedPlayerId={selectedPlayerId}
+              onSelectPlayer={onSelectPlayer}
+              onPlacePlayer={onPlacePlayer}
+            />
           ))}
         </div>
       </SortableContext>
     </div>
   );
 }
+
+function TacticsPitch({
+  teams,
+  canEdit,
+  isSaving,
+  isOperator,
+  isRedLeader,
+  isBlueLeader,
+  match,
+  canConfirmRed,
+  canConfirmBlue,
+  selectedPlayerId,
+  onSelectPlayer,
+  onPlacePlayer,
+  onConfirm,
+  onPublish,
+}: {
+  teams: TeamState[];
+  canEdit: boolean;
+  isSaving: boolean;
+  isOperator: boolean;
+  isRedLeader: boolean;
+  isBlueLeader: boolean;
+  match: UpcomingMatch | null;
+  canConfirmRed: boolean;
+  canConfirmBlue: boolean;
+  selectedPlayerId: string | null;
+  onSelectPlayer: (playerId: string) => void;
+  onPlacePlayer: (teamId: 'red' | 'blue', slotIndex: number) => void;
+  onConfirm: (teamNumber: 1 | 2, confirmed?: boolean) => Promise<void>;
+  onPublish: () => Promise<void>;
+}) {
+  const redConfirmed = Boolean(match?.redLeaderConfirmed);
+  const blueConfirmed = Boolean(match?.blueLeaderConfirmed);
+
+  return (
+    <SoccerPitch testId="tactics-field">
+      <div className="relative flex h-full">
+        {teams.map((team) => (
+          <TeamDropZone
+            key={team.id}
+            team={team}
+            canEdit={canEdit && !isSaving}
+            canArrange={isOperator || (team.id === 'red' ? isRedLeader : isBlueLeader)}
+            selectedPlayerId={selectedPlayerId}
+            onSelectPlayer={onSelectPlayer}
+            onPlacePlayer={onPlacePlayer}
+          />
+        ))}
+      </div>
+      {isPreMatchTacticsWindow(match ?? undefined) ? (
+        <>
+          <TacticsConfirmBadge
+            team="red"
+            confirmed={redConfirmed}
+            canToggle={canConfirmRed}
+            disabled={isSaving}
+            onToggle={() => onConfirm(1, !redConfirmed)}
+          />
+          <TacticsConfirmBadge
+            team="blue"
+            confirmed={blueConfirmed}
+            canToggle={canConfirmBlue}
+            disabled={isSaving}
+            onToggle={() => onConfirm(2, !blueConfirmed)}
+          />
+          {isOperator && redConfirmed && blueConfirmed && !match?.tacticsCompleted ? (
+            <button
+              type="button"
+              disabled={isSaving}
+              onClick={() => void onPublish()}
+              className="absolute left-1/2 top-1/2 z-30 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-brand-primary bg-brand-primary text-white shadow-lg ring-2 ring-white/70 transition-all hover:bg-brand-primary-hover active:scale-95 disabled:opacity-50"
+              aria-label="전술 완료 및 공개"
+            >
+              <Send size={15} strokeWidth={2.6} aria-hidden="true" />
+            </button>
+          ) : null}
+        </>
+      ) : null}
+    </SoccerPitch>
+  );
+}
+
+function TacticsConfirmBadge({
+  team,
+  confirmed,
+  canToggle,
+  disabled,
+  onToggle,
+}: {
+  team: 'red' | 'blue';
+  confirmed: boolean;
+  canToggle: boolean;
+  disabled: boolean;
+  onToggle: () => Promise<void>;
+}) {
+  const isRed = team === 'red';
+  const teamName = isRed ? 'Red' : 'Blue';
+  const positionClass = isRed ? 'left-2 top-2' : 'right-2 top-2';
+  const stateClass = confirmed
+    ? isRed
+      ? 'border-red-team-border bg-red-team text-white shadow-md ring-2 ring-white/70 animate-fadeIn'
+      : 'border-blue-team-border bg-blue-team text-white shadow-md ring-2 ring-white/70 animate-fadeIn'
+    : isRed
+      ? 'border-red-team-border/40 bg-red-team-bg/80 text-red-team/45 shadow-sm'
+      : 'border-blue-team-border/40 bg-blue-team-bg/80 text-blue-team/45 shadow-sm';
+  const label = confirmed
+    ? canToggle ? `${teamName} 전술 확정 취소` : `${teamName} 전술 확정됨`
+    : `${teamName} 전술 확정`;
+  const content = confirmed ? (
+    <Check size={15} strokeWidth={3} aria-hidden="true" />
+  ) : (
+    <Check size={13} strokeWidth={3} aria-hidden="true" />
+  );
+
+  if (!canToggle) {
+    return (
+      <span
+        className={`absolute ${positionClass} z-30 flex h-7 w-7 items-center justify-center rounded-full border text-[10px] font-black ${stateClass}`}
+        aria-label={label}
+      >
+        {content}
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => void onToggle()}
+      className={`absolute ${positionClass} z-30 flex h-7 w-7 items-center justify-center rounded-full border text-[10px] font-black transition-all hover:scale-105 active:scale-95 disabled:opacity-50 ${stateClass}`}
+      aria-label={label}
+    >
+      {content}
+    </button>
+  );
+}
+
+function BenchStrip({
+  bench,
+  canEdit,
+  isSaving,
+  match,
+  selectedPlayerId,
+  onSelectPlayer,
+  nodeRef,
+  isOver,
+}: {
+  bench: Player[];
+  canEdit: boolean;
+  isSaving: boolean;
+  match: UpcomingMatch | null;
+  selectedPlayerId: string | null;
+  onSelectPlayer: (playerId: string) => void;
+  nodeRef?: (element: HTMLElement | null) => void;
+  isOver?: boolean;
+}) {
+  if (!canEdit && bench.length > 0) return null;
+  if (bench.length === 0) {
+    if (!isPreMatchTacticsWindow(match ?? undefined)) {
+      return (
+        <div
+          ref={nodeRef}
+          className={`h-2 rounded-full transition-colors ${
+            isOver ? 'bg-green-500/30 ring-2 ring-green-500/20' : 'bg-transparent'
+          }`}
+          aria-hidden="true"
+        />
+      );
+    }
+    return (
+      <div
+        ref={nodeRef}
+        className={`h-2 rounded-full transition-colors ${
+          isOver ? 'bg-green-500/30 ring-2 ring-green-500/20' : 'bg-transparent'
+        }`}
+        aria-hidden="true"
+      />
+    );
+  }
+
+  return (
+    <div
+      ref={nodeRef}
+      className={`rounded-2xl border transition-all duration-200 min-h-[54px] flex items-center justify-between ${
+        isOver
+          ? 'border-green-500 bg-green-900/20 scale-[1.01] ring-2 ring-green-500/30'
+          : 'border-green-800/15 bg-green-900/10'
+      } px-3 py-2.5 shadow-inner`}
+    >
+      <SortableContext items={bench.map((p) => p.id)} strategy={rectSortingStrategy}>
+        <div className="flex flex-1 flex-wrap gap-2 min-h-[36px] items-center justify-center">
+          {bench.map((player) => (
+            <DraggablePlayerAvatar
+              key={player.id}
+              player={player}
+              zone="bench"
+              disabled={!canEdit || isSaving}
+              isSelected={selectedPlayerId === player.id}
+              onSelect={onSelectPlayer}
+            />
+          ))}
+        </div>
+      </SortableContext>
+    </div>
+  );
+}
+
 
 // ─── 메인: 드래그 앤 드롭 전술 빌더 ───
 export default function TacticsDragBuilder({
@@ -176,25 +589,55 @@ export default function TacticsDragBuilder({
   players = initialPlayers,
   lineup = [],
   readOnly = false,
-  onCompleted,
+  embedded = false,
+  onLineupUpdated,
+  onPlayersUpdated,
+  match,
+  onMatchUpdated,
 }: TacticsDragBuilderProps) {
   const { userRole } = useAppStore();
+  const memberProfile = useAuthStore((state) => state.memberProfile);
   const { showToast } = useToastStore();
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [tacticsCompleted, setTacticsCompleted] = useState(lineup.length > 0);
   const [isSaving, setIsSaving] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [selectedPlacementPlayerId, setSelectedPlacementPlayerId] = useState<string | null>(null);
+  const [showAddAttendee, setShowAddAttendee] = useState(false);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [availableMembers, setAvailableMembers] = useState<ApprovedMembership[]>([]);
 
-  const [bench, setBench] = useState<Player[]>(players);
+  const [bench, setBench] = useState<Player[]>(() => buildInitialBench(players, lineup));
   const [teams, setTeams] = useState<TeamState[]>(() => buildInitialTeams(lineup));
 
-  const isLeader = userRole === 'admin' || userRole === 'operator';
-  const canEdit = isLeader && !readOnly;
+  const isOperator = userRole === 'admin' || userRole === 'operator';
+  const isMatchTacticsCompleted = match?.tacticsCompleted ?? false;
+
+  const redLeaderId = teams.find((t) => t.id === 'red')?.players.find((p) => p.isLeader)?.id;
+  const blueLeaderId = teams.find((t) => t.id === 'blue')?.players.find((p) => p.isLeader)?.id;
+
+  const isRedLeader = Boolean(memberProfile?.id && memberProfile.id === redLeaderId);
+  const isBlueLeader = Boolean(memberProfile?.id && memberProfile.id === blueLeaderId);
+
+  const canEdit = Boolean(
+    !readOnly &&
+    !isMatchTacticsCompleted &&
+    (isOperator || isRedLeader || isBlueLeader)
+  );
+
+  useEffect(() => {
+    setBench(buildInitialBench(players, lineup));
+    setTeams(buildInitialTeams(lineup));
+  }, [lineup, players]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
   );
+
+  const { isOver: isOverBench, setNodeRef: setBenchNodeRef } = useDroppable({
+    id: 'bench-dropzone',
+    data: { zone: 'bench' },
+    disabled: !canEdit,
+  });
 
   const activePlayer = [bench, ...teams.flatMap(t => t.players)].flat().find((p) => p.id === activeId);
 
@@ -205,182 +648,467 @@ export default function TacticsDragBuilder({
     return null;
   };
 
-  const removeFromZone = (id: string) => {
-    setBench((prev) => prev.filter((p) => p.id !== id));
-    setTeams((prev) => prev.map(t => ({ ...t, players: t.players.filter(p => p.id !== id) })));
-  };
-
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
+    setSelectedPlacementPlayerId(null);
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const placePlayerInSlot = async (playerId: string, targetZone: 'red' | 'blue' | 'bench', targetIndex: number | null) => {
+    const player = [bench, ...teams.flatMap(t => t.players)].flat().find((p) => p.id === playerId);
+    if (!player) return;
+
+    const sourceZone = findPlayerZone(playerId);
+    if (!canEdit || !clubId || !matchId) return;
+
+    setIsSaving(true);
+    try {
+      if (targetZone === 'bench') {
+        if (sourceZone === 'bench') return;
+        const isAuthorizedToBench = canManageZone(sourceZone, { isOperator, isRedLeader, isBlueLeader });
+        if (!isAuthorizedToBench) {
+          showToast('소속 팀의 선수만 대기명단으로 돌려보낼 수 있어요.');
+          return;
+        }
+
+        const draft = buildOperatorLineupDraft({
+          bench,
+          teams,
+          playerId,
+          targetTeamId: 'bench',
+          targetIndex: null,
+        });
+        setTeams(draft.teams);
+        setBench(draft.bench);
+        setSelectedPlacementPlayerId(null);
+        if (!draft.canPersist) {
+          showToast('Red/Blue에 최소 1명씩 배치하면 전술이 저장돼요.');
+          return;
+        }
+        
+        try {
+          const nextLineup = await saveMatchLineup({
+            clubId,
+            matchId,
+            entries: draft.entries,
+          });
+          setTeams(buildInitialTeams(nextLineup));
+          setBench(buildInitialBench(players, nextLineup));
+          onLineupUpdated?.(nextLineup);
+        } catch (error) {
+          console.warn('[FC Moim] saveMatchLineup failed, falling back to local simulation:', error);
+          const simulatedLineup = createSimulatedLineup(draft.entries, matchId, [
+            ...players,
+            ...teams.flatMap((team) => team.players),
+            ...bench,
+          ]);
+          onLineupUpdated?.(simulatedLineup);
+        }
+
+        if (match) {
+          onMatchUpdated?.(getMatchAfterLineupTeamChanges(match, [sourceZone]));
+        }
+        return;
+      }
+
+      if (sourceZone === targetZone) {
+        if (targetZone !== 'red' && targetZone !== 'blue') return;
+        const isAuthorizedToRearrange = canManageZone(targetZone, { isOperator, isRedLeader, isBlueLeader });
+        if (!isAuthorizedToRearrange) {
+          showToast('소속 팀의 슬롯만 변경할 수 있어요.');
+          return;
+        }
+
+        const team = teams.find((item) => item.id === targetZone);
+        const oldIndex = team?.players.findIndex((item) => item.id === playerId) ?? -1;
+        const newIndex = targetIndex ?? -1;
+        if (!team || oldIndex < 0 || newIndex < 0) return;
+        if (newIndex >= TACTICS_SLOT_COUNT) return;
+        const nextTeams = teams.map((item) => item.id === targetZone
+          ? normalizeLeaderForTeam({ ...item, players: movePlayerToSlot(item.players, playerId, newIndex) })
+          : item);
+        setTeams(nextTeams);
+        setSelectedPlacementPlayerId(null);
+        
+        try {
+          const nextLineup = await saveMatchLineup({
+            clubId,
+            matchId,
+            entries: nextTeams.flatMap(mapTeamToSaveEntries),
+          });
+          setTeams(buildInitialTeams(nextLineup));
+          setBench(buildInitialBench(players, nextLineup));
+          onLineupUpdated?.(nextLineup);
+        } catch (error) {
+          console.warn('[FC Moim] saveMatchLineup failed, falling back to local simulation:', error);
+          const entries = nextTeams.flatMap(mapTeamToSaveEntries);
+          const simulatedLineup = createSimulatedLineup(entries, matchId, [
+            ...players,
+            ...nextTeams.flatMap((team) => team.players),
+            ...bench,
+          ]);
+          onLineupUpdated?.(simulatedLineup);
+        }
+
+        if (match) {
+          onMatchUpdated?.(getMatchAfterLineupTeamChanges(match, [targetZone]));
+        }
+        return;
+      }
+
+      if (isOperator) {
+        const draft = buildOperatorLineupDraft({
+          bench,
+          teams,
+          playerId,
+          targetTeamId: targetZone,
+          targetIndex,
+        });
+        setTeams(draft.teams);
+        setBench(draft.bench);
+        setSelectedPlacementPlayerId(null);
+        if (!draft.canPersist) {
+          showToast('Red/Blue에 최소 1명씩 배치하면 전술이 저장돼요.');
+          return;
+        }
+        
+        try {
+          const nextLineup = await saveMatchLineup({
+            clubId,
+            matchId,
+            entries: draft.entries,
+          });
+          setTeams(buildInitialTeams(nextLineup));
+          setBench(buildInitialBench(players, nextLineup));
+          onLineupUpdated?.(nextLineup);
+        } catch (error) {
+          console.warn('[FC Moim] saveMatchLineup failed, falling back to local simulation:', error);
+          const simulatedLineup = createSimulatedLineup(draft.entries, matchId, [
+            ...players,
+            ...teams.flatMap((team) => team.players),
+            ...bench,
+          ]);
+          onLineupUpdated?.(simulatedLineup);
+        }
+
+        if (match) {
+          onMatchUpdated?.(getMatchAfterLineupTeamChanges(match, [sourceZone, targetZone]));
+        }
+        return;
+      }
+
+      if ((sourceZone === 'red' || sourceZone === 'blue') && !canManageZone(sourceZone, { isOperator, isRedLeader, isBlueLeader })) {
+        showToast('소속 팀의 선수만 이동할 수 있어요.');
+        return;
+      }
+
+      if (!canManageZone(targetZone, { isOperator, isRedLeader, isBlueLeader })) {
+        showToast('소속 팀에만 선수를 배치할 수 있어요.');
+        return;
+      }
+
+      const draft = buildOperatorLineupDraft({
+        bench,
+        teams,
+        playerId,
+        targetTeamId: targetZone,
+        targetIndex,
+      });
+      setTeams(draft.teams);
+      setBench(draft.bench);
+      setSelectedPlacementPlayerId(null);
+      if (!draft.canPersist) {
+        showToast('Red/Blue에 최소 1명씩 배치하면 전술이 저장돼요.');
+        return;
+      }
+
+      try {
+        const nextLineup = await saveMatchLineup({
+          clubId,
+          matchId,
+          entries: draft.entries,
+        });
+        setTeams(buildInitialTeams(nextLineup));
+        setBench(buildInitialBench(players, nextLineup));
+        onLineupUpdated?.(nextLineup);
+      } catch (error) {
+        console.warn('[FC Moim] saveMatchLineup failed, falling back to local simulation:', error);
+        const simulatedLineup = createSimulatedLineup(draft.entries, matchId, [
+          ...players,
+          ...teams.flatMap((team) => team.players),
+          ...bench,
+        ]);
+        onLineupUpdated?.(simulatedLineup);
+      }
+
+      if (match) {
+        onMatchUpdated?.(getMatchAfterLineupTeamChanges(match, [sourceZone, targetZone]));
+      }
+    } catch (error) {
+      console.error('[FC Moim] Draft pick failed:', error);
+      showToast('전술 배치를 저장하지 못했어요.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
     setActiveId(null);
     const { active, over } = event;
     if (!over) return;
 
-    const playerId = active.id as string;
-    const player = [bench, ...teams.flatMap(t => t.players)].flat().find((p) => p.id === playerId);
-    if (!player) return;
-
     const targetZone = (over.data?.current as { zone?: string })?.zone;
-    const sourceZone = findPlayerZone(playerId);
-    if (sourceZone === targetZone) return;
+    if (targetZone !== 'red' && targetZone !== 'blue' && targetZone !== 'bench') return;
 
-    removeFromZone(playerId);
+    await placePlayerInSlot(active.id as string, targetZone, getDropSlotIndex(over));
+  };
 
-    if (targetZone === 'bench') {
-      setBench((prev) => [...prev, player]);
-    } else {
-      setTeams((prev) => prev.map(t => t.id === targetZone ? { ...t, players: [...t.players, player] } : t));
+  if (!canEdit && !isMatchTacticsCompleted) {
+    return (
+      <MatchAnticipationPanel
+        match={match}
+        players={players}
+        lineup={lineup}
+        currentMembershipId={memberProfile?.id ?? null}
+      />
+    );
+  }
+
+  const canConfirmRed = isOperator || Boolean(memberProfile?.id && memberProfile.id === redLeaderId);
+  const canConfirmBlue = isOperator || Boolean(memberProfile?.id && memberProfile.id === blueLeaderId);
+
+  const handleConfirm = async (teamNumber: 1 | 2, confirmed = true) => {
+    if (!clubId || !matchId || !match) return;
+    setIsSaving(true);
+    try {
+      const updatedMatch = await confirmMatchLineup({ clubId, matchId, teamNumber, ...(confirmed ? {} : { confirmed }) });
+      onMatchUpdated?.(updatedMatch);
+      showToast(`${teamNumber === 1 ? 'Red' : 'Blue'} ${confirmed ? '확정' : '확정 취소'}`);
+    } catch (error) {
+      console.error('[FC Moim] Confirm lineup failed:', error);
+      showToast(confirmed ? '전술을 확정하지 못했어요.' : '전술 확정을 취소하지 못했어요.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const getTeamClasses = (color: string) => {
-    if (color === 'red') return { bg: 'bg-red-team-bg', border: 'border-red-team-border', text: 'text-red-team', fill: 'fill-red-team/20 text-red-team', emptyText: 'text-red-team' };
-    if (color === 'blue') return { bg: 'bg-blue-team-bg', border: 'border-blue-team-border', text: 'text-blue-team', fill: 'fill-blue-team/20 text-blue-team', emptyText: 'text-blue-team' };
-    return { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-600', fill: 'fill-green-500/20 text-green-500', emptyText: 'text-green-400' };
+  const handlePublish = async () => {
+    if (!clubId || !matchId || !match || !isOperator) return;
+    setIsSaving(true);
+    try {
+      const updatedMatch = await publishMatchLineup({ clubId, matchId });
+      onMatchUpdated?.(updatedMatch);
+      showToast('전술을 공개했어요.');
+    } catch (error) {
+      console.error('[FC Moim] Publish lineup failed:', error);
+      showToast('전술을 공개하지 못했어요.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  if (!canEdit && teams.every((team) => team.players.length === 0)) return null;
-
-  const handleConfirmLineup = async () => {
-    setIsSaving(true);
-
+  const handleOpenAddAttendee = async () => {
+    if (!clubId || !matchId) return;
+    setShowAddAttendee(true);
+    setSelectedMemberIds([]);
     try {
-      if (clubId && matchId) {
-        await saveMatchLineup({
-          clubId,
-          matchId,
-          entries: teams.flatMap((team) => team.players.map((player, index) => ({
-            membershipId: player.id,
-            teamNumber: team.id === 'red' ? 1 : 2,
-            isLeader: index === 0,
-            position: normalizePosition(player.position),
-          }))),
-        });
-      }
+      setAvailableMembers(await fetchApprovedMemberships(clubId));
+    } catch {
+      setAvailableMembers([]);
+    }
+  };
 
-      setTacticsCompleted(true);
-      setShowConfirm(false);
-      showToast('팀 편성이 확정되었습니다!');
-      onCompleted?.();
+  const handleToggleMember = (memberId: string) => {
+    setSelectedMemberIds((prev) =>
+      prev.includes(memberId) ? prev.filter((id) => id !== memberId) : [...prev, memberId]
+    );
+  };
+
+  const handleAddAttendeesBatch = async () => {
+    if (!clubId || !matchId || selectedMemberIds.length === 0) return;
+    setIsSaving(true);
+    try {
+      const attendees = await addMatchAttendee({
+        clubId,
+        matchId,
+        membershipIds: selectedMemberIds,
+      });
+      const attendeePlayers = attendees.map(mapAttendeeToPlayer);
+      setBench(buildInitialBench(attendeePlayers, teams.flatMap((team) => team.players.map(mapPlayerToLineupStub))));
+      showToast(`${selectedMemberIds.length}명의 참석자를 대기명단에 추가했어요.`);
+      setShowAddAttendee(false);
+      onPlayersUpdated?.(attendeePlayers);
     } catch (error) {
-      console.error('[FC Moim] Lineup save failed:', error);
-      showToast('팀 편성을 저장하지 못했어요.');
+      console.error('[FC Moim] Add attendees batch failed:', error);
+      showToast('참석자를 추가하지 못했어요.');
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <section className="rounded-2xl border border-feedback-warning-border bg-feedback-warning-bg p-4 shadow-sm animate-fadeIn">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-bold text-gray-900 flex items-center gap-1.5">
-          🏟 전술 설정
-        </h3>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold text-gray-500 bg-white px-2 py-1 rounded-md">
-            참석 {bench.length + teams.reduce((acc, t) => acc + t.players.length, 0)}명
+    <section className={`relative overflow-hidden animate-fadeIn ${
+      embedded
+        ? 'rounded-2xl p-0'
+        : 'rounded-3xl border border-feedback-warning-border bg-feedback-warning-bg p-3 shadow-sm tactics-frame'
+    }`}>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <h3 className="flex items-center gap-1.5 text-[11px] font-black text-gray-500">
+          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white">
+            <Image
+              src={SVG_REPO_ICONS.tactics}
+              alt=""
+              width={16}
+              height={16}
+              className="h-4 w-4 object-contain"
+              style={{ width: 16, height: 16 }}
+              unoptimized
+            />
           </span>
-        </div>
+          전술 설정
+        </h3>
+        {canEdit && isOperator ? (
+          <button
+            type="button"
+            onClick={() => void handleOpenAddAttendee()}
+            className="flex h-6 w-6 items-center justify-center rounded-lg border border-border bg-white text-gray-500 hover:text-brand-primary hover:border-brand-primary active:scale-95 transition-all duration-300 group shadow-xs"
+            aria-label="참석자 추가"
+          >
+            <Plus size={13} aria-hidden="true" className="group-hover:rotate-90 transition-transform duration-300" />
+          </button>
+        ) : null}
       </div>
 
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={slotFirstCollisionDetection}
         onDragStart={canEdit ? handleDragStart : undefined}
         onDragEnd={canEdit ? handleDragEnd : undefined}
       >
-        {/* 대기 명단 */}
-        {bench.length > 0 && (
-          <div className="mb-3">
-            <p className="text-[10px] font-bold text-gray-500 mb-1.5">대기 명단</p>
-            <SortableContext items={bench.map((p) => p.id)} strategy={verticalListSortingStrategy}>
-              <div className="grid grid-cols-2 gap-1.5">
-                {bench.map((player) => (
-                  <DraggablePlayerCard key={player.id} player={player} zone="bench" />
-                ))}
-              </div>
-            </SortableContext>
-          </div>
-        )}
-
-        {/* Teams 드롭존 */}
-        <div className="grid grid-cols-2 gap-3 mb-3">
-          {teams.map((team) => {
-            const cls = getTeamClasses(team.color);
-            return (
-              <TeamDropZone key={team.id} team={team} cls={cls} canEdit={canEdit} />
-            );
-          })}
+        <div className="mb-1.5">
+          <TacticsPitch
+            teams={teams}
+            canEdit={canEdit}
+            isSaving={isSaving}
+            isOperator={isOperator}
+            isRedLeader={isRedLeader}
+            isBlueLeader={isBlueLeader}
+            match={match ?? null}
+            canConfirmRed={canConfirmRed}
+            canConfirmBlue={canConfirmBlue}
+            selectedPlayerId={selectedPlacementPlayerId}
+            onSelectPlayer={setSelectedPlacementPlayerId}
+            onPlacePlayer={(teamId, slotIndex) => {
+              if (!selectedPlacementPlayerId) return;
+              void placePlayerInSlot(selectedPlacementPlayerId, teamId, slotIndex);
+            }}
+            onConfirm={handleConfirm}
+            onPublish={handlePublish}
+          />
         </div>
+
+        <BenchStrip
+          bench={bench}
+          canEdit={canEdit}
+          isSaving={isSaving}
+          match={match ?? null}
+          selectedPlayerId={selectedPlacementPlayerId}
+          onSelectPlayer={setSelectedPlacementPlayerId}
+          nodeRef={setBenchNodeRef}
+          isOver={isOverBench}
+        />
 
         <DragOverlay>
           {activePlayer ? <PlayerOverlay player={activePlayer} /> : null}
         </DragOverlay>
       </DndContext>
 
-      {/* 팁 인디케이터 */}
-      <div className="bg-white px-4 py-2 text-center shadow-sm relative z-20 mb-3 rounded-lg">
-        <div className="inline-flex items-center gap-4 bg-gray-50 px-4 py-1.5 rounded-full border border-gray-100">
-          <span className="text-xs font-bold text-gray-500">배치된 인원: {teams.reduce((acc, t) => acc + t.players.length, 0)}명</span>
-        </div>
-      </div>
+      <Modal title="참석자 추가" isOpen={showAddAttendee} onClose={() => setShowAddAttendee(false)}>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto no-scrollbar">
+            {availableMembers
+              .filter((member) => ![bench, ...teams.map((team) => team.players)].flat().some((player) => player.id === member.id))
+              .map((member) => {
+                const isSelected = selectedMemberIds.includes(member.id);
+                return (
+                  <button
+                    key={member.id}
+                    type="button"
+                    disabled={isSaving}
+                    onClick={() => handleToggleMember(member.id)}
+                    className={`flex items-center gap-2.5 rounded-xl border px-3 py-2 text-left transition-all active:scale-95 disabled:opacity-50 ${
+                      isSelected
+                        ? 'border-brand-primary bg-brand-primary-bg ring-1 ring-brand-primary/30'
+                        : 'border-border/40 bg-surface-bg hover:bg-surface-hover'
+                    }`}
+                  >
+                    <Image
+                      src={member.photoUrl || getFallbackAvatar(member.nickname)}
+                      alt=""
+                      width={28}
+                      height={28}
+                      className="h-7 w-7 rounded-full bg-surface-card"
+                      unoptimized
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-extrabold text-primary leading-tight">{member.nickname}</p>
+                      <p className="mt-0.5 text-[10px] font-black text-brand-primary leading-none">OVR {member.ovr}</p>
+                    </div>
+                    {isSelected && (
+                      <Check size={14} className="text-brand-primary shrink-0 font-bold" />
+                    )}
+                  </button>
+                );
+              })}
+            {availableMembers.length === 0 ? (
+              <p className="col-span-2 py-6 text-center text-xs font-bold text-tertiary">추가할 회원을 불러오는 중입니다</p>
+            ) : null}
+            {availableMembers.length > 0 && availableMembers.filter((member) => ![bench, ...teams.map((team) => team.players)].flat().some((player) => player.id === member.id)).length === 0 ? (
+              <p className="col-span-2 py-6 text-center text-xs font-bold text-tertiary">이미 모든 회원이 등록되어 있습니다.</p>
+            ) : null}
+          </div>
 
-      {/* 팁 인디케이터 */}
-      {!canEdit ? (
-        <div className="w-full rounded-xl bg-white px-4 py-3 text-center text-sm font-bold text-gray-700">
-          확정된 팀 편성입니다
-        </div>
-      ) : tacticsCompleted ? (
-        <button disabled className="w-full bg-gray-200 text-gray-500 font-bold py-3 rounded-xl cursor-not-allowed">
-          전술 설정이 모두에게 공개되었습니다
-        </button>
-      ) : (
-        <button
-          onClick={() => {
-            if (teams.some(t => t.players.length === 0)) {
-              showToast('모든 팀에 선수를 배치해주세요!');
-              return;
-            }
-            setShowConfirm(true);
-          }}
-          className="w-full bg-feedback-warning text-white font-bold py-3 rounded-xl hover:brightness-110 active:scale-95 transition-all"
-        >
-          전술설정 완료
-        </button>
-      )}
-
-      <Modal title="최종 컨펌" isOpen={showConfirm} onClose={() => setShowConfirm(false)}>
-        <p className="text-[13px] font-bold text-gray-800 mb-4 whitespace-pre-wrap leading-relaxed text-center">
-          {teams.map(t => `${t.name} ${t.players.length}명`).join(' vs ')}{'\n'}
-          전체 회원에게 팀 편성 결과가 공개됩니다.{'\n'}
-          이대로 완료하시겠어요?
-        </p>
-        <div className="flex gap-2">
-          <button
-            onClick={() => void handleConfirmLineup()}
-            disabled={isSaving}
-            className="flex-1 bg-gray-900 text-white font-bold py-3 rounded-xl hover:brightness-110 active:scale-95 transition-all text-[13px]"
-          >
-            {isSaving ? '저장 중...' : '네, 완료할게요'}
-          </button>
-          <button
-            onClick={() => setShowConfirm(false)}
-            className="flex-1 bg-gray-100 text-gray-600 font-bold py-3 rounded-xl hover:bg-gray-200 active:scale-95 transition-all text-[13px]"
-          >
-            조금 더 볼게요
-          </button>
+          {selectedMemberIds.length > 0 && (
+            <button
+              type="button"
+              disabled={isSaving}
+              onClick={() => void handleAddAttendeesBatch()}
+              className="w-full rounded-xl bg-brand-primary hover:bg-brand-primary-hover px-4 py-3 text-xs font-extrabold text-white transition-all active:scale-95 disabled:opacity-50 shadow-sm"
+            >
+              {isSaving ? '추가 중...' : `${selectedMemberIds.length}명 추가하기`}
+            </button>
+          )}
         </div>
       </Modal>
     </section>
   );
 }
 
+function getAvatarBorderClass(zone: string) {
+  if (zone === 'red') return 'border-red-team';
+  if (zone === 'blue') return 'border-blue-team';
+  return 'border-gray-200';
+}
+
+const slotFirstCollisionDetection: CollisionDetection = (args) => {
+  const pointerCollisions = pointerWithin(args);
+  const pointerSlot = pointerCollisions.find((collision) => String(collision.id).startsWith('slot-'));
+  if (pointerSlot) return [pointerSlot];
+  if (pointerCollisions.length > 0) return pointerCollisions;
+
+  const centerCollisions = closestCenter(args);
+  const centerSlot = centerCollisions.find((collision) => String(collision.id).startsWith('slot-'));
+  return centerSlot ? [centerSlot] : centerCollisions;
+};
+
 function buildInitialTeams(lineup: MatchLineupEntry[]): TeamState[] {
-  const redPlayers = lineup.filter((entry) => entry.teamNumber === 1).map(mapLineupEntryToPlayer);
-  const bluePlayers = lineup.filter((entry) => entry.teamNumber === 2).map(mapLineupEntryToPlayer);
+  const redPlayers = lineup.filter((entry) => entry.teamNumber === 1).map((entry, index) => ({
+    ...mapLineupEntryToPlayer(entry),
+    slotIndex: getInitialFormationSlot(entry, index),
+  }));
+  const bluePlayers = lineup.filter((entry) => entry.teamNumber === 2).map((entry, index) => ({
+    ...mapLineupEntryToPlayer(entry),
+    slotIndex: getInitialFormationSlot(entry, index),
+  }));
 
   return [
     { id: 'red', name: 'Red', color: 'red', players: redPlayers },
@@ -388,17 +1116,305 @@ function buildInitialTeams(lineup: MatchLineupEntry[]): TeamState[] {
   ];
 }
 
+function buildInitialBench(players: Player[], lineup: MatchLineupEntry[]) {
+  const lineupMembershipIds = new Set(lineup.map((entry) => entry.membershipId));
+  return players.filter((player) => !lineupMembershipIds.has(player.id));
+}
+
+function buildOperatorLineupDraft(input: {
+  bench: Player[];
+  teams: TeamState[];
+  playerId: string;
+  targetTeamId: 'red' | 'blue' | 'bench';
+  targetIndex?: number | null;
+}) {
+  const allPlayers = [
+    ...input.bench,
+    ...input.teams.flatMap((team) => team.players),
+  ];
+  const movedPlayer = allPlayers.find((player) => player.id === input.playerId);
+  if (!movedPlayer) {
+    const entries = input.teams.flatMap(mapTeamToSaveEntries);
+    return {
+      teams: input.teams,
+      bench: input.bench,
+      entries,
+      canPersist: hasBothTeams(entries),
+    };
+  }
+
+  const nextTeams = input.teams.map((team) => {
+    const retainedPlayers = team.players.filter((player) => player.id !== input.playerId);
+    if (team.id !== input.targetTeamId) {
+      return normalizeLeaderForTeam({ ...team, players: retainedPlayers });
+    }
+
+    const nextPlayers = addPlayerToSlot(retainedPlayers, { ...movedPlayer, isLeader: false }, input.targetIndex);
+    return normalizeLeaderForTeam({ ...team, players: nextPlayers });
+  });
+
+  const assignedIds = new Set(nextTeams.flatMap((team) => team.players.map((player) => player.id)));
+  const entries = nextTeams.flatMap(mapTeamToSaveEntries);
+  return {
+    teams: nextTeams,
+    bench: allPlayers.filter((player) => !assignedIds.has(player.id)),
+    entries,
+    canPersist: hasBothTeams(entries),
+  };
+}
+
+function normalizeLeaderForTeam(team: TeamState): TeamState {
+  let hasLeader = false;
+  return {
+    ...team,
+    players: team.players.map((player, index) => {
+      const isLeader = !hasLeader && (player.isLeader || index === 0);
+      if (isLeader) hasLeader = true;
+      return { ...player, isLeader };
+    }),
+  };
+}
+
+function mapTeamToSaveEntries(team: TeamState) {
+  return [...team.players].sort(comparePlayersBySlot).map((player) => ({
+    membershipId: player.id,
+    teamNumber: team.id === 'red' ? 1 as const : 2 as const,
+    isLeader: Boolean(player.isLeader),
+    position: 'MF' as const,
+    formationSlot: player.slotIndex ?? null,
+  }));
+}
+
+function createSimulatedLineup(
+  entries: ReturnType<typeof mapTeamToSaveEntries>,
+  matchId: string,
+  playerPool: Player[],
+): MatchLineupEntry[] {
+  const playersById = new Map(playerPool.map((player) => [player.id, player]));
+
+  return entries.map((entry, index) => {
+    const player = playersById.get(entry.membershipId);
+
+    return {
+      id: `simulated-${index}`,
+      matchId,
+      membershipId: entry.membershipId,
+      teamNumber: entry.teamNumber,
+      isLeader: entry.isLeader,
+      position: entry.position,
+      formationSlot: entry.formationSlot ?? null,
+      playerName: player?.name ?? entry.membershipId,
+      playerPosition: null,
+      playerOvr: player?.ovr ?? 0,
+      playerPhotoUrl: player?.photo ?? null,
+      playerMatchPoints: player?.matchPoints ?? 0,
+    };
+  });
+}
+
+function getInitialFormationSlot(entry: MatchLineupEntry, fallbackIndex: number) {
+  if (typeof entry.formationSlot === 'number') return entry.formationSlot;
+  const slots = entry.teamNumber === 1
+    ? [6, 0, 12, 7, 13, 1, 8, 14, 2, 9, 15, 3, 10, 16, 4, 11, 17, 5]
+    : [11, 5, 17, 10, 16, 4, 9, 15, 3, 8, 14, 2, 7, 13, 1, 6, 12, 0];
+  return slots[fallbackIndex] ?? fallbackIndex;
+}
+
+function getPlayerInSlot(players: Player[], slotIndex: number) {
+  return players.find((player, index) => getPlayerSlot(player, index) === slotIndex);
+}
+
+function getPlayerSlot(player: Player, fallbackIndex: number) {
+  return typeof player.slotIndex === 'number' ? player.slotIndex : fallbackIndex;
+}
+
+function comparePlayersBySlot(left: Player, right: Player) {
+  return getPlayerSlot(left, 0) - getPlayerSlot(right, 0);
+}
+
+function movePlayerToSlot(players: Player[], playerId: string, targetIndex: number) {
+  const moving = players.find((player) => player.id === playerId);
+  if (!moving) return players;
+
+  const currentSlot = getPlayerSlot(moving, players.indexOf(moving));
+  return players.map((player, index) => {
+    if (player.id === playerId) return { ...player, slotIndex: targetIndex };
+    if (getPlayerSlot(player, index) === targetIndex) return { ...player, slotIndex: currentSlot };
+    return player;
+  });
+}
+
+function addPlayerToSlot(players: Player[], player: Player, requestedIndex?: number | null) {
+  const usedSlots = new Set(players.map((item, index) => getPlayerSlot(item, index)));
+  const fallbackIndex = findFirstOpenSlot(usedSlots);
+  const slotIndex = typeof requestedIndex === 'number' && requestedIndex >= 0 && requestedIndex < TACTICS_SLOT_COUNT && !usedSlots.has(requestedIndex)
+    ? requestedIndex
+    : fallbackIndex;
+
+  return [...players, { ...player, slotIndex }];
+}
+
+function findFirstOpenSlot(usedSlots: Set<number>) {
+  for (let index = 0; index < TACTICS_SLOT_COUNT; index += 1) {
+    if (!usedSlots.has(index)) return index;
+  }
+  return TACTICS_SLOT_COUNT - 1;
+}
+
+function getDropSlotIndex(eventTarget: DragEndEvent['over']) {
+  const value = (eventTarget?.data?.current as { slotIndex?: unknown } | undefined)?.slotIndex;
+  return typeof value === 'number' ? value : null;
+}
+
+function hasBothTeams(entries: Array<{ teamNumber: 1 | 2 }>) {
+  return entries.some((entry) => entry.teamNumber === 1) && entries.some((entry) => entry.teamNumber === 2);
+}
+
+function isPreMatchTacticsWindow(match: UpcomingMatch | undefined) {
+  if (!match) return true;
+  if (match.status === 'finished' || match.status === 'cancelled') return false;
+  return new Date(match.date).getTime() >= Date.now();
+}
+
+function canManageZone(
+  zone: string | null,
+  input: { isOperator: boolean; isRedLeader: boolean; isBlueLeader: boolean },
+) {
+  if (input.isOperator) return true;
+  if (zone === 'red') return input.isRedLeader;
+  if (zone === 'blue') return input.isBlueLeader;
+  return false;
+}
+
+function getMatchAfterLineupTeamChanges(
+  match: UpcomingMatch,
+  changedTeams: Array<string | null | undefined>,
+): UpcomingMatch {
+  const changedTeamSet = new Set(changedTeams.filter((team) => team === 'red' || team === 'blue'));
+  const redLeaderConfirmed = changedTeamSet.has('red') ? false : Boolean(match.redLeaderConfirmed);
+  const blueLeaderConfirmed = changedTeamSet.has('blue') ? false : Boolean(match.blueLeaderConfirmed);
+
+  return {
+    ...match,
+    redLeaderConfirmed,
+    blueLeaderConfirmed,
+    tacticsCompleted: redLeaderConfirmed && blueLeaderConfirmed,
+  };
+}
+
+export function buildMatchAnticipationState(input: {
+  match?: Pick<UpcomingMatch, 'redLeaderConfirmed' | 'blueLeaderConfirmed' | 'tacticsCompleted'>;
+  players: Array<Pick<Player, 'id'>>;
+  lineup: Array<Pick<MatchLineupEntry, 'membershipId' | 'teamNumber'>>;
+  currentMembershipId: string | null;
+}): MatchAnticipationState {
+  const redReady = Boolean(input.match?.redLeaderConfirmed);
+  const blueReady = Boolean(input.match?.blueLeaderConfirmed);
+  const redCount = input.lineup.filter((entry) => entry.teamNumber === 1).length;
+  const blueCount = input.lineup.filter((entry) => entry.teamNumber === 2).length;
+  const assignedIds = new Set(input.lineup.map((entry) => entry.membershipId));
+  const benchCount = input.players.filter((player) => !assignedIds.has(player.id)).length;
+  const currentLineup = input.currentMembershipId
+    ? input.lineup.find((entry) => entry.membershipId === input.currentMembershipId)
+    : null;
+  const memberState: MatchAnticipationMemberState = currentLineup
+    ? currentLineup.teamNumber === 1 ? 'red' : 'blue'
+    : input.currentMembershipId && input.players.some((player) => player.id === input.currentMembershipId)
+      ? 'bench'
+      : 'notAttending';
+
+  let stage: MatchAnticipationStage = 'drafting';
+  if (input.players.length === 0 && input.lineup.length === 0) {
+    stage = 'waitingRoster';
+  } else if (input.lineup.length === 0) {
+    stage = 'drafting';
+  } else if (redReady && blueReady && !input.match?.tacticsCompleted) {
+    stage = 'finalizing';
+  } else if (redReady && !blueReady) {
+    stage = 'redReady';
+  } else if (blueReady && !redReady) {
+    stage = 'blueReady';
+  }
+
+  return {
+    stage,
+    memberState,
+    redCount,
+    blueCount,
+    benchCount,
+    redReady,
+    blueReady,
+  };
+}
+
+function getMemberAnticipationCopy(memberState: MatchAnticipationMemberState) {
+  switch (memberState) {
+    case 'red':
+      return { label: '내 팀 Red' };
+    case 'blue':
+      return { label: '내 팀 Blue' };
+    case 'bench':
+      return { label: '대기명단' };
+    case 'notAttending':
+    default:
+      return { label: '프리뷰' };
+  }
+}
+
+function getMemberBadgeClass(memberState: MatchAnticipationMemberState) {
+  switch (memberState) {
+    case 'red':
+      return 'border-red-team-border bg-red-team-bg text-red-team';
+    case 'blue':
+      return 'border-blue-team-border bg-blue-team-bg text-blue-team';
+    case 'bench':
+      return 'border-feedback-warning-border bg-feedback-warning-bg text-feedback-warning';
+    case 'notAttending':
+    default:
+      return 'border-border bg-surface-card text-secondary';
+  }
+}
+
 function mapLineupEntryToPlayer(entry: MatchLineupEntry): Player {
   return {
     id: entry.membershipId,
     name: entry.playerName,
     ovr: entry.playerOvr,
-    position: entry.position || entry.playerPosition || 'MF',
+    matchPoints: entry.playerMatchPoints,
+    photo: entry.playerPhotoUrl || entry.playerName,
+    isLeader: entry.isLeader,
+  };
+}
+
+function mapAttendeeToPlayer(entry: MatchAttendee): Player {
+  return {
+    id: entry.membershipId,
+    name: entry.playerName,
+    ovr: entry.playerOvr,
+    matchPoints: entry.matchPoints,
     photo: entry.playerPhotoUrl || entry.playerName,
   };
 }
 
-function normalizePosition(value: string): 'FW' | 'MF' | 'DF' {
-  if (value === 'FW' || value === 'MF' || value === 'DF') return value;
-  return 'MF';
+function mapPlayerToLineupStub(player: Player): MatchLineupEntry {
+  return {
+    id: player.id,
+    matchId: '',
+    membershipId: player.id,
+    teamNumber: 1,
+    isLeader: Boolean(player.isLeader),
+    position: 'MF',
+    formationSlot: player.slotIndex ?? null,
+    playerName: player.name,
+    playerPosition: null,
+    playerOvr: player.ovr,
+    playerPhotoUrl: player.photo,
+    playerMatchPoints: player.matchPoints,
+  };
+}
+
+function getPlayerPhotoSrc(player: Player) {
+  return player.photo.startsWith('/') || player.photo.startsWith('http')
+    ? player.photo
+    : getFallbackAvatar(player.photo);
 }

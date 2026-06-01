@@ -22,13 +22,13 @@ export default function AttendeeList({ count, total }: AttendeeListProps) {
             width={28}
             height={28}
             sizes="28px"
-            className="rounded-full border-[1.5px] border-white bg-gray-200 relative"
+            className="rounded-full border-[1.5px] border-surface-card bg-surface-hover relative"
             style={{ width: 28, height: 28, zIndex: 14 - i }}
             unoptimized
           />
         ))}
       </div>
-      <span className="text-xs font-bold text-gray-500 whitespace-nowrap ml-1 flex-shrink-0">
+      <span className="text-xs font-bold text-secondary whitespace-nowrap ml-1 flex-shrink-0">
         {count}/{total}명 참석
       </span>
     </div>

@@ -1,7 +1,7 @@
 # Design Tokens — Allowed Palette
 
 이 문서는 UI surface 코드(`src/app/**`, `src/components/**`)에서 사용 가능한 색상 토큰의 **완전한 허용 목록**입니다.
-`guard-design.mjs` 스크립트와 Review Agent(DC-1)가 이 목록을 기준으로 위반을 검출합니다.
+`guard-design.mjs` 스크립트와 Verifier(DC-1)가 이 목록을 기준으로 위반을 검출합니다.
 
 ## 토큰 정의 파일
 
@@ -32,13 +32,15 @@
 ### 축구 게임 메타포 (Winning Eleven / FIFA Online)
 
 - `condition-*` — 5단계 컨디션 화살표 (best/good/normal/poor/worst)
-- `tier-*` — 선수 카드 등급 (bronze/silver/gold/special)
+- `tier-*` — 선수 카드 등급 및 그라데이션 (bronze/silver/gold/special 및 그라데이션용 `-from`, `-via`, `-to`, `-text`, `-border`, `-shadow`, `-ring`)
 - `stat-*` — OVR 능력치 등급 (diamond/gold/silver/bronze)
 - `pos-*` — 포지션 컬러 (fw/mf/df/gk)
 - `chem-*` — 케미스트리 (strong/weak/neutral)
 - `stamina-*` — 체력 게이지 (full/mid/low)
 - `foot-*` — 주발 아이콘 (active/inactive/stroke)
+- `icon-*` CSS 변수 — `src/components/icons/**` 공유 SVG 내부 색상 전용
 - `viz-*` — 데이터 시각화 (primary/secondary/tertiary/danger, fill, grid, label)
+- `event-*` — 카테고리별 일정 이벤트 테마 (`match`, `vote`, `seminar`, `etc` 카테고리 및 하부의 `-bg`, `-border`, `-text`, `-icon-bg`, `-icon-text`, `-detail-border`, `-meta-icon`, `-map-accent` 등)
 
 ### 축구 소셜앱 메타포 (플랩풋볼 / 어반풋볼)
 
@@ -49,6 +51,9 @@
 - `fee-*` — 회비 상태 (paid/unpaid/partial)
 - `skill-*` — 실력 등급 (beginner/intermediate/advanced/pro)
 - `trend-*` — 상승/하락 지표 (up/down/flat)
+- `highlight-*` — 강조/데코레이션용 뱃지 및 액센트 (purple, amber, rose)
+- `metric-*` — 데이터 시각화 및 시즌 통계용 (purple, orange, cyan, gray)
+- `social-*` — 커뮤니티 및 유저 피드백 상호작용 (like, reply, mention)
 
 ### 공통 피드백
 
@@ -73,20 +78,24 @@
 - 인라인 hex (예: `bg-[#ff0000]`, `text-[#334155]`)
 - 컴포넌트(`.tsx`) 내 직접 rgba/hex 하드코딩 (`globals.css` 토큰 참조만 허용)
 - 인라인 SVG path 직접 작성 (`lucide-react` 또는 `src/components/ui/` 공유 컴포넌트 사용)
-- 커스텀 SVG는 `src/components/ui/**` 또는 `src/components/brand/**`의 공유 컴포넌트로만 둡니다.
+- 커스텀 SVG는 `src/components/ui/**`, `src/components/brand/**`, `src/components/icons/**`의 공유 컴포넌트로만 둡니다.
+- `src/components/icons/**`의 SVG 내부 색상은 `globals.css`의 `--icon-*` CSS 변수를 참조해야 하며, 컴포넌트에 hex를 직접 쓰지 않습니다.
+- SVGRepo asset은 원본 URL을 `next/image`로 참조하거나 원본 파일을 `public/icons/**`에 보관해 사용합니다. 출처가 명시된 외부 SVG를 임의로 재제작하거나 inline path로 붙여 넣지 않습니다.
 
 ## 의미 슬롯 계약
 
 - 라커룸 스쿼드의 컨디션 열은 `ConditionIcon`을 사용하고, 상태별 `condition-*` 토큰으로 렌더링해야 합니다.
 - 컨디션 UI를 일반 성공색(`green-*`) 체크 아이콘으로 대체하지 않습니다.
 - 주발 표시는 `PreferredFootIcon`을 사용하고, `foot-*` 토큰으로 렌더링해야 합니다.
-- 의미 슬롯을 변경하면 브라우저 QA에서 접근 가능한 이름이나 selector로 실제 렌더링을 증명합니다.
+- 일정/전술/지도처럼 변경이 잦은 화면별 세부 표현은 하네스의 고정 계약으로 두지 않고, 해당 작업의 테스트와 브라우저 evidence로 검증합니다.
+- 하네스 의미 슬롯은 장기적으로 유지되어야 하는 공유 컴포넌트, 토큰 체계, 접근성 계약에 한해 추가합니다.
+- 의미 슬롯을 변경하면 SDD 기반 UI 테스트에서 접근 가능한 이름이나 selector로 렌더링을 증명합니다.
 
 ## 토큰 추가 절차
 
 새로운 시맨틱 색상이 필요한 경우:
 
-1. Frontend Agent가 `statePatchSuggestion`으로 토큰 추가를 요청한다.
-2. Architect Agent가 `docs/design-tokens.md`와 `globals.css`에 토큰을 추가한다.
+1. Builder가 `statePatchSuggestion`으로 토큰 추가를 요청한다.
+2. Infra가 `docs/design-tokens.md`와 `globals.css`에 토큰을 추가한다.
 3. `docs/agent-rules.json`의 `designPolicy.allowedTailwindColorPrefixes`에 새 프리픽스를 등록한다.
 4. `tailwind.config.ts`에 시맨틱 참조를 추가한다.

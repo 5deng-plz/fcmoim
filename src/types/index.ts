@@ -8,7 +8,7 @@ export type DateTime = Date | string;
 
 // ─── 역할(Role) & 상태 ───
 export type UserRole = 'admin' | 'operator' | 'member';
-export type UserStatus = 'guest' | 'pending' | 'approved' | 'rejected' | 'suspended';
+export type UserStatus = 'guest' | 'pending' | 'approved' | 'rejected' | 'suspended' | 'withdrawn';
 
 // ─── 포지션 ───
 export type Position = 'FW' | 'MF' | 'DF';
@@ -19,29 +19,38 @@ export type MatchStatusType = '예정' | '라커룸' | '종료' | '취소';
 export type AttendanceStatus = 'attend' | 'absent' | 'none';
 
 // ─── 탭 네비게이션 ───
-export type Tab = 'home' | 'schedule' | 'records' | 'locker_room';
+export type Tab = 'home' | 'schedule' | 'records' | 'locker_room' | 'community';
 
 // ─── 카드 등급 ───
 export type CardGrade = '비기너' | '아마추어' | '세미프로' | '프로' | '레전드';
 
-// ─── 6각형 능력치 (위닝 스타일) ───
+// ─── 6각형 능력치 (아마추어 풋살 스타일) ───
 export interface UserStats {
-  speed: number;    // 스피드 (1-99)
-  shooting: number; // 슈팅 (1-99)
-  passing: number;  // 패스 (1-99)
-  defense: number;  // 수비 (1-99)
-  physical: number; // 피지컬 (1-99)
-  dribble: number;  // 드리블 (1-99)
+  attack: number;    // 공격 (1-99)
+  defense: number;   // 수비 (1-99)
+  stamina: number;   // 체력 (1-99)
+  mentality: number; // 멘탈 (1-99)
+  speed: number;     // 스피드 (1-99)
+  manner: number;    // 인성 (1-99)
 }
 
 export const DEFAULT_STATS: UserStats = {
-  speed: 60,
-  shooting: 60,
-  passing: 60,
+  attack: 60,
   defense: 60,
-  physical: 60,
-  dribble: 60,
+  stamina: 60,
+  mentality: 60,
+  speed: 60,
+  manner: 60,
 };
+
+export const STAT_KEYS: Array<keyof UserStats> = [
+  'attack',
+  'defense',
+  'stamina',
+  'mentality',
+  'speed',
+  'manner',
+];
 
 // ─── User ───
 export interface User {
@@ -59,6 +68,7 @@ export interface User {
   height: number | null;
   weight: number | null;
   birth: Date | null;
+  residence: string | null;
   preferredFoot: '왼발' | '오른발' | '양발';
   createdAt: DateTime;
   updatedAt: DateTime;
@@ -86,6 +96,8 @@ export interface Match {
   ourScore: number | null;
   oppScore: number | null;
   tacticsCompleted: boolean;
+  redLeaderConfirmed: boolean;
+  blueLeaderConfirmed: boolean;
   memo: string | null;
   cancellationReason: string | null;
   cancelledAt: DateTime | null;

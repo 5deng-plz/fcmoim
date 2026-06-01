@@ -21,12 +21,17 @@ export default function FootballIcon({
     >
       <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
       <path
-        d="M12 7.5 15.9 10.3 14.4 14.9H9.6L8.1 10.3 12 7.5Z"
+        d="M 12 8.7 L 15.14 11 L 13.94 14.67 L 10.06 14.67 L 8.86 11 Z"
         stroke="currentColor"
         strokeWidth="1.7"
         strokeLinejoin="round"
       />
-      <path d="M12 7.5V3.4M15.9 10.3 20 9M14.4 14.9 16.9 18.6M9.6 14.9 7.1 18.6M8.1 10.3 4 9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path
+        d="M 12 8.7 V 3 M 15.14 11 L 20.56 9.22 M 13.94 14.67 L 17.29 19.28 M 10.06 14.67 L 6.71 19.28 M 8.86 11 L 3.44 9.22"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }

@@ -1,62 +1,49 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Agent Project Context",
+  "title": "Agent Project Context (Lightweight)",
   "type": "object",
-  "required": [
-    "schemaVersion",
-    "projectName",
-    "updatedAt",
-    "updatedBy",
-    "currentPhase",
-    "agents",
-    "activeWork",
-    "workstreams",
-    "handoffs",
-    "blockers",
-    "nextActions"
-  ],
+  "required": ["schemaVersion", "projectName", "updateVersion", "updatedAt", "updatedBy", "currentPhase", "activeWork"],
   "properties": {
     "schemaVersion": { "type": "string", "minLength": 1 },
     "projectName": { "type": "string", "minLength": 1 },
     "updateVersion": { "type": "integer", "minimum": 0 },
     "updatedAt": { "type": "string", "minLength": 1 },
-    "updatedBy": { "const": "main-orchestrator" },
+    "updatedBy": { "type": "string" },
     "currentPhase": { "type": "string", "minLength": 1 },
-    "agents": { "type": "object" },
     "activeWork": {
       "type": "object",
-      "required": [
-        "agentId",
-        "taskId",
-        "status",
-        "startedAt",
-        "baselineCommit",
-        "changedFiles",
-        "changedSurfaces",
-        "allowedPaths",
-        "evidence",
-        "reviewVerdict",
-        "blockers",
-        "guardResults"
-      ],
+      "required": ["taskId", "status", "changedFiles", "changedSurfaces", "allowedPaths"],
       "properties": {
-        "agentId": { "type": ["string", "null"] },
         "taskId": { "type": ["string", "null"] },
-        "status": { "type": "string", "minLength": 1 },
-        "startedAt": { "type": ["string", "null"] },
+        "status": { "type": "string" },
         "baselineCommit": { "type": ["string", "null"] },
         "changedFiles": { "type": "array", "items": { "type": "string" } },
         "changedSurfaces": { "type": "array", "items": { "type": "string" } },
         "allowedPaths": { "type": "array", "items": { "type": "string" } },
         "evidence": { "type": "object" },
-        "reviewVerdict": { "type": ["object", "null"] },
-        "blockers": { "type": "array" },
-        "guardResults": { "type": "object" }
-      },
-      "additionalProperties": true
+        "reviewStatus": { "type": ["string", "null"] },
+        "loopCounters": {
+          "type": "object",
+          "properties": {
+            "reviewRounds": { "type": "integer", "minimum": 0 },
+            "guardRetries": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
     },
-    "workstreams": { "type": "array" },
-    "handoffs": { "type": "array" },
+    "workstreams": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "status"],
+        "properties": {
+          "id": { "type": "string" },
+          "status": { "type": "string" },
+          "completedAt": { "type": ["string", "null"] },
+          "commit": { "type": ["string", "null"] }
+        }
+      }
+    },
     "blockers": { "type": "array" },
     "nextActions": { "type": "array" }
   },

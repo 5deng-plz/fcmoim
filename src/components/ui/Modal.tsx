@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -11,6 +12,8 @@ interface ModalProps {
 }
 
 export default function Modal({ title, isOpen, onClose, children, presentation = 'sheet' }: ModalProps) {
+  const titleId = useId();
+
   if (!isOpen) return null;
 
   const isSheet = presentation === 'sheet';
@@ -22,17 +25,20 @@ export default function Modal({ title, isOpen, onClose, children, presentation =
         onClick={onClose}
       />
       <div
-        className={`relative z-10 flex max-h-[85vh] w-full max-w-[400px] flex-col overflow-hidden bg-white animate-slideUp ${
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className={`relative z-10 flex max-h-[85vh] w-full max-w-[400px] flex-col overflow-hidden bg-surface-elevated animate-slideUp ${
           isSheet ? 'rounded-t-2xl sm:rounded-2xl' : 'rounded-2xl'
         }`}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-black text-gray-900">{title}</h2>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <h2 id={titleId} className="text-lg font-black text-primary">{title}</h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-full hover:bg-gray-100 active:scale-90 transition-all"
+            className="p-1 rounded-full hover:bg-surface-hover active:scale-90 transition-all"
           >
-            <X size={20} className="text-gray-400" />
+            <X size={20} className="text-tertiary" />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto no-scrollbar p-5">

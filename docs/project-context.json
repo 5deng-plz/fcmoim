@@ -1,129 +1,94 @@
 {
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 8,
-  "updatedAt": "2026-05-15T11:05:00.000Z",
-  "updatedBy": "main-orchestrator",
-  "currentPhase": "prototype-v0.2-push-ready",
-  "architecture": {},
-  "agents": {
-    "architect": {
-      "status": "ready",
-      "stateWriteAccess": false
-    },
-    "backend": {
-      "status": "ready",
-      "stateWriteAccess": false
-    },
-    "data": {
-      "status": "ready",
-      "stateWriteAccess": false
-    },
-    "devops": {
-      "status": "ready",
-      "stateWriteAccess": false
-    },
-    "frontend": {
-      "status": "active",
-      "stateWriteAccess": false
-    },
-    "main-orchestrator": {
-      "status": "ready",
-      "stateWriteAccess": true
-    },
-    "qa": {
-      "status": "ready",
-      "stateWriteAccess": false
-    },
-    "review": {
-      "status": "ready",
-      "stateWriteAccess": false
-    }
-  },
-  "qualityGates": {
-    "baseline": {
-      "status": "required-for-code-changes",
-      "command": "npm run verify:baseline",
-      "standard": "Run before edits when practical or record why unavailable."
-    },
-    "database": {
-      "status": "required-when-affected",
-      "command": "npm run db:check",
-      "standard": "Supabase schema, enum, RLS, and data access changes need tracked SQL plus Supabase plugin or SQL contract evidence."
-    },
-    "deterministicVerify": {
-      "status": "required-for-handoff-sized-changes",
-      "command": "npm run verify",
-      "standard": "Harness structure, lint, typecheck, tests, and DB contract checks must pass or be explicitly blocked."
-    },
-    "review": {
-      "status": "required-for-completion",
-      "standard": "Review Agent must report no blockers before work is marked complete."
-    },
-    "runtimeEvidence": {
-      "status": "required-when-affected",
-      "standard": "Browser Use, API, and Supabase evidence must match the changed runtime surface."
-    }
-  },
+  "updateVersion": 36,
+  "updatedAt": "2026-06-02T00:42:00.000+09:00",
+  "updatedBy": "orchestrator",
+  "currentPhase": "join-onboarding-hardening",
   "activeWork": {
-    "agentId": "main-orchestrator",
-    "taskId": "prototype-v0.2-push-ready",
-    "status": "ready",
-    "startedAt": "2026-05-15T11:05:00.000Z",
-    "baselineCommit": "383435e",
+    "taskId": "join-onboarding-hardening",
+    "status": "complete",
+    "baselineCommit": "1441f5f5015af6e2bb3c3743a490bc3adaa34ffa",
     "changedFiles": [
+      "scripts/seed-local-demo-data.mjs",
+      "src/app/page.tsx",
+      "src/stores/useAppStore.ts",
+      "tests/account-membership-flows.test.ts",
+      "tests/local-supabase-api.test.ts",
+      "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
-    "changedSurfaces": [],
+    "changedSurfaces": ["ui", "api", "data", "tests", "docs"],
     "allowedPaths": [
+      "src/**",
+      "supabase/**",
+      "scripts/**",
+      "tests/**",
       "docs/project-context.json"
     ],
-    "evidence": {},
-    "reviewVerdict": {
-      "status": "ready",
-      "blockers": [],
-      "reviewedAt": "2026-05-15T11:05:00.000Z",
-      "reviewedBy": "review",
-      "worktreeFingerprint": "no-open-worktree-changes",
-      "evidenceReviewed": [
-        "pre-push verify passed before context finalization"
-      ],
-      "checks": [
-        "prototype v0.2 squash commit is present on local main",
-        "pre-push verify completed lint, typecheck, tests, and Supabase contract check successfully",
-        "project context finalized so no open worktree surfaces require runtime evidence"
-      ],
-      "summary": "Ready to push prototype v0.2 after finalizing project context for a clean worktree."
-    },
-    "blockers": [],
-    "guardResults": {
-      "latest": {
-        "status": "ready",
-        "summary": "Pre-push project verify passed; context finalized for a clean worktree push."
+    "evidence": {
+      "verifyBaseline": {
+        "status": "passed",
+        "command": "npm run verify:baseline",
+        "summary": "Harness validation, lint, typecheck, and full Vitest suite passed: 18 files passed, 1 local-Supabase-gated file skipped; 190 tests passed, 7 gated tests skipped."
+      },
+      "lint": {
+        "status": "passed",
+        "command": "npm run lint"
+      },
+      "typecheck": {
+        "status": "passed",
+        "command": "npm run typecheck"
+      },
+      "targetedTests": {
+        "status": "passed",
+        "command": "npm run test -- --run tests/frontend-auth-and-schedule-ui.test.tsx tests/frontend-membership-client.test.ts tests/account-membership-flows.test.ts tests/local-supabase-api.test.ts",
+        "summary": "82 tests passed and 7 local-Supabase-gated tests skipped without FC_RUN_LOCAL_SUPABASE_API_TESTS."
+      },
+      "dbCheck": {
+        "status": "passed",
+        "command": "npm run db:check",
+        "summary": "Supabase contract check passed for 15 tracked SQL files."
+      },
+      "verifyDbLocal": {
+        "status": "passed",
+        "command": "npm run verify:db:local",
+        "summary": "Local DB reset, QA Auth seed, 3-team demo seed, and 7 local Supabase API integration tests passed."
+      },
+      "harnessGuardVerify": {
+        "status": "passed",
+        "command": "npm run harness:guard:verify",
+        "summary": "Harness validation, design guard, diff guard, verify:baseline, and db:check passed."
+      },
+      "scenarioCoverage": {
+        "status": "passed",
+        "summary": "Added hardening coverage for pending blocked duplicate path, rejected/suspended/withdrawn blocked states, full duplicate join conflict messages, public club response allowlists, reusable local Supabase clients, fixed date cleanup, and seed fixture structure."
+      },
+      "designChangePolicy": {
+        "status": "passed",
+        "summary": "No redesign introduced; only routing cleanup, comments, seed structure, and tests changed."
       }
+    },
+    "reviewStatus": "ready",
+    "loopCounters": {
+      "reviewRounds": 0,
+      "guardRetries": 0
     }
   },
   "workstreams": [
     {
-      "id": "admin-role-email-login-onboarding-qa",
+      "id": "schedule-detail-tactics-ui-rework",
       "status": "complete",
-      "completedAt": "2026-05-09T15:17:00.511Z",
-      "summary": "Removed admin bypass, added admin-only operator assignment in locker room, added DEV_TEST email login and QA auth seed, and passed verify plus in-app browser QA.",
-      "commit": "fc66ab2a482e00f4df2bbe1d712b40d32c17d6c7"
-    }
-  ],
-  "handoffs": [],
-  "blockers": [],
-  "nextActions": [
+      "completedAt": "2026-05-20T14:29:33.138Z",
+      "commit": "8955a27f722338965b12ef4a03c20269aecce137"
+    },
     {
-      "agentId": "qa",
-      "taskId": "join-onboarding-real-operator-approval",
-      "summary": "Log in with a real admin/operator account, verify 라커룸 입단 대기 shows 실제 QA 신청, approve it, then verify chamggae427@gmail.com reaches approved app home."
+      "id": "announcements-records-schedule-polish",
+      "status": "complete",
+      "completedAt": "2026-05-17T12:20:13.057Z",
+      "commit": "a1ede07bc849a82749853401aeacc70dc0054fc3"
     }
   ],
-  "decisionLog": {
-    "path": "docs/decisions.md",
-    "revision": 1,
-    "updatedAt": "2026-05-07"
-  }
+  "blockers": [],
+  "nextActions": []
 }

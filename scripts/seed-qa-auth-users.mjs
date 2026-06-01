@@ -6,7 +6,6 @@ loadDotenv('.env.local');
 
 const supabaseUrl = firstEnv('NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_URL');
 const serviceRoleKey = firstEnv('SUPABASE_SECRET_KEY', 'SUPABASE_SERVICE_ROLE_KEY');
-const clubId = process.env.NEXT_PUBLIC_DEFAULT_CLUB_ID || '00000000-0000-0000-0000-000000000001';
 const password = process.env.QA_TEST_PASSWORD;
 
 if (process.env.DEV_TEST !== 'true') {
@@ -29,6 +28,7 @@ const qaUsers = [
   { email: 'qa-member2@fcmoim.test', name: 'QA 멤버 2', role: 'member', position: 'MF' },
   { email: 'qa-member3@fcmoim.test', name: 'QA 멤버 3', role: 'member', position: 'DF' },
   { email: 'qa-member4@fcmoim.test', name: 'QA 멤버 4', role: 'member', position: 'MF' },
+  { email: 'qa-new@fcmoim.test', name: 'QA 신규', role: 'member', position: 'MF' },
 ];
 
 const supabase = createClient(supabaseUrl, serviceRoleKey, {
@@ -51,27 +51,10 @@ for (const qaUser of qaUsers) {
     throw new Error(`Failed to upsert account for ${qaUser.email}: ${accountError.message}`);
   }
 
-  const { error: membershipError } = await supabase
-    .from('team_memberships')
-    .upsert(
-      {
-        account_id: user.id,
-        club_id: clubId,
-        profile_name: qaUser.name,
-        main_position: qaUser.position,
-        role: qaUser.role,
-        status: 'approved',
-      },
-      { onConflict: 'account_id,club_id' },
-    );
-  if (membershipError) {
-    throw new Error(`Failed to upsert membership for ${qaUser.email}: ${membershipError.message}`);
-  }
-
-  console.log(`${qaUser.email}: ${qaUser.role}`);
+  console.log(`${qaUser.email}: auth ready`);
 }
 
-console.log(`Seeded ${qaUsers.length} QA auth users for club ${clubId}.`);
+console.log(`Seeded ${qaUsers.length} QA auth users. Demo memberships are seeded by seed-local-demo-data.`);
 
 async function ensureAuthUser(qaUser) {
   const existing = await findUserByEmail(qaUser.email);

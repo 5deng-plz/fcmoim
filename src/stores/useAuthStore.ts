@@ -8,17 +8,19 @@ import {
   logout,
   onAuthChange,
   signInWithEmailPassword,
+  signInWithGoogle,
   signInWithKakao,
   type AuthUser,
 } from '@/lib/auth';
 import { useAppStore } from './useAppStore';
+import { useToastStore } from './useToastStore';
 import {
   fetchClubMemberships,
   fetchMembershipSnapshot,
   mapMembershipSnapshotToUser,
   membershipStateToUserStatus,
   patchMembershipPhoto,
-  shouldShowJoinRequest,
+  patchMembershipProfile,
 } from './membershipClient';
 
 let unsubscribeAuthListener: (() => void) | null = null;
@@ -29,11 +31,20 @@ interface AuthState {
   isLoading: boolean;
 
   initialize: () => Promise<void>;
+  signInGoogle: () => Promise<void>;
   signInKakao: () => Promise<void>;
   signInEmail: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   setMemberProfile: (user: User | null) => void;
   saveMemberPhoto: (clubId: string, photoUrl: string | null) => Promise<void>;
+  saveMemberProfile: (input: {
+    clubId: string;
+    nickname?: string | null;
+    heightCm?: number | null;
+    weightKg?: number | null;
+    birthDate?: string | null;
+    residence?: string | null;
+  }) => Promise<void>;
   switchClub: (clubId: string) => Promise<void>;
   approveUser: (userId: string) => Promise<void>;
 }
@@ -49,7 +60,7 @@ function syncAppAuthState(isAuthenticated: boolean, userStatus: UserStatus, user
   });
 }
 
-function applyAuthState(
+async function applyAuthState(
   set: (partial: Partial<AuthState>) => void,
   authUser: AuthUser | null,
 ) {
@@ -77,54 +88,66 @@ function applyAuthState(
     isLoading: true,
   });
 
-  const joinClubId = useAppStore.getState().selectedJoinClubId || appConfig.defaultClubId;
+  const appState = useAppStore.getState();
+  const joinIntent = appState.joinIntent;
+  const joinClubId = joinIntent?.clubId || appState.selectedJoinClubId || appConfig.defaultClubId;
 
-  void fetchMembershipSnapshot(joinClubId)
-    .then((snapshot) => {
-      const memberProfile = mapMembershipSnapshotToUser(snapshot, authUser);
-      return fetchClubMemberships()
-        .catch(() => [])
-        .then((availableClubs) => {
-          const currentClubId = snapshot.membership?.clubId || availableClubs[0]?.clubId || joinClubId;
-          const currentClub = availableClubs.find((club) => club.clubId === currentClubId) || availableClubs[0];
+  try {
+    const snapshot = await fetchMembershipSnapshot(joinClubId);
+    const memberProfile = mapMembershipSnapshotToUser(snapshot, authUser);
+    const availableClubs = await fetchClubMemberships().catch(() => []);
+    const requestedStatus = membershipStateToUserStatus(snapshot.membershipState);
+    const currentClubId = memberProfile?.status === 'approved'
+      ? snapshot.membership?.clubId || joinClubId
+      : availableClubs[0]?.clubId || appConfig.defaultClubId;
+    const currentClub = availableClubs.find((club) => club.clubId === currentClubId) || availableClubs[0];
+    const shouldShowJoinForm =
+      Boolean(joinIntent) && (snapshot.membershipState === 'new' || snapshot.membershipState === 'pending');
 
-          set({
-            authUser,
-            memberProfile,
-            isLoading: false,
-          });
-
-          useAppStore.setState({
-            activeClubId: currentClubId,
-            selectedJoinClubId: snapshot.membership?.clubId || joinClubId,
-            availableClubs,
-            teamName: currentClub?.clubName || 'FC Moim',
-            isAuthenticated: true,
-            userStatus: membershipStateToUserStatus(snapshot.membershipState),
-            userRole: memberProfile?.role || snapshot.membership?.role || 'member',
-            authView: 'login',
-            showJoinForm: shouldShowJoinRequest(snapshot.membershipState),
-          });
-        });
-    })
-    .catch((error) => {
-      console.error('[FC Moim] Membership state initialization failed:', error);
-      set({
-        authUser,
-        memberProfile: null,
-        isLoading: false,
-      });
-
-      useAppStore.setState({
-        availableClubs: [],
-        activeClubId: appConfig.defaultClubId,
-        teamName: 'FC Moim',
-        isAuthenticated: false,
-        userStatus: 'guest',
-        authView: 'login',
-        showJoinForm: false,
-      });
+    set({
+      authUser,
+      memberProfile,
+      isLoading: false,
     });
+
+    useAppStore.setState({
+      activeClubId: currentClubId,
+      selectedJoinClubId: joinClubId,
+      availableClubs,
+      teamName: currentClub?.clubName || 'FC Moim',
+      isAuthenticated: true,
+      userStatus: requestedStatus,
+      userRole: memberProfile?.role || snapshot.membership?.role || 'member',
+      authView: 'login',
+      showJoinForm: shouldShowJoinForm,
+      joinIntent: shouldShowJoinForm ? joinIntent : null,
+    });
+
+    if (joinIntent && !shouldShowJoinForm) {
+      useAppStore.getState().clearJoinIntent();
+    }
+    if (joinIntent && snapshot.membershipState === 'approved') {
+      useToastStore.getState().showToast('이미 이 팀의 멤버입니다.');
+    }
+  } catch (error) {
+    console.error('[FC Moim] Membership state initialization failed:', error);
+    set({
+      authUser,
+      memberProfile: null,
+      isLoading: false,
+    });
+
+    useAppStore.setState({
+      availableClubs: [],
+      activeClubId: appConfig.defaultClubId,
+      teamName: 'FC Moim',
+      isAuthenticated: false,
+      userStatus: 'guest',
+      authView: 'login',
+      showJoinForm: false,
+    });
+    throw error;
+  }
 }
 
 async function getCurrentAuthUserWithTimeout() {
@@ -145,7 +168,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   initialize: async () => {
     if (!unsubscribeAuthListener) {
       unsubscribeAuthListener = onAuthChange((user) => {
-        applyAuthState(set, user);
+        void applyAuthState(set, user).catch((error) => {
+          console.error('[FC Moim] Auth listener synchronization failed:', error);
+        });
       });
     }
 
@@ -169,9 +194,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await signInWithKakao();
   },
 
+  signInGoogle: async () => {
+    await signInWithGoogle();
+  },
+
   signInEmail: async (email, password) => {
     const user = await signInWithEmailPassword(email, password);
-    applyAuthState(set, user);
+    await applyAuthState(set, user);
   },
 
   // ─── 로그아웃 ───
@@ -189,7 +218,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       isAuthenticated: false,
       userStatus: 'guest',
       authView: 'login',
+      joinIntent: null,
     });
+    useAppStore.getState().clearJoinIntent();
   },
 
   // ─── 상태 업데이트 ───
@@ -205,6 +236,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         ? {
             ...state.memberProfile,
             photoUrl: membership.photoUrl,
+          }
+        : state.memberProfile,
+    }));
+  },
+
+  saveMemberProfile: async (input) => {
+    const membership = await patchMembershipProfile(input);
+    set((state) => ({
+      memberProfile: state.memberProfile
+        ? {
+            ...state.memberProfile,
+            name: membership.nickname,
+            height: membership.heightCm,
+            weight: membership.weightKg,
+            birth: membership.birthDate ? new Date(membership.birthDate) : null,
+            residence: membership.residence,
           }
         : state.memberProfile,
     }));
@@ -231,7 +278,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       userStatus: membershipStateToUserStatus(snapshot.membershipState),
       userRole: memberProfile?.role || snapshot.membership?.role || 'member',
       authView: 'login',
-      showJoinForm: shouldShowJoinRequest(snapshot.membershipState),
+      showJoinForm: false,
     });
   },
 

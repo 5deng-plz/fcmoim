@@ -6,7 +6,6 @@
 // schema. New server workflows should prefer route handlers and services.
 
 import {
-  DEFAULT_STATS,
   type Announcement,
   type EventType,
   type Match,
@@ -19,6 +18,7 @@ import {
   type UserStats,
   type UserStatus,
 } from '@/types';
+import { normalizeUserStats } from '@/utils/stats';
 import { supabase } from './supabase';
 
 type DbMatchStatus = 'scheduled' | 'locker_room' | 'finished' | 'cancelled';
@@ -40,6 +40,7 @@ type TeamMembershipDbRow = {
   height: number | null;
   weight: number | null;
   birth: string | null;
+  residence: string | null;
   preferred_foot: DbPreferredFoot;
   created_at: string;
   updated_at: string;
@@ -57,6 +58,8 @@ type MatchDbRow = {
   our_score: number | null;
   opp_score: number | null;
   tactics_completed: boolean;
+  red_leader_confirmed: boolean;
+  blue_leader_confirmed: boolean;
   memo: string | null;
   cancellation_reason: string | null;
   cancelled_at: string | null;
@@ -92,10 +95,10 @@ type SeasonDbRow = {
 };
 
 const TEAM_MEMBERSHIP_SELECT =
-  'id, account_id, profile_name, main_position, sub_position, ovr, stats, match_points, photo_url, role, status, height, weight, birth, preferred_foot, created_at, updated_at';
+  'id, account_id, profile_name, main_position, sub_position, ovr, stats, match_points, photo_url, role, status, height, weight, birth, residence, preferred_foot, created_at, updated_at';
 
 const MATCH_SELECT =
-  'id, season_id, round, title, date, location, type, status, our_score, opp_score, tactics_completed, memo, cancellation_reason, cancelled_at';
+  'id, season_id, round, title, date, location, type, status, our_score, opp_score, tactics_completed, red_leader_confirmed, blue_leader_confirmed, memo, cancellation_reason, cancelled_at';
 
 // --- Queries ---
 
@@ -395,6 +398,7 @@ function mapTeamMembershipToUser(row: TeamMembershipDbRow): User {
     height: row.height,
     weight: row.weight,
     birth: row.birth ? new Date(row.birth) : null,
+    residence: row.residence,
     preferredFoot: toUserPreferredFoot(row.preferred_foot),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -414,6 +418,8 @@ function mapMatch(row: MatchDbRow): Match {
     ourScore: row.our_score,
     oppScore: row.opp_score,
     tacticsCompleted: row.tactics_completed,
+    redLeaderConfirmed: row.red_leader_confirmed,
+    blueLeaderConfirmed: row.blue_leader_confirmed,
     memo: row.memo,
     cancellationReason: row.cancellation_reason ?? null,
     cancelledAt: row.cancelled_at ?? null,
@@ -456,23 +462,7 @@ function mapSeason(row: SeasonDbRow): Season {
 }
 
 function normalizeStats(value: unknown): UserStats {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return DEFAULT_STATS;
-  }
-
-  const stats = value as Partial<Record<keyof UserStats, unknown>>;
-  return {
-    speed: toStatNumber(stats.speed, DEFAULT_STATS.speed),
-    shooting: toStatNumber(stats.shooting, DEFAULT_STATS.shooting),
-    passing: toStatNumber(stats.passing, DEFAULT_STATS.passing),
-    defense: toStatNumber(stats.defense, DEFAULT_STATS.defense),
-    physical: toStatNumber(stats.physical, DEFAULT_STATS.physical),
-    dribble: toStatNumber(stats.dribble, DEFAULT_STATS.dribble),
-  };
-}
-
-function toStatNumber(value: unknown, fallback: number) {
-  return typeof value === 'number' ? value : fallback;
+  return normalizeUserStats(value);
 }
 
 function toUserPreferredFoot(value: DbPreferredFoot): User['preferredFoot'] {
@@ -578,6 +568,9 @@ function toTeamMembershipUpdate(data: Partial<User>) {
   if (data.birth !== undefined) {
     payload.birth = toIsoDate(data.birth);
   }
+  if (data.residence !== undefined) {
+    payload.residence = data.residence;
+  }
   if (data.preferredFoot !== undefined) {
     payload.preferred_foot = toDbPreferredFoot(data.preferredFoot);
   }
@@ -586,5 +579,5 @@ function toTeamMembershipUpdate(data: Partial<User>) {
 }
 
 function isMembershipStatus(value: string): value is DbMembershipStatus {
-  return ['pending', 'approved', 'rejected', 'suspended'].includes(value);
+  return ['pending', 'approved', 'rejected', 'suspended', 'withdrawn'].includes(value);
 }

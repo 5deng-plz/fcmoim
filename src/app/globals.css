@@ -16,16 +16,16 @@
     --background: var(--surface-bg);
 
     /* ── Text ── */
-    --text-primary: #111827;
-    --text-secondary: #4b5563;
-    --text-tertiary: #9ca3af;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-tertiary: #94a3b8;
     --text-inverse: #ffffff;
     --foreground: var(--text-primary);
 
     /* ── Brand ── */
-    --color-brand: #16a34a;
-    --color-brand-light: #dcfce7;
-    --color-brand-hover: #15803d;
+    --color-brand: #0fb752;
+    --color-brand-light: #e6f8ed;
+    --color-brand-hover: #0d9e46;
     --brand-primary: var(--color-brand);
     --brand-primary-hover: var(--color-brand-hover);
     --brand-primary-bg: var(--color-brand-light);
@@ -37,7 +37,7 @@
     --action-secondary-hover: #1f2937;
     --action-ghost: var(--text-secondary);
     --action-ghost-hover: var(--text-primary);
-    --action-disabled: #d1d5db;
+    --action-disabled: #cbd5e1;
 
     /* ── Team ── */
     --color-red-team: #ef4444;
@@ -48,9 +48,9 @@
     --color-blue-team-border: #bfdbfe;
 
     /* ── Semantic ── */
-    --color-success: #22c55e;
-    --color-success-bg: #f0fdf4;
-    --color-success-border: #bbf7d0;
+    --color-success: #10b981;
+    --color-success-bg: #ecfdf5;
+    --color-success-border: #a7f3d0;
     --color-warning: #f59e0b;
     --color-warning-bg: #fffbeb;
     --color-warning-border: #fde68a;
@@ -59,17 +59,17 @@
     --color-error-border: #fecaca;
 
     /* ── Border / Divider ── */
-    --border-default: #e5e7eb;
+    --border-default: #e2e8f0;
     --border-subtle: #f1f5f9;
     --border-focus: var(--action-primary);
-    --divider-default: #e5e7eb;
+    --divider-default: #e2e8f0;
     --divider-subtle: #f8fafc;
 
     /* ── Card ── */
     --card-radius: 16px;
-    --card-border: 1px solid #f1f5f9;
-    --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
-    --card-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+    --card-border: 1px solid #e2e8f0;
+    --card-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.04), 0 2px 6px -1px rgba(15, 23, 42, 0.02);
+    --card-shadow-hover: 0 12px 24px -4px rgba(15, 23, 42, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
 
     /* ── Spacing ── */
     --space-section: 28px;
@@ -94,12 +94,81 @@
     /* ── Player Card Tier: 선수 카드 등급 배경/테두리 ── */
     --tier-bronze: #b45309;          /* 브론즈 */
     --tier-bronze-bg: #451a03;
+    --tier-bronze-from: #92400e;
+    --tier-bronze-via: #78350f;
+    --tier-bronze-to: #2c1203;
+    --tier-bronze-border: rgba(44, 18, 3, 0.45);
+    --tier-bronze-text: #fef3c7;
+    --tier-bronze-shadow: rgba(44, 18, 3, 0.2);
+
     --tier-silver: #9ca3af;          /* 실버 */
     --tier-silver-bg: #1f2937;
+    --tier-silver-from: #e2e8f0;
+    --tier-silver-via: #a1a1aa;
+    --tier-silver-to: #64748b;
+    --tier-silver-border: rgba(148, 163, 184, 0.4);
+    --tier-silver-text: #18181b;
+    --tier-silver-shadow: rgba(148, 163, 184, 0.1);
+    --tier-silver-ring: rgba(203, 213, 225, 0.4);
+
     --tier-gold: #eab308;            /* 골드 */
     --tier-gold-bg: #422006;
+    --tier-gold-from: #facc15;
+    --tier-gold-via: #f59e0b;
+    --tier-gold-to: #ca8a04;
+    --tier-gold-border: rgba(202, 138, 4, 0.4);
+    --tier-gold-text: #451a03;
+    --tier-gold-shadow: rgba(234, 179, 8, 0.1);
+    --tier-gold-ring: rgba(253, 224, 71, 0.4);
+
     --tier-special: #c084fc;         /* 스페셜/TOTW */
     --tier-special-bg: #2e1065;
+
+    /* ── Event Category Themes ── */
+    --event-training-bg: #f3e8ff;
+    --event-training-border: #d8b4fe;
+    --event-training-text: #6b21a8;
+    --event-training-icon-bg: #e9d5ff;
+    --event-training-icon-text: #7e22ce;
+    --event-training-detail-border: rgba(216, 180, 254, 0.5);
+    --event-training-meta-icon: #9333ea;
+    --event-training-map-accent: #9333ea;
+
+    --event-seminar-bg: #fff7ed;
+    --event-seminar-border: #ffedd5;
+    --event-seminar-text: #c2410c;
+    --event-seminar-icon-bg: #ffedd5;
+    --event-seminar-icon-text: #c2410c;
+    --event-seminar-detail-border: rgba(255, 237, 213, 0.8);
+    --event-seminar-meta-icon: #ea580c;
+    --event-seminar-map-accent: #ea580c;
+
+    --event-etc-bg: #f3f4f6;
+    --event-etc-border: #d1d5db;
+    --event-etc-text: #4b5563;
+    --event-etc-icon-bg: #e5e7eb;
+    --event-etc-icon-text: #4b5563;
+    --event-etc-detail-border: rgba(209, 213, 219, 0.7);
+    --event-etc-meta-icon: #6b7280;
+    --event-etc-map-accent: #6b7280;
+
+    --event-match-bg: #f0fdf4;
+    --event-match-border: #dcfce7;
+    --event-match-text: #16a34a;
+    --event-match-icon-bg: #dcfce7;
+    --event-match-icon-text: #16a34a;
+    --event-match-detail-border: rgba(220, 252, 231, 0.8);
+    --event-match-meta-icon: #16a34a;
+    --event-match-map-accent: #16a34a;
+
+    --event-vote-bg: #fffbeb;
+    --event-vote-border: #fde68a;
+    --event-vote-text: #b45309;
+    --event-vote-icon-bg: #fde68a;
+    --event-vote-icon-text: #b45309;
+    --event-vote-detail-border: rgba(253, 230, 138, 0.8);
+    --event-vote-meta-icon: #d97706;
+    --event-vote-map-accent: #d97706;
 
     /* ── OVR Stat Grade: 능력치 등급 아이콘 색상 ── */
     --stat-diamond: #22d3ee;         /* OVR 80+ */
@@ -124,9 +193,17 @@
     --stamina-low: #ef4444;          /* 고갈 */
 
     /* ── Preferred Foot: 주발 아이콘 ── */
-    --foot-active: #5be3f0;          /* 선택된 발 */
+    --foot-active: #2563eb;          /* 선택된 발 */
     --foot-inactive: #6b7280;        /* 비활성 발 */
     --foot-stroke: #1f2937;          /* 발 윤곽선 */
+
+    /* ── Custom Soccer Icons: 공유 SVG 아이콘 내부 색상 ── */
+    --icon-boot-red: var(--color-red-team);
+    --icon-boot-blue: var(--color-blue-team);
+    --icon-boot-stud: #475569;
+    --icon-boot-collar: #1e293b;
+    --icon-boot-mark: #ffffff;
+    --icon-boot-lace: #0f172a;
 
     /* ── Tactics Board: 전술 보드 ── */
     --tactics-field: #166534;        /* 필드 잔디 */
@@ -168,7 +245,7 @@
     /* ── MVP / Award: 수상 뱃지 ── */
     --award-mvp: #eab308;            /* MVP */
     --award-motm: #f97316;           /* Man of the Match */
-    --award-assist: #3b82f6;         /* 어시스트왕 */
+    --award-assist: #7c3aed;         /* 어시스트왕 */
     --award-goals: #ef4444;          /* 득점왕 */
 
     /* ── Fee / Payment: 회비 상태 ── */
@@ -191,6 +268,29 @@
     --weather-clear: #f59e0b;        /* 맑음 */
     --weather-cloudy: #9ca3af;       /* 흐림 */
     --weather-rain: #3b82f6;         /* 비 */
+
+    /* ── Highlight Accents ── */
+    --highlight-purple: #7c3aed;
+    --highlight-purple-bg: #f5f3ff;
+    --highlight-amber: #d97706;
+    --highlight-amber-bg: #fffbeb;
+    --highlight-rose: #e11d48;
+    --highlight-rose-bg: #fff1f2;
+
+    /* ── Metric Visualizations ── */
+    --metric-purple: #8b5cf6;
+    --metric-purple-bg: #f5f3ff;
+    --metric-orange: #f97316;
+    --metric-orange-bg: #fff7ed;
+    --metric-cyan: #06b6d4;
+    --metric-cyan-bg: #ecfeff;
+    --metric-gray: #4b5563;
+    --metric-gray-bg: #f3f4f6;
+
+    /* ── Social Interactions ── */
+    --social-like: #e11d48;
+    --social-reply: #3b82f6;
+    --social-mention: rgba(124, 58, 237, 0.1);
   }
 
   /* Pretendard 웹폰트 */
@@ -208,8 +308,7 @@
     overflow: hidden;
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
+  :root[data-theme="dark"] {
       --surface-bg: #0f172a;
       --surface-card: #111827;
       --surface-card-hover: #1f2937;
@@ -223,6 +322,9 @@
       --color-warning-border: #92400e;
       --color-error-bg: #450a0a;
       --color-error-border: #991b1b;
+      --brand-primary-bg: rgba(15, 183, 82, 0.15);
+      --color-red-team-bg: rgba(239, 68, 68, 0.15);
+      --color-blue-team-bg: rgba(59, 130, 246, 0.15);
       --action-secondary: #cbd5e1;
       --action-secondary-hover: #f8fafc;
       --action-disabled: #475569;
@@ -242,12 +344,78 @@
       --condition-worst: #a78bfa;
       --tier-bronze: #b45309;
       --tier-bronze-bg: #451a03;
+      --tier-bronze-from: #92400e;
+      --tier-bronze-via: #78350f;
+      --tier-bronze-to: #2c1203;
+      --tier-bronze-border: rgba(44, 18, 3, 0.45);
+      --tier-bronze-text: #fef3c7;
+      --tier-bronze-shadow: rgba(44, 18, 3, 0.2);
       --tier-silver: #9ca3af;
       --tier-silver-bg: #1f2937;
+      --tier-silver-from: #e2e8f0;
+      --tier-silver-via: #a1a1aa;
+      --tier-silver-to: #64748b;
+      --tier-silver-border: rgba(148, 163, 184, 0.4);
+      --tier-silver-text: #18181b;
+      --tier-silver-shadow: rgba(148, 163, 184, 0.1);
+      --tier-silver-ring: rgba(203, 213, 225, 0.4);
       --tier-gold: #eab308;
       --tier-gold-bg: #422006;
+      --tier-gold-from: #facc15;
+      --tier-gold-via: #f59e0b;
+      --tier-gold-to: #ca8a04;
+      --tier-gold-border: rgba(202, 138, 4, 0.4);
+      --tier-gold-text: #451a03;
+      --tier-gold-shadow: rgba(234, 179, 8, 0.1);
+      --tier-gold-ring: rgba(253, 224, 71, 0.4);
       --tier-special: #c084fc;
       --tier-special-bg: #2e1065;
+
+      /* Event category themes for Dark Mode */
+      --event-training-bg: rgba(168, 85, 247, 0.15);
+      --event-training-border: rgba(168, 85, 247, 0.3);
+      --event-training-text: #d8b4fe;
+      --event-training-icon-bg: rgba(168, 85, 247, 0.25);
+      --event-training-icon-text: #e9d5ff;
+      --event-training-detail-border: rgba(168, 85, 247, 0.2);
+      --event-training-meta-icon: #c084fc;
+      --event-training-map-accent: #c084fc;
+
+      --event-seminar-bg: rgba(234, 88, 12, 0.1);
+      --event-seminar-border: rgba(234, 88, 12, 0.2);
+      --event-seminar-text: #fb923c;
+      --event-seminar-icon-bg: rgba(234, 88, 12, 0.2);
+      --event-seminar-icon-text: #fb923c;
+      --event-seminar-detail-border: rgba(234, 88, 12, 0.15);
+      --event-seminar-meta-icon: #f97316;
+      --event-seminar-map-accent: #f97316;
+
+      --event-etc-bg: rgba(107, 114, 128, 0.14);
+      --event-etc-border: rgba(107, 114, 128, 0.3);
+      --event-etc-text: #d1d5db;
+      --event-etc-icon-bg: rgba(107, 114, 128, 0.28);
+      --event-etc-icon-text: #e5e7eb;
+      --event-etc-detail-border: rgba(107, 114, 128, 0.22);
+      --event-etc-meta-icon: #9ca3af;
+      --event-etc-map-accent: #9ca3af;
+
+      --event-match-bg: rgba(22, 163, 74, 0.15);
+      --event-match-border: rgba(22, 163, 74, 0.3);
+      --event-match-text: #4ade80;
+      --event-match-icon-bg: rgba(22, 163, 74, 0.3);
+      --event-match-icon-text: #4ade80;
+      --event-match-detail-border: rgba(22, 163, 74, 0.2);
+      --event-match-meta-icon: #22c55e;
+      --event-match-map-accent: #22c55e;
+
+      --event-vote-bg: rgba(234, 179, 8, 0.1);
+      --event-vote-border: rgba(234, 179, 8, 0.2);
+      --event-vote-text: #fbbf24;
+      --event-vote-icon-bg: rgba(234, 179, 8, 0.2);
+      --event-vote-icon-text: #fbbf24;
+      --event-vote-detail-border: rgba(234, 179, 8, 0.15);
+      --event-vote-meta-icon: #f59e0b;
+      --event-vote-map-accent: #f59e0b;
       --stat-diamond: #22d3ee;
       --stat-gold: #eab308;
       --stat-silver: #9ca3af;
@@ -262,7 +430,7 @@
       --stamina-full: #22c55e;
       --stamina-mid: #f59e0b;
       --stamina-low: #ef4444;
-      --foot-active: #5be3f0;
+      --foot-active: #60a5fa;
       --foot-inactive: #6b7280;
       --foot-stroke: #f8fafc;
       --tactics-field: #166534;
@@ -292,7 +460,7 @@
       --match-cancelled: #9ca3af;
       --award-mvp: #eab308;
       --award-motm: #f97316;
-      --award-assist: #3b82f6;
+      --award-assist: #7c3aed;
       --award-goals: #ef4444;
       --fee-paid: #22c55e;
       --fee-unpaid: #ef4444;
@@ -307,11 +475,33 @@
       --weather-clear: #f59e0b;
       --weather-cloudy: #9ca3af;
       --weather-rain: #3b82f6;
-    }
+
+      /* ── Highlight Accents (Dark Mode) ── */
+      --highlight-purple: #c084fc;
+      --highlight-purple-bg: rgba(168, 85, 247, 0.15);
+      --highlight-amber: #fbbf24;
+      --highlight-amber-bg: rgba(234, 179, 8, 0.15);
+      --highlight-rose: #f43f5e;
+      --highlight-rose-bg: rgba(244, 63, 94, 0.15);
+
+      /* ── Metric Visualizations (Dark Mode) ── */
+      --metric-purple: #a78bfa;
+      --metric-purple-bg: rgba(167, 139, 250, 0.15);
+      --metric-orange: #fb923c;
+      --metric-orange-bg: rgba(251, 146, 60, 0.15);
+      --metric-cyan: #22d3ee;
+      --metric-cyan-bg: rgba(34, 211, 238, 0.15);
+      --metric-gray: #9ca3af;
+      --metric-gray-bg: rgba(156, 163, 175, 0.15);
+
+      /* ── Social Interactions (Dark Mode) ── */
+      --social-like: #f43f5e;
+      --social-reply: #60a5fa;
+      --social-mention: rgba(168, 85, 247, 0.2);
   }
 }
 
-@layer utilities {
+
   .app-viewport {
     min-height: 100vh;
     min-height: 100dvh;
@@ -401,29 +591,247 @@
     50% { opacity: 1; }
   }
 
-  /* ── 골드 쉬머 카드 애니메이션 ── */
-  @keyframes gold-shimmer {
+
+  @keyframes tactics-tension {
+    0%, 100% {
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45), 0 0 0 rgba(234, 179, 8, 0);
+    }
+    50% {
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.75), 0 0 24px rgba(234, 179, 8, 0.18);
+    }
+  }
+
+  @keyframes tactics-scanline {
     0% {
-      background-position: -200% center;
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+    20%, 80% {
+      opacity: 0.7;
     }
     100% {
-      background-position: 200% center;
+      transform: translateX(100%);
+      opacity: 0;
     }
   }
-  .card-gold-shimmer {
-    background: linear-gradient(
-      110deg,
-      #fffbeb 0%,
-      #fef3c7 20%,
-      #fde68a 35%,
-      #fef3c7 50%,
-      #fffbeb 65%,
-      #fef3c7 80%,
-      #fffbeb 100%
-    );
-    background-size: 200% 100%;
-    animation: gold-shimmer 3s ease-in-out infinite;
-    border: 1.5px solid #f59e0b;
-    box-shadow: 0 0 12px rgba(245, 158, 11, 0.15), 0 1px 3px rgba(0,0,0,0.06);
+
+  @keyframes tactics-frame-flow {
+    0%, 100% {
+      box-shadow:
+        0 0 0 1px rgba(245, 158, 11, 0.18),
+        0 1px 3px rgba(0, 0, 0, 0.06);
+    }
+    50% {
+      box-shadow:
+        0 0 0 2px rgba(245, 158, 11, 0.38),
+        0 0 22px rgba(245, 158, 11, 0.22),
+        0 1px 3px rgba(0, 0, 0, 0.06);
+    }
   }
-}
+
+  @keyframes settlement-cta-flow {
+    0%, 100% {
+      box-shadow:
+        0 0 0 1px rgba(239, 68, 68, 0.16),
+        0 1px 3px rgba(0, 0, 0, 0.06);
+      filter: saturate(1);
+    }
+    50% {
+      box-shadow:
+        0 0 0 2px rgba(239, 68, 68, 0.34),
+        0 0 20px rgba(239, 68, 68, 0.22),
+        0 1px 3px rgba(0, 0, 0, 0.06);
+      filter: saturate(1.12);
+    }
+  }
+
+  .tactics-tension {
+    animation: tactics-tension 2.8s ease-in-out infinite;
+  }
+
+  .tactics-scanline {
+    animation: tactics-scanline 2.2s ease-in-out infinite;
+  }
+
+  .tactics-frame {
+    animation: tactics-frame-flow 2.8s ease-in-out infinite;
+  }
+
+  .settlement-cta-flow {
+    animation: settlement-cta-flow 2.4s ease-in-out infinite;
+  }
+
+  .radar-axis {
+    cursor: help;
+  }
+
+  .radar-axis-value {
+    opacity: 0;
+    paint-order: stroke;
+    stroke: white;
+    stroke-width: 4px;
+    transition: opacity 120ms ease;
+  }
+
+  .radar-axis:hover .radar-axis-value,
+  .radar-axis:focus .radar-axis-value,
+  .radar-axis:focus-visible .radar-axis-value {
+    opacity: 1;
+  }
+
+  /* ── 전술판 / 결과 구장 잔디 배경 그라데이션 ── */
+  .bg-soccer-pitch {
+    background-image: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.015) 0px, rgba(255, 255, 255, 0.015) 30px, transparent 30px, transparent 60px), linear-gradient(135deg, #16a34a 0%, #15803d 50%, #166534 100%);
+  }
+
+  @keyframes gold-shimmer {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  .gold-shimmer {
+    background: linear-gradient(
+      135deg,
+      #fef08a 0%,
+      #facc15 25%,
+      #fbbf24 50%,
+      #facc15 75%,
+      #fef08a 100%
+    ) !important;
+    background-size: 200% 200% !important;
+    animation: gold-shimmer 3s ease infinite !important;
+  }
+
+  /* Metric cards backgrounds & icon colors */
+  .metric-blue-bg { background-color: #eff6ff; }
+  .metric-blue-icon { color: #3b82f6; }
+  
+  .metric-amber-bg { background-color: #fffbeb; }
+  .metric-amber-icon { color: #d97706; }
+  
+  .metric-green-bg { background-color: #f0fdf4; }
+  .metric-green-icon { color: #16a34a; }
+  
+  .metric-red-bg { background-color: #fef2f2; }
+  .metric-red-icon { color: #ef4444; }
+  
+  .metric-purple-bg { background-color: #f5f3ff; }
+  .metric-purple-icon { color: #7c3aed; }
+  
+  .metric-orange-bg { background-color: #fff7ed; }
+  .metric-orange-icon { color: #ea580c; }
+
+  /* Item Card Playstyle Badges */
+  .playstyle-pos-card {
+    background: linear-gradient(135deg, #fff7ed 0%, #fef3c7 52%, #dcfce7 100%);
+    color: #451a03;
+    border-color: #fde68a;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78), 0 4px 10px rgba(234, 179, 8, 0.14);
+  }
+  .playstyle-neg-card {
+    background: linear-gradient(135deg, #fff7ed 0%, #fee2e2 56%, #fef3c7 100%);
+    color: #450a0a;
+    border-color: #fca5a5;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78), 0 4px 10px rgba(239, 68, 68, 0.13);
+  }
+
+  /* Header Pill Badges & Dots */
+  .header-badge-green { background-color: #f0fdf4; color: #15803d; box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.1); }
+  .header-badge-blue { background-color: #eff6ff; color: #1d4ed8; box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.1); }
+  .header-badge-amber { background-color: #fffbeb; color: #b45309; box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.1); }
+
+  :root[data-theme="dark"] {
+    .metric-blue-bg { background-color: rgba(30, 41, 59, 0.4); }
+    .metric-blue-icon { color: #60a5fa; }
+    
+    .metric-amber-bg { background-color: rgba(69, 26, 3, 0.4); }
+    .metric-amber-icon { color: #f59e0b; }
+    
+    .metric-green-bg { background-color: rgba(22, 163, 74, 0.15); }
+    .metric-green-icon { color: #4ade80; }
+    
+    .metric-red-bg { background-color: rgba(69, 10, 10, 0.4); }
+    .metric-red-icon { color: #f87171; }
+    
+    .metric-purple-bg { background-color: rgba(46, 16, 101, 0.4); }
+    .metric-purple-icon { color: #a78bfa; }
+    
+    .metric-orange-bg { background-color: rgba(124, 45, 18, 0.4); }
+    .metric-orange-icon { color: #fb923c; }
+
+    .playstyle-pos-card {
+      background: linear-gradient(to right, rgba(66, 32, 6, 0.4), rgba(120, 53, 15, 0.4));
+      color: #fef3c7;
+      border-color: rgba(234, 179, 8, 0.3);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    .playstyle-neg-card {
+      background: linear-gradient(to right, rgba(69, 10, 10, 0.4), rgba(124, 45, 18, 0.4));
+      color: #fee2e2;
+      border-color: rgba(239, 68, 68, 0.3);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .profile-card-header {
+      background-color: var(--surface-elevated) !important;
+      border-bottom: 1px solid var(--border-default) !important;
+    }
+    .profile-card-body {
+      background-color: var(--surface-bg) !important;
+      border-top-color: var(--border-default) !important;
+    }
+    .profile-ability-panel {
+      background-color: var(--surface-card) !important;
+      border-color: var(--border-default) !important;
+    }
+
+    .header-badge-green { background-color: rgba(22, 163, 74, 0.15); color: #4ade80; box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.25); }
+    .header-badge-blue { background-color: rgba(30, 41, 59, 0.4); color: #60a5fa; box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.25); }
+    .header-badge-amber { background-color: rgba(69, 26, 3, 0.4); color: #fbbf24; box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.25); }
+  }
+  
+  .dot-green { background-color: #22c55e; }
+  .dot-blue { background-color: #3b82f6; }
+  .dot-amber { background-color: #f59e0b; }
+
+  /* Notice & Avatar Gold Shimmer */
+  .gold-shimmer-badge {
+    background: linear-gradient(135deg, #fef08a 0%, #facc15 25%, #fbbf24 50%, #facc15 75%, #fef08a 100%) !important;
+    background-size: 200% 200% !important;
+    animation: gold-shimmer 3s ease infinite !important;
+    border-color: rgba(234, 179, 8, 0.5) !important;
+    color: #451a03 !important;
+  }
+  .gold-shimmer-icon-bg {
+    background: linear-gradient(135deg, #fef08a 0%, #facc15 25%, #fbbf24 50%, #facc15 75%, #fef08a 100%) !important;
+    background-size: 200% 200% !important;
+    animation: gold-shimmer 3s ease infinite !important;
+    box-shadow: 0 0 12px rgba(234, 179, 8, 0.3);
+  }
+  .red-shimmer-icon-bg {
+    background: linear-gradient(135deg, #fee2e2 0%, #f87171 25%, #ef4444 50%, #f87171 75%, #fee2e2 100%) !important;
+    background-size: 200% 200% !important;
+    animation: gold-shimmer 3s ease infinite !important;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.22);
+  }
+  .blue-shimmer-icon-bg {
+    background: linear-gradient(135deg, #eff6ff 0%, #60a5fa 25%, #3b82f6 50%, #60a5fa 75%, #eff6ff 100%) !important;
+    background-size: 200% 200% !important;
+    animation: gold-shimmer 3s ease infinite !important;
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.22);
+  }
+
+  @keyframes counter-spin {
+    to { transform: rotate(-360deg); }
+  }
+
+  .animate-counter-spin {
+    animation: counter-spin 10s linear infinite;
+  }

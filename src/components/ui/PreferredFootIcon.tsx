@@ -24,22 +24,32 @@ export default function PreferredFootIcon({ preferredFoot, className = '' }: Pre
       {/* Left Foot */}
       <g transform="translate(5, 5)">
         <path
-          d="M 55 10 C 35 10, 15 20, 10 40 C 5 60, 5 90, 15 130 C 20 160, 25 180, 40 185 C 55 190, 65 180, 65 155 C 65 130, 45 110, 45 85 C 45 60, 70 55, 70 35 C 70 15, 65 10, 55 10 Z"
+          d="M 55 42 C 45 42, 28 45, 20 60 C 14 75, 12 95, 20 135 C 25 155, 30 175, 42 178 C 52 180, 58 172, 58 152 C 58 132, 44 118, 44 98 C 44 78, 62 70, 62 55 C 62 45, 58 42, 55 42 Z"
           fill={isLeftActive ? activeColor : inactiveColor}
           stroke={strokeColor}
-          strokeWidth="8"
+          strokeWidth="6"
           strokeLinejoin="round"
         />
+        <circle cx="55" cy="22" r="10" fill={isLeftActive ? activeColor : inactiveColor} stroke={strokeColor} strokeWidth="5" />
+        <circle cx="39" cy="20" r="7.5" fill={isLeftActive ? activeColor : inactiveColor} stroke={strokeColor} strokeWidth="5" />
+        <circle cx="26" cy="25" r="6" fill={isLeftActive ? activeColor : inactiveColor} stroke={strokeColor} strokeWidth="5" />
+        <circle cx="16" cy="35" r="5" fill={isLeftActive ? activeColor : inactiveColor} stroke={strokeColor} strokeWidth="5" />
+        <circle cx="10" cy="48" r="4.2" fill={isLeftActive ? activeColor : inactiveColor} stroke={strokeColor} strokeWidth="5" />
       </g>
       {/* Right Foot (Mirrored) */}
       <g transform="translate(155, 5) scale(-1, 1)">
         <path
-          d="M 55 10 C 35 10, 15 20, 10 40 C 5 60, 5 90, 15 130 C 20 160, 25 180, 40 185 C 55 190, 65 180, 65 155 C 65 130, 45 110, 45 85 C 45 60, 70 55, 70 35 C 70 15, 65 10, 55 10 Z"
+          d="M 55 42 C 45 42, 28 45, 20 60 C 14 75, 12 95, 20 135 C 25 155, 30 175, 42 178 C 52 180, 58 172, 58 152 C 58 132, 44 118, 44 98 C 44 78, 62 70, 62 55 C 62 45, 58 42, 55 42 Z"
           fill={isRightActive ? activeColor : inactiveColor}
           stroke={strokeColor}
-          strokeWidth="8"
+          strokeWidth="6"
           strokeLinejoin="round"
         />
+        <circle cx="55" cy="22" r="10" fill={isRightActive ? activeColor : inactiveColor} stroke={strokeColor} strokeWidth="5" />
+        <circle cx="39" cy="20" r="7.5" fill={isRightActive ? activeColor : inactiveColor} stroke={strokeColor} strokeWidth="5" />
+        <circle cx="26" cy="25" r="6" fill={isRightActive ? activeColor : inactiveColor} stroke={strokeColor} strokeWidth="5" />
+        <circle cx="16" cy="35" r="5" fill={isRightActive ? activeColor : inactiveColor} stroke={strokeColor} strokeWidth="5" />
+        <circle cx="10" cy="48" r="4.2" fill={isRightActive ? activeColor : inactiveColor} stroke={strokeColor} strokeWidth="5" />
       </g>
     </svg>
   );

@@ -8,12 +8,17 @@ const errors = [];
 const requiredContracts = [
   { type: 'column', table: 'matches', column: 'cancelled_at' },
   { type: 'column', table: 'matches', column: 'cancellation_reason' },
+  { type: 'column', table: 'matches', column: 'red_leader_confirmed' },
+  { type: 'column', table: 'matches', column: 'blue_leader_confirmed' },
   { type: 'column', table: 'matches', column: 'updated_by' },
   { type: 'column', table: 'schedule_polls', column: 'cancelled_at' },
   { type: 'column', table: 'schedule_polls', column: 'cancellation_reason' },
   { type: 'column', table: 'schedule_polls', column: 'updated_by' },
+  { type: 'column', table: 'clubs', column: 'is_public' },
+  { type: 'column', table: 'team_memberships', column: 'residence' },
   { type: 'enumValue', enumName: 'match_status', value: 'cancelled' },
-  { type: 'enumValue', enumName: 'schedule_poll_status', value: 'cancelled' }
+  { type: 'enumValue', enumName: 'schedule_poll_status', value: 'cancelled' },
+  { type: 'enumValue', enumName: 'membership_status', value: 'withdrawn' }
 ];
 
 const forbiddenSqlIgnorePatterns = new Set([

@@ -19,5 +19,5 @@ jobs:
 
       - run: npm ci
 
-      - name: Run harness CI guard profile
-        run: node .agents/scripts/guard-runner.mjs ci
+      - name: Run harness verify guard profile
+        run: node .agents/scripts/guard-runner.mjs verify

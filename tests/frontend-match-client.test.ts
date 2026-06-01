@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   cancelMatch,
+  confirmMatchLineup,
+  createMatch,
   fetchMatchLineup,
   fetchUpcomingMatches,
+  publishMatchLineup,
   saveMatchLineup,
   type MatchLineupEntry,
   type UpcomingMatch,
@@ -34,10 +37,12 @@ const apiLineup: MatchLineupEntry[] = [{
   teamNumber: 1,
   isLeader: true,
   position: 'FW',
+  formationSlot: 6,
   playerName: 'Red Player',
   playerPosition: 'FW',
   playerOvr: 70,
   playerPhotoUrl: null,
+  playerMatchPoints: 900,
 }];
 
 describe('frontend match API client', () => {
@@ -91,6 +96,41 @@ describe('frontend match API client', () => {
     expect(body).not.toHaveProperty('authUid');
   });
 
+  it('posts manual match creation without client authUid', async () => {
+    const fetchMock = vi.fn(async () => (
+      new Response(JSON.stringify(apiMatch), { status: 201 })
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(createMatch({
+      clubId: 'club-1',
+      type: 'match',
+      title: null,
+      date: '2026-03-21',
+      time: '18:00',
+      location: '서울 용산 풋살장',
+      memo: '늦지 않게 와주세요',
+    })).resolves.toEqual(apiMatch);
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/matches', expect.objectContaining({
+      method: 'POST',
+    }));
+
+    const requestInit = (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1];
+    const body = JSON.parse(requestInit.body as string);
+
+    expect(body).toEqual({
+      clubId: 'club-1',
+      type: 'match',
+      title: null,
+      date: '2026-03-21',
+      time: '18:00',
+      location: '서울 용산 풋살장',
+      memo: '늦지 않게 와주세요',
+    });
+    expect(body).not.toHaveProperty('authUid');
+  });
+
   it('fetches match lineup by club and match id', async () => {
     const fetchMock = vi.fn(async () => (
       new Response(JSON.stringify(apiLineup), { status: 200 })
@@ -136,5 +176,85 @@ describe('frontend match API client', () => {
       ],
     });
     expect(body).not.toHaveProperty('authUid');
+  });
+
+  it('posts lineup publish requests without client authUid', async () => {
+    const fetchMock = vi.fn(async () => (
+      new Response(JSON.stringify({
+        ...apiMatch,
+        redLeaderConfirmed: true,
+        blueLeaderConfirmed: true,
+        tacticsCompleted: true,
+      }), { status: 200 })
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await publishMatchLineup({
+      clubId: 'club-1',
+      matchId: 'match-1',
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/matches/lineup/publish', expect.objectContaining({
+      method: 'POST',
+    }));
+
+    const requestInit = (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1];
+    const body = JSON.parse(requestInit.body as string);
+
+    expect(body).toEqual({
+      clubId: 'club-1',
+      matchId: 'match-1',
+    });
+    expect(body).not.toHaveProperty('authUid');
+  });
+
+  it('posts lineup unconfirm requests without client authUid', async () => {
+    const fetchMock = vi.fn(async () => (
+      new Response(JSON.stringify({
+        ...apiMatch,
+        redLeaderConfirmed: false,
+        blueLeaderConfirmed: true,
+        tacticsCompleted: false,
+      }), { status: 200 })
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await confirmMatchLineup({
+      clubId: 'club-1',
+      matchId: 'match-1',
+      teamNumber: 1,
+      confirmed: false,
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/matches/lineup/confirm', expect.objectContaining({
+      method: 'POST',
+    }));
+
+    const requestInit = (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1];
+    const body = JSON.parse(requestInit.body as string);
+
+    expect(body).toEqual({
+      clubId: 'club-1',
+      matchId: 'match-1',
+      teamNumber: 1,
+      confirmed: false,
+    });
+    expect(body).not.toHaveProperty('authUid');
+  });
+
+  it('surfaces lineup publish API errors', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => (
+      new Response(JSON.stringify({
+        error: { code: 'forbidden', message: '운영진만 전술을 공개할 수 있어요.' },
+      }), { status: 403 })
+    )));
+
+    await expect(publishMatchLineup({
+      clubId: 'club-1',
+      matchId: 'match-1',
+    })).rejects.toMatchObject({
+      code: 'forbidden',
+      message: '운영진만 전술을 공개할 수 있어요.',
+    });
   });
 });

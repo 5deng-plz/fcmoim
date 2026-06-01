@@ -1,23 +1,16 @@
 'use client';
 
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Vote } from 'lucide-react';
 import { useState } from 'react';
 import { useScheduleStore } from '@/stores/useScheduleStore';
 import { isHoliday } from 'korean-holidays';
+import { getScheduleEventTheme, scheduleEventLegendTypes } from './scheduleEventTheme';
 
 export interface CalendarEvent {
   day: number;
   date?: string;
   type: 'match' | 'training' | 'seminar' | 'etc' | 'poll';
 }
-
-const dotColor: Record<string, string> = {
-  match: 'bg-green-500',
-  poll: 'bg-award-mvp',
-  seminar: 'bg-result-loss',
-  training: 'bg-matchst-upcoming',
-  etc: 'bg-gray-500',
-};
 
 interface CalendarViewProps {
   value?: number | number[];
@@ -90,16 +83,16 @@ export default function CalendarView({
           type="button"
           onClick={() => moveMonth(-1)}
           aria-label="이전 달"
-          className="p-1 hover:text-gray-900 active:scale-90 transition-all text-gray-400"
+          className="p-1 hover:text-primary active:scale-90 transition-all text-tertiary"
         >
           <ChevronLeft size={20} />
         </button>
-        <h2 className="font-bold text-gray-900 tracking-tight">{monthLabel}</h2>
+        <h2 className="font-bold text-primary tracking-tight">{monthLabel}</h2>
         <button
           type="button"
           onClick={() => moveMonth(1)}
           aria-label="다음 달"
-          className="p-1 hover:text-gray-900 active:scale-90 transition-all text-gray-400"
+          className="p-1 hover:text-primary active:scale-90 transition-all text-tertiary"
         >
           <ChevronRight size={20} />
         </button>
@@ -107,7 +100,7 @@ export default function CalendarView({
 
       <div className="grid grid-cols-7 gap-1 text-center mb-2">
         {['일', '월', '화', '수', '목', '금', '토'].map((d, i) => (
-          <div key={d} className={`text-[11px] font-bold ${i === 0 ? 'text-result-loss' : i === 6 ? 'text-pos-df' : 'text-gray-400'}`}>
+          <div key={d} className={`text-[11px] font-bold ${i === 0 ? 'text-result-loss' : i === 6 ? 'text-pos-df' : 'text-tertiary'}`}>
             {d}
           </div>
         ))}
@@ -115,12 +108,13 @@ export default function CalendarView({
 
       <div className="grid grid-cols-7 gap-y-2 text-center text-sm font-medium">
         {leadingBlanks.map((key) => (
-          <div key={key} aria-hidden="true" className="h-8 w-8" />
+          <div key={key} aria-hidden="true" className="h-11 w-8" />
         ))}
         {days.map((d) => {
           const dayEvents = events.filter((e) => (
             e.day === d && isEventInVisibleMonth(e, year, monthIndex)
           ));
+          const markerTypes = getMarkerEventTypes(dayEvents);
           const isSelected = selectedDates.includes(d);
           
           const dateObj = new Date(year, monthIndex, d);
@@ -129,12 +123,16 @@ export default function CalendarView({
           const isBlueDay = dayOfWeek === 6 && !isRedDay;
           
           const textColor = isSelected
-            ? 'text-white'
+            ? 'text-background'
             : isRedDay
             ? 'text-result-loss'
             : isBlueDay
             ? 'text-pos-df'
-            : 'text-gray-700';
+            : 'text-primary';
+
+          const dayBgClassName = isSelected
+            ? 'bg-action-secondary font-bold'
+            : 'hover:bg-surface-hover';
 
           return (
             <button
@@ -143,50 +141,43 @@ export default function CalendarView({
               onClick={() => handleSelect(d)}
               aria-label={`${monthIndex + 1}월 ${d}일${dayEvents.length > 0 ? `, ${dayEvents.length}개 일정` : ''}`}
               aria-pressed={isSelected}
-              className={`relative flex justify-center items-center h-8 w-8 mx-auto rounded-full transition-all duration-200 cursor-pointer ${
-                isSelected
-                  ? 'bg-gray-900 font-bold'
-                  : 'hover:bg-gray-100'
-              } ${textColor}`}
+              className="relative mx-auto flex h-11 w-8 cursor-pointer flex-col items-center justify-start transition-all duration-200"
             >
-              {d}
-              {dayEvents.length > 0 && (
-                <div className="absolute bottom-0 flex gap-0.5">
-                  {dayEvents.map((event, idx) => (
-                    <div
-                      key={idx}
-                      className={`w-1.5 h-1.5 rounded-full ${dotColor[event.type]}`}
-                    />
-                  ))}
-                </div>
-              )}
+              <span className={`flex h-8 w-8 items-center justify-center rounded-full ${dayBgClassName} ${textColor}`}>
+                {d}
+              </span>
+              {markerTypes.length > 0 ? (
+                <span className="mt-0.5 flex h-2.5 items-center justify-center gap-0.5" aria-hidden="true">
+                  {markerTypes.map((type) => {
+                    const meta = getScheduleEventTheme(type);
+                    const Icon = meta.Icon || Vote;
+                    return (
+                      <span key={type} className={`flex h-3.5 w-3.5 items-center justify-center rounded-full ${meta.markerClassName}`}>
+                        <Icon size={7} />
+                      </span>
+                    );
+                  })}
+                </span>
+              ) : null}
             </button>
           );
         })}
       </div>
 
       {!hideLegend && (
-        <div className="flex items-center gap-3 mt-4 pt-3 border-t border-gray-50 text-[10px] text-gray-400 font-medium justify-center flex-wrap">
-          <div className="flex items-center gap-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            <span>경기</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-award-mvp" />
-            <span>투표중</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-result-loss" />
-            <span>정신교육</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-matchst-upcoming" />
-            <span>전지훈련</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-gray-500" />
-            <span>기타</span>
-          </div>
+        <div className="flex items-center gap-3 mt-4 pt-3 border-t border-border text-[10px] text-tertiary font-medium justify-center flex-wrap">
+          {scheduleEventLegendTypes.map((type) => {
+            const meta = getScheduleEventTheme(type);
+            const Icon = meta.Icon || Vote;
+            return (
+              <div key={type} className="flex items-center gap-1">
+                <span className={`flex h-4 w-4 items-center justify-center rounded-full ${meta.legendClassName}`}>
+                  <Icon aria-hidden="true" size={9} />
+                </span>
+                <span>{meta.label}</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </section>
@@ -204,4 +195,9 @@ function isEventInVisibleMonth(event: CalendarEvent, year: number, monthIndex: n
 
   const [eventYear, eventMonth] = event.date.split('-').map(Number);
   return eventYear === year && eventMonth === monthIndex + 1;
+}
+
+function getMarkerEventTypes(events: CalendarEvent[]) {
+  const priority: CalendarEvent['type'][] = ['match', 'poll', 'seminar', 'training', 'etc'];
+  return priority.filter((type) => events.some((event) => event.type === type)).slice(0, 3);
 }

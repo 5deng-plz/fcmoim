@@ -9,6 +9,7 @@ function createRepositories(overrides: Partial<PublicClubRepositories['clubs']> 
     slug: 'fc-guppy',
     description: 'Default club',
     logoUrl: null,
+    isPublic: true,
     memberCount: 12,
     activeSeason: {
       id: 'season-1',
@@ -34,6 +35,8 @@ function createRepositories(overrides: Partial<PublicClubRepositories['clubs']> 
         status: 'scheduled',
         ourScore: null,
         oppScore: null,
+        attendeeCount: 0,
+        attendeeTotal: 12,
       },
     ],
   };
@@ -70,7 +73,7 @@ describe('public club service', () => {
 
     await expect(service.getClub({ clubId: ' club-1 ' })).resolves.toMatchObject({
       id: 'club-1',
-      upcomingMatches: [{ title: '정기전' }],
+      upcomingMatches: [{ title: '정기전', attendeeCount: 0, attendeeTotal: 12 }],
     });
     expect(repositories.clubs.findPublicDetail).toHaveBeenCalledWith('club-1');
   });

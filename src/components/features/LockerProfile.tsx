@@ -1,25 +1,34 @@
 'use client';
 
-import { Coins, LoaderCircle } from 'lucide-react';
+import { LoaderCircle } from 'lucide-react';
 import Image from 'next/image';
 import { useRef, useState, type ChangeEvent } from 'react';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
-import PlayerAbilityPanel from '@/components/ui/PlayerAbilityPanel';
+import Modal from '@/components/ui/Modal';
+import PlayerAbilityPanel, { type ProfileField } from '@/components/ui/PlayerAbilityPanel';
 import { useAppStore } from '@/stores/useAppStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useToastStore } from '@/stores/useToastStore';
+import { fetchMatchPointLedger, type MatchPointLedgerEntry } from '@/stores/membershipClient';
 import { DEFAULT_STATS } from '@/types';
-
-import PreferredFootIcon from '@/components/ui/PreferredFootIcon';
 import { calculateOvr } from '@/components/ui/PlayerAbilityPanel';
 
 export default function LockerProfile() {
+  const ownedStatPoints = 40;
+  const maxStatsSum = 360 + ownedStatPoints;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { activeClubId } = useAppStore();
   const memberProfile = useAuthStore((state) => state.memberProfile);
   const saveMemberPhoto = useAuthStore((state) => state.saveMemberPhoto);
+  const saveMemberProfile = useAuthStore((state) => state.saveMemberProfile);
   const { showToast } = useToastStore();
   const [isUploading, setIsUploading] = useState(false);
+  const [editingField, setEditingField] = useState<ProfileField | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isPointHistoryOpen, setIsPointHistoryOpen] = useState(false);
+  const [pointLedger, setPointLedger] = useState<MatchPointLedgerEntry[]>([]);
+  const [pointLedgerStatus, setPointLedgerStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
 
   const displayName = memberProfile?.name || '프로필 준비 중';
   const hasCustomPhoto = Boolean(memberProfile?.photoUrl);
@@ -32,6 +41,21 @@ export default function LockerProfile() {
   const handleUploadBannerClick = () => {
     if (!activeClubId || isUploading) return;
     fileInputRef.current?.click();
+  };
+
+  const handleOpenPointHistory = async () => {
+    setIsPointHistoryOpen(true);
+    if (!activeClubId || pointLedgerStatus === 'loading') return;
+
+    setPointLedgerStatus('loading');
+    try {
+      setPointLedger(await fetchMatchPointLedger(activeClubId));
+      setPointLedgerStatus('ready');
+    } catch (error) {
+      console.error('[FC Moim] Match point ledger load failed:', error);
+      setPointLedger([]);
+      setPointLedgerStatus('error');
+    }
   };
 
   const handlePhotoChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -58,94 +82,249 @@ export default function LockerProfile() {
     }
   };
 
+  const handleProfileCardClick = (field: ProfileField) => {
+    setEditingField(field);
+    setEditValue(getProfileEditValue(field, memberProfile));
+  };
+
+  const handleSaveProfileField = async () => {
+    if (!activeClubId || !editingField) return;
+    const validationMessage = validateProfileEditValue(editingField, editValue);
+    if (validationMessage) {
+      showToast(validationMessage);
+      return;
+    }
+
+    try {
+      setIsSavingProfile(true);
+      await saveMemberProfile({
+        clubId: activeClubId,
+        ...buildProfilePatch(editingField, editValue),
+      });
+      setEditingField(null);
+      showToast('프로필 정보를 저장했어요.');
+    } catch (error) {
+      console.error('[FC Moim] Profile update failed:', error);
+      showToast(error instanceof Error ? error.message : '프로필 정보를 저장하지 못했어요.');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
   return (
-    <section className="card relative overflow-hidden bg-gradient-to-br from-green-50 to-white shadow-sm shadow-gray-200/50">
-      {/* Decorative background accent */}
-      <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-green-200/30 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-green-200/30 blur-3xl" />
-
-      <div className="relative z-10 px-5 pt-5">
-        <div className="flex items-start justify-between">
-          {/* Left: OVR and Footprint */}
-          <div className="flex w-16 shrink-0 flex-col items-center justify-start pt-3">
-            <span className="rounded bg-fcgreen-700 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
-              OVR
-            </span>
-            <strong className="mt-1 text-5xl font-black tracking-tighter text-fcgreen-800">
-              {ovr}
-            </strong>
-            <div className="mt-2 flex h-8 items-center justify-center">
-              <PreferredFootIcon preferredFoot={preferredFoot} />
-            </div>
-          </div>
-
-          {/* Right: Photo */}
-          <div className="relative shrink-0">
-            <button
-              type="button"
-              onClick={handleUploadBannerClick}
-              disabled={!activeClubId || isUploading}
-              className="group relative block h-[152px] w-[112px] overflow-hidden rounded-xl border border-white/60 bg-white shadow-md transition-transform hover:scale-[1.02] active:scale-95"
-            >
-              <Image
-                src={avatarSrc}
-                alt={displayName}
-                fill
-                sizes="112px"
-                loading="eager"
-                priority
-                className="object-cover"
-                unoptimized
-              />
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/85 to-transparent px-2 pb-3 pt-7 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-visible:opacity-100">
-                <div className="rounded-full bg-white/94 px-2.5 py-1 text-center text-[11px] font-bold text-gray-900 shadow-sm">
-                  {isUploading ? '업로드 중...' : hasCustomPhoto ? '사진 변경' : '사진 업로드'}
-                </div>
-              </div>
-              {isUploading ? (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/72">
-                  <LoaderCircle size={20} className="animate-spin text-green-600" />
-                </div>
-              ) : null}
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              onChange={handlePhotoChange}
+    <section className="overflow-hidden rounded-3xl border border-border-subtle bg-surface-card shadow-md shadow-brand-primary/5">
+      <div className="flex items-center gap-3 bg-surface-elevated px-4 py-4 profile-card-header">
+        <div className="relative shrink-0">
+          <button
+            type="button"
+            onClick={handleUploadBannerClick}
+            disabled={!activeClubId || isUploading}
+            className="group relative block h-20 w-20 overflow-hidden rounded-full bg-surface-bg shadow-sm transition-transform hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            <Image
+              src={avatarSrc}
+              alt={`${displayName} 사진 변경`}
+              fill
+              sizes="80px"
+              loading="eager"
+              priority
+              className={
+                hasCustomPhoto
+                  ? 'rounded-full object-cover'
+                  : 'rounded-full bg-surface-elevated object-contain p-1.5'
+              }
+              unoptimized
             />
-          </div>
+            <div className="pointer-events-none absolute inset-x-1 bottom-1 rounded-full bg-surface-card/90 px-1.5 py-1 text-center text-[9px] font-bold text-secondary shadow-sm opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-visible:opacity-100">
+              {isUploading ? '업로드 중' : hasCustomPhoto ? '사진 변경' : '사진 업로드'}
+            </div>
+            {isUploading ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-surface-card/72">
+                <LoaderCircle size={20} className="animate-spin text-brand-primary" />
+              </div>
+            ) : null}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={handlePhotoChange}
+          />
         </div>
 
-        {/* Name and Match Points */}
-        <div className="mt-3 flex flex-col items-end">
-          <h2 className="text-[32px] font-black tracking-tight text-gray-900">
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-2xl font-black tracking-tight text-primary">
             {displayName}
           </h2>
-          <div className="mt-1 flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 shadow-sm backdrop-blur-sm">
-            <Coins size={15} className="text-fcgreen-600" />
-            <span className="text-xs font-extrabold text-fcgreen-700">
-              {points.toLocaleString('ko-KR')} MP
+        </div>
+
+        <div className="flex flex-col items-end gap-1 shrink-0 text-right animate-fadeIn">
+          <button
+            type="button"
+            onClick={() => void handleOpenPointHistory()}
+            className="rounded-xl px-2 py-0.5 transition-all hover:bg-surface-hover active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+            aria-label="경기 Point 내역 보기"
+          >
+            <span className="rounded bg-highlight-amber px-1.5 py-0.5 text-[9px] font-bold leading-none text-white">
+              경기 Point
             </span>
+            <strong className="mt-0.5 block text-base font-black leading-none text-primary">
+              {points.toLocaleString('ko-KR')}
+            </strong>
+          </button>
+          <div className="px-2 py-0.5">
+            <span className="rounded bg-brand-primary px-1.5 py-0.5 text-[9px] font-bold leading-none text-white">
+              스탯 Point
+            </span>
+            <strong className="mt-0.5 block text-base font-black leading-none text-primary">
+              {Math.max(0, maxStatsSum - Object.values(stats).reduce((a, b) => a + b, 0))}
+            </strong>
           </div>
         </div>
       </div>
 
-      <div className="relative z-10 px-2 pb-2">
+      <div className="border-t border-brand-primary/10 bg-surface-card px-3 py-2 profile-card-body">
         <PlayerAbilityPanel
           stats={stats}
           ovr={ovr}
           preferredFoot={preferredFoot}
+          surface="flat"
           birthDate={memberProfile?.birth}
+          residence={memberProfile?.residence}
           heightCm={memberProfile?.height}
           weightKg={memberProfile?.weight}
-          layout="stats-only"
-          className="bg-transparent border-none shadow-none"
+          onProfileItemClick={handleProfileCardClick}
+          editingField={editingField}
+          editValue={editValue}
+          onEditValueChange={setEditValue}
+          onCancelEdit={() => setEditingField(null)}
+          onSave={handleSaveProfileField}
+          isSaving={isSavingProfile}
         />
       </div>
+
+      <Modal
+        title="경기 Point 내역"
+        isOpen={isPointHistoryOpen}
+        onClose={() => setIsPointHistoryOpen(false)}
+        presentation="dialog"
+      >
+        <div className="space-y-3">
+          <div className="rounded-2xl border border-highlight-amber/20 bg-highlight-amber-bg px-4 py-3">
+            <p className="text-[11px] font-black text-highlight-amber">현재 보유</p>
+            <p className="mt-1 text-2xl font-black leading-none text-primary">{points.toLocaleString('ko-KR')} P</p>
+          </div>
+          <div className="space-y-2">
+            {pointLedgerStatus === 'loading' ? (
+              <div className="rounded-xl border border-border bg-surface-card px-3 py-4 text-center text-xs font-bold text-secondary">
+                경기 Point 내역을 불러오는 중입니다
+              </div>
+            ) : null}
+            {pointLedgerStatus === 'error' ? (
+              <div className="rounded-xl border border-feedback-error-border bg-feedback-error-bg px-3 py-3 text-xs font-bold text-feedback-error">
+                경기 Point 내역을 불러오지 못했어요.
+              </div>
+            ) : null}
+            {(pointLedger.length > 0 ? pointLedger.map(mapLedgerToPointHistory) : buildPointHistory(points)).map((entry) => (
+              <div key={entry.id} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-card px-3 py-2.5 shadow-sm">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-black text-primary">{entry.title}</p>
+                  <p className="mt-0.5 text-[11px] font-bold text-tertiary">{entry.date}</p>
+                </div>
+                <span className={`shrink-0 text-sm font-black ${entry.amount >= 0 ? 'text-brand-primary' : 'text-feedback-error'}`}>
+                  {entry.amount >= 0 ? '+' : ''}{entry.amount.toLocaleString('ko-KR')} P
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Modal>
     </section>
   );
+}
+
+function buildPointHistory(points: number) {
+  const earned = Math.max(0, points - 100);
+  return [
+    ...(earned > 0 ? [{
+      id: 'earned',
+      title: '경기 참여 및 결과 반영',
+      amount: earned,
+      date: '최근 경기 기준',
+    }] : []),
+    {
+      id: 'initial',
+      title: '시즌 기본 지급',
+      amount: 100,
+      date: '가입 시점',
+    },
+  ];
+}
+
+function mapLedgerToPointHistory(entry: MatchPointLedgerEntry) {
+  return {
+    id: entry.id,
+    title: formatPointReason(entry.reason),
+    amount: entry.amount,
+    date: formatPointLedgerDate(entry.createdAt),
+  };
+}
+
+function formatPointReason(reason: string) {
+  if (reason === 'match_result') return '경기 결과 반영';
+  if (reason === 'match_attendance') return '경기 참석 적립';
+  if (reason === 'shop_purchase') return '라커룸 상점 사용';
+  return reason || '경기 Point 변동';
+}
+
+function formatPointLedgerDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '날짜 미상';
+  return date.toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+}
+
+function getProfileEditValue(field: ProfileField, profile: ReturnType<typeof useAuthStore.getState>['memberProfile']) {
+  if (!profile) return '';
+  if (field === 'height') return profile.height?.toString() ?? '';
+  if (field === 'weight') return profile.weight?.toString() ?? '';
+  if (field === 'birth') return profile.birth ? profile.birth.toISOString().slice(0, 10) : '1990-09-09';
+  return profile.residence ?? '';
+}
+
+function buildProfilePatch(field: ProfileField, value: string) {
+  const trimmed = value.trim();
+  if (field === 'height') return { heightCm: trimmed ? Number.parseInt(trimmed, 10) : null };
+  if (field === 'weight') return { weightKg: trimmed ? Number.parseInt(trimmed, 10) : null };
+  if (field === 'birth') return { birthDate: trimmed || null };
+  return { residence: trimmed || null };
+}
+
+
+
+function validateProfileEditValue(field: ProfileField, value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  if (field === 'height') {
+    const height = Number.parseInt(trimmed, 10);
+    if (!Number.isInteger(height) || height < 100 || height > 230) {
+      return '키는 100cm 이상 230cm 이하로 입력해주세요.';
+    }
+  }
+
+  if (field === 'weight') {
+    const weight = Number.parseInt(trimmed, 10);
+    if (!Number.isInteger(weight) || weight < 30 || weight > 180) {
+      return '몸무게는 30kg 이상 180kg 이하로 입력해주세요.';
+    }
+  }
+
+  return null;
 }
 
 async function createProfilePhotoDataUrl(file: File) {

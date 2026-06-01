@@ -27,6 +27,7 @@ vi.mock('@/config/app.config', () => ({
 import PollCreateModal from '../src/components/features/PollCreateModal';
 import RecentNotice from '../src/components/features/RecentNotice';
 import { useAppStore } from '../src/stores/useAppStore';
+import { useAnnouncementStore } from '../src/stores/useAnnouncementStore';
 import { useModalStore } from '../src/stores/useModalStore';
 import { useScheduleStore } from '../src/stores/useScheduleStore';
 import { useToastStore } from '../src/stores/useToastStore';
@@ -71,6 +72,11 @@ describe('PollCreateModal real API wiring', () => {
       activePolls: [],
       activePollsStatus: 'idle',
       activePollsError: null,
+    });
+    useAnnouncementStore.setState({
+      announcements: [],
+      announcementsStatus: 'ready',
+      announcementsError: null,
     });
     useToastStore.setState({ message: null });
   });
@@ -156,6 +162,11 @@ describe('RecentNotice schedule poll API participation', () => {
       activePolls: [],
       activePollsStatus: 'idle',
       activePollsError: null,
+    });
+    useAnnouncementStore.setState({
+      announcements: [],
+      announcementsStatus: 'ready',
+      announcementsError: null,
     });
     useToastStore.setState({ message: null });
   });
@@ -253,7 +264,7 @@ describe('RecentNotice schedule poll API participation', () => {
     expect(useToastStore.getState().message).toBe('This action requires an approved team membership.');
   });
 
-  it('keeps cancelled polls visible with the cancellation reason', async () => {
+  it('removes cancelled polls from the Home dashboard immediately', async () => {
     const user = userEvent.setup();
     useAppStore.setState({
       userRole: 'admin',
@@ -288,19 +299,59 @@ describe('RecentNotice schedule poll API participation', () => {
       pollId: 'poll-created',
       cancellationReason: '강설로 인한 취소',
     });
-    expect(await screen.findByText('취소')).toBeInTheDocument();
-    expect(screen.getByText('취소 사유: 강설로 인한 취소')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('button', { name: /3월 친선 경기 일정 투표/ })).not.toBeInTheDocument());
+    expect(screen.getByText('표시할 공지나 일정 투표가 없어요')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '투표 제출하기' })).not.toBeInTheDocument();
+  });
+
+  it('posts explicit Home absence votes with no selected options', async () => {
+    const user = userEvent.setup();
+    const absencePoll: SchedulePoll = {
+      ...createdPoll,
+      votes: createdPoll.options.map((option) => ({
+        id: `absence-${option.id}`,
+        pollId: createdPoll.id,
+        optionId: option.id,
+        membershipId: 'membership-member',
+        isAvailable: false,
+      })),
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify([createdPoll]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(absencePoll), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<RecentNotice />);
+
+    await user.click(await screen.findByRole('button', { name: /3월 친선 경기 일정 투표/ }));
+    await user.click(screen.getByRole('button', { name: '아쉽지만 불참' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+
+    const requestInit = (fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1];
+    expect(JSON.parse(requestInit.body as string)).toEqual({
+      clubId: 'club-real',
+      pollId: 'poll-created',
+      selectedOptionIds: [],
+    });
+    expect(useToastStore.getState().message).toBe('불참 응답이 저장되었어요.');
   });
 
   it('lets admins promote a poll option to a confirmed match', async () => {
     const user = userEvent.setup();
+    const promotablePoll: SchedulePoll = {
+      ...createdPoll,
+      votes: [
+        { id: 'vote-red', pollId: createdPoll.id, optionId: 'option-1', membershipId: 'membership-red', isAvailable: true },
+        { id: 'vote-blue', pollId: createdPoll.id, optionId: 'option-1', membershipId: 'membership-blue', isAvailable: true },
+      ],
+    };
     useAppStore.setState({
       userRole: 'admin',
       userStatus: 'approved',
     });
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify([createdPoll]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([promotablePoll]), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
         pollId: 'poll-created',
         matchId: 'match-created-from-poll',
@@ -312,7 +363,7 @@ describe('RecentNotice schedule poll API participation', () => {
 
     await user.click(await screen.findByRole('button', { name: /3월 친선 경기 일정 투표/ }));
     await user.click(screen.getAllByRole('button', { name: '확정' })[0]);
-    expect(screen.getByText('이 후보 일정으로 확정 경기 일정을 만들고 투표를 종료합니다.')).toBeInTheDocument();
+    expect(screen.getByText('선택한 일정으로 경기를 확정하시겠습니까?')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '확정하기' }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
@@ -326,8 +377,7 @@ describe('RecentNotice schedule poll API participation', () => {
       pollId: 'poll-created',
       optionId: 'option-1',
     });
-    expect(await screen.findByText('확정')).toBeInTheDocument();
-    expect(screen.getByText('확정 일정으로 전환되었어요')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('button', { name: /3월 친선 경기 일정 투표/ })).not.toBeInTheDocument());
     expect(useToastStore.getState().message).toBe('일정 투표가 확정되었어요.');
   });
 

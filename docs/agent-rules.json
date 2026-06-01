@@ -1,122 +1,85 @@
 {
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "2.0.0",
   "project": {
     "name": "fcmoim",
     "docs": {
       "readme": "docs/README.md",
       "decisions": "docs/decisions.md",
       "context": "docs/project-context.json",
-      "designTokens": "docs/design-tokens.md"
+      "designTokens": "docs/design-tokens.md",
+      "feedback": "docs/agent-feedback.md"
     }
   },
   "agents": [
     {
-      "id": "architect",
-      "owns": ["AGENT.md", "docs/**"],
-      "forbidden": [".github/**", "src/**", "supabase/**"]
+      "id": "builder",
+      "owns": ["src/**", "supabase/**", "public/**", "tests/**"],
+      "forbidden": [".github/**", ".agents/**"]
     },
     {
-      "id": "backend",
-      "owns": ["src/app/api/**", "src/lib/**", "src/services/**", "src/types/**", "tests/**"],
-      "forbidden": [".github/**", ".agents/**", "docs/**", "supabase/**"]
+      "id": "infra",
+      "owns": ["AGENT.md", "docs/**", ".agents/**", ".github/**", "scripts/**", "package.json", "apphosting.yaml", "firebase.json", ".env.local.example"],
+      "forbidden": []
     },
     {
-      "id": "data",
-      "owns": ["docs/decisions.md", "src/types/database.generated.ts", "src/types/database.types.ts", "supabase/**"],
-      "forbidden": [".github/**", ".agents/**", "src/components/**"]
-    },
-    {
-      "id": "devops",
-      "owns": [".agents/**", ".env.local.example", ".github/**", "apphosting.yaml", "firebase.json", "package.json", "scripts/**"],
-      "forbidden": ["src/components/**", "supabase/migrations/**"]
-    },
-    {
-      "id": "frontend",
-      "owns": ["public/**", "src/app/**", "src/components/**", "src/config/**", "src/mocks/**", "src/stores/**", "tests/**"],
-      "forbidden": [".github/**", ".agents/**", "docs/decisions.md", "supabase/**"]
-    },
-    {
-      "id": "main-orchestrator",
-      "owns": ["docs/project-context.json", "docs/agent-rules.json"],
-      "forbidden": [".github/**", "src/**", "supabase/**"]
-    },
-    {
-      "id": "qa",
+      "id": "verifier",
       "owns": ["tests/**"],
       "forbidden": [".github/**", ".agents/**", "docs/project-context.json", "src/**", "supabase/**"]
     },
     {
-      "id": "review",
-      "owns": [],
-      "forbidden": [".github/**", ".agents/**", "docs/project-context.json", "src/**", "supabase/**", "tests/**"]
+      "id": "orchestrator",
+      "owns": ["docs/project-context.json", "docs/agent-rules.json"],
+      "forbidden": [".github/**", "src/**", "supabase/**"]
     }
   ],
   "sharedAllowedPaths": [".gitignore", "package-lock.json"],
   "surfaces": [
-    { "id": "harness", "paths": [".agents/**", "AGENT.md", "docs/agent-rules.json"] },
-    { "id": "docs", "paths": ["docs/**"] },
     { "id": "ui", "paths": ["src/app/**", "src/components/**", "src/stores/**"] },
     { "id": "api", "paths": ["src/app/api/**", "src/lib/**", "src/services/**"] },
     { "id": "data", "paths": ["supabase/**", "src/types/database.generated.ts", "src/types/database.types.ts"] },
-    { "id": "infra", "paths": [".github/**", "apphosting.yaml", "firebase.json", "package.json", "scripts/**"] },
-    { "id": "tests", "paths": ["tests/**"] }
+    { "id": "docs", "paths": ["docs/**"] },
+    { "id": "tests", "paths": ["tests/**"] },
+    { "id": "infra", "paths": [".github/**", "apphosting.yaml", "firebase.json", "package.json", "scripts/**"] }
   ],
   "commands": {
     "baseline": "npm run verify:baseline",
-    "ci": "npm run verify",
-    "dataCheck": "npm run db:check",
-    "harnessTest": "node .agents/scripts/test-harness.mjs",
-    "preCommit": "npm run lint",
-    "prePush": "npm run verify",
-    "verify": "npm run verify"
+    "verify": "npm run verify:harness",
+    "preCommit": "npm run lint"
   },
   "guardProfiles": {
-    "preCommit": { "steps": ["validateHarness", "validateProject", "guardHooks", "guardDiffStaged", "guardDesignStaged", "projectPreCommit"] },
-    "prePush": { "steps": ["guardDesign", "projectPrePush", "guardEvidence", "guardReview"] },
-    "ci": { "steps": ["validateHarness", "validateProject", "harnessTest", "guardDesign", "guardEvidence", "guardReview", "projectCi"] },
-    "handoff": { "steps": ["guardDiff", "guardDesign", "guardEvidence", "guardReview"] }
-  },
-  "hookPolicy": {
-    "requiredPath": ".agents/hooks"
-  },
-  "bypassPolicy": {
-    "allowedProfiles": ["preCommit"],
-    "blockedProfiles": ["prePush", "ci", "handoff"],
-    "bypassableSteps": ["guardDiffStaged", "guardDesignStaged"],
-    "requiredReasonEnv": "HARNESS_BYPASS_REASON"
-  },
-  "coordinationPolicy": {
-    "allowedPathLeases": {
-      "enabled": true,
-      "source": "activeWork.allowedPaths",
-      "scope": "task",
-      "issuer": "main-orchestrator",
-      "cannotOverrideForbidden": true
-    }
+    "preCommit": { "steps": ["validateHarness", "guardDesignStaged", "projectPreCommit"] },
+    "verify": { "steps": ["validateHarness", "guardDesign", "guardDiff", "projectVerify"] }
   },
   "statePolicy": {
-    "updateVersionRequired": true,
-    "writer": "main-orchestrator",
-    "incrementOnWrite": true
+    "writer": "orchestrator"
   },
+  "completionPolicy": {
+    "commitAtTurnEnd": true,
+    "commitMessageLanguage": "ko",
+    "splitLargeWorkByConcern": true,
+    "summaryRequired": true
+  },
+  "documentationPolicy": {
+    "maxLines": 200,
+    "targetPatterns": ["AGENT.md", "docs/*.md", "docs/user/*.md", "docs/agent-rules.json", ".agents/manifest.json", ".agents/contracts/agent-contracts.json"],
+    "excludePaths": ["docs/project-context.json"]
+  },
+  "assetProvenancePolicy": "When a user specifies an external asset URL, including SVGRepo assets, fetch or reference the original asset exactly and preserve provenance, or report the blocker; do not recreate, approximate, or transform it.",
   "evidencePolicy": {
     "ui": {
-      "requiredEvidence": [
-        {
-          "type": "browser",
-          "maxAgeMinutes": 1440,
-          "requireConsoleClean": true
-        }
-      ],
-      "providers": ["Browser Use"],
-      "runtimeConsole": {
-        "required": true,
-        "maxErrors": 0,
-        "maxWarnings": 0
-      }
+      "requiredEvidence": [{ "type": "deterministic", "maxAgeMinutes": 1440 }],
+      "providers": ["Vitest", "Testing Library", "SDD acceptance tests"]
     },
-    "api": { "requiredEvidence": [{ "type": "api", "maxAgeMinutes": 1440 }] },
-    "data": { "requiredEvidence": [{ "type": "database", "maxAgeMinutes": 1440 }], "providers": ["Supabase plugin", "tracked SQL"] }
+    "api": {
+      "requiredEvidence": [{ "type": "api", "maxAgeMinutes": 1440 }],
+      "providers": ["Local Supabase CLI"],
+      "mockEvidenceAccepted": false
+    },
+    "data": {
+      "requiredEvidence": [{ "type": "database", "maxAgeMinutes": 1440 }],
+      "providers": ["Local Supabase CLI", "tracked SQL"],
+      "mockEvidenceAccepted": false
+    }
   },
   "reviewPolicy": {
     "required": true,
@@ -130,14 +93,17 @@
       "condition", "tier", "stat", "pos", "chem", "stamina", "foot", "viz",
       "attend", "result", "matchst", "award", "fee", "skill", "trend", "feedback",
       "gray", "slate", "green", "white", "black",
-      "red-team", "blue-team", "background", "foreground", "transparent", "current"
+      "red-team", "blue-team", "background", "foreground", "transparent", "current", "event",
+      "highlight", "metric", "social"
     ],
-    "customSvgAllowedPaths": ["src/components/brand/**", "src/components/ui/**"],
+    "customSvgAllowedPaths": ["src/components/brand/**", "src/components/ui/**", "src/components/icons/**"],
     "exemptPatterns": ["// design-exempt"],
     "layoutPolicy": {
       "forbiddenClasses": ["overflow-x-auto", "overflow-x-scroll"],
-      "forbidArbitraryMinWidth": true,
-      "runtimeEvidence": "Changed UI surfaces must fit the configured viewport without horizontal page or panel scrolling."
+      "forbidArbitraryMinWidth": true
+    },
+    "inAppInstructionPolicy": {
+      "forbiddenPatterns": ["드래그하세요", "클릭하세요", "첫 선수는 주장입니다", "사용법"]
     },
     "semanticSlots": [
       {
@@ -151,17 +117,19 @@
         "id": "condition-icon-token-contract",
         "description": "The shared condition icon must expose the five condition token styles.",
         "paths": ["src/components/ui/ConditionIcon.tsx"],
-        "requiredContent": [
-          "text-condition-best",
-          "text-condition-good",
-          "text-condition-normal",
-          "text-condition-poor",
-          "text-condition-worst"
-        ],
+        "requiredContent": ["text-condition-best", "text-condition-good", "text-condition-normal", "text-condition-poor", "text-condition-worst"],
         "forbiddenContent": ["text-green-600", "text-red-500", "text-blue-500"]
       }
     ],
     "docs": "docs/design-tokens.md"
+  },
+  "scopeControlPolicy": {
+    "uiSensitivePaths": ["src/app/**", "src/components/**", "src/stores/**", "public/**"]
+  },
+  "loopPolicy": {
+    "maxGuardRetries": 3,
+    "maxReviewRounds": 3,
+    "escalationAction": "Stop work and report to user with: (1) current state summary, (2) failure analysis, (3) next step suggestions"
   },
   "harnessPurity": {
     "forbiddenTokens": ["fcmoim", "npm", "src/", "tests/", "supabase", "Next.js", "Firebase", "docs/README", "docs/project-context", "docs/decisions"]

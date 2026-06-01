@@ -19,16 +19,39 @@ export type UpcomingMatch = {
   ourScore: number | null;
   oppScore: number | null;
   tacticsCompleted: boolean;
+  redLeaderConfirmed?: boolean;
+  blueLeaderConfirmed?: boolean;
   memo: string | null;
   createdByMembershipId: string | null;
   cancellationReason: string | null;
   cancelledAt: string | null;
+  updatedAt?: string | null;
 };
 
 export type CancelMatchRequest = {
   clubId: string;
   matchId: string;
   cancellationReason: string;
+};
+
+export type CreateMatchRequest = {
+  clubId: string;
+  type: Exclude<EventType, 'vote_match'>;
+  title?: string | null;
+  date: string;
+  time: string;
+  location: string;
+  memo?: string | null;
+};
+
+export type MatchAttendee = {
+  matchId: string;
+  membershipId: string;
+  status: 'attend';
+  playerName: string;
+  playerOvr: number;
+  playerPhotoUrl: string | null;
+  matchPoints: number;
 };
 
 export type MatchLineupEntry = {
@@ -38,10 +61,12 @@ export type MatchLineupEntry = {
   teamNumber: 1 | 2;
   isLeader: boolean;
   position: 'FW' | 'MF' | 'DF';
+  formationSlot: number | null;
   playerName: string;
   playerPosition: string | null;
   playerOvr: number;
   playerPhotoUrl: string | null;
+  playerMatchPoints: number;
 };
 
 export type SaveMatchLineupEntry = {
@@ -49,6 +74,7 @@ export type SaveMatchLineupEntry = {
   teamNumber: 1 | 2;
   isLeader: boolean;
   position: 'FW' | 'MF' | 'DF';
+  formationSlot?: number | null;
 };
 
 export type SaveMatchLineupRequest = {
@@ -77,6 +103,45 @@ export async function fetchUpcomingMatches(
   }
 
   return response.json() as Promise<UpcomingMatch[]>;
+}
+
+export async function fetchCalendarMatches(input: {
+  clubId?: string;
+  from: string;
+  to: string;
+}): Promise<UpcomingMatch[]> {
+  const params = new URLSearchParams({
+    clubId: input.clubId ?? appConfig.defaultClubId,
+    from: input.from,
+    to: input.to,
+  });
+  const response = await fetch(`/api/matches?${params.toString()}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw await buildApiError(response, '월간 일정을 불러오지 못했어요.');
+  }
+
+  return response.json() as Promise<UpcomingMatch[]>;
+}
+
+export async function createMatch(input: CreateMatchRequest): Promise<UpcomingMatch> {
+  const response = await fetch('/api/matches', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    throw await buildApiError(response, '일정을 생성하지 못했어요.');
+  }
+
+  return response.json() as Promise<UpcomingMatch>;
 }
 
 export async function cancelMatch(input: CancelMatchRequest): Promise<UpcomingMatch> {
@@ -116,6 +181,69 @@ export async function fetchMatchLineup(input: {
   return response.json() as Promise<MatchLineupEntry[]>;
 }
 
+export async function fetchMatchAttendees(input: {
+  clubId: string;
+  matchId: string;
+}): Promise<MatchAttendee[]> {
+  const params = new URLSearchParams({
+    clubId: input.clubId,
+    matchId: input.matchId,
+  });
+  const response = await fetch(`/api/matches/attendees?${params.toString()}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw await buildApiError(response, '참석자 명단을 불러오지 못했어요.');
+  }
+
+  return response.json() as Promise<MatchAttendee[]>;
+}
+
+export async function addMatchAttendee(input: {
+  clubId: string;
+  matchId: string;
+  membershipId?: string;
+  membershipIds?: string[];
+}): Promise<MatchAttendee[]> {
+  const response = await fetch('/api/matches/attendees', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    throw await buildApiError(response, '참석자를 추가하지 못했어요.');
+  }
+
+  return response.json() as Promise<MatchAttendee[]>;
+}
+
+export async function pickMatchLineupPlayer(input: {
+  clubId: string;
+  matchId: string;
+  membershipId: string;
+}): Promise<MatchLineupEntry[]> {
+  const response = await fetch('/api/matches/lineup/pick', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    throw await buildApiError(response, '선수를 배치하지 못했어요.');
+  }
+
+  return response.json() as Promise<MatchLineupEntry[]>;
+}
+
 export async function saveMatchLineup(input: SaveMatchLineupRequest): Promise<MatchLineupEntry[]> {
   const response = await fetch('/api/matches/lineup', {
     method: 'POST',
@@ -131,6 +259,48 @@ export async function saveMatchLineup(input: SaveMatchLineupRequest): Promise<Ma
   }
 
   return response.json() as Promise<MatchLineupEntry[]>;
+}
+
+export async function confirmMatchLineup(input: {
+  clubId: string;
+  matchId: string;
+  teamNumber: 1 | 2;
+  confirmed?: boolean;
+}): Promise<UpcomingMatch> {
+  const response = await fetch('/api/matches/lineup/confirm', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    throw await buildApiError(response, '전술을 승인하지 못했어요.');
+  }
+
+  return response.json() as Promise<UpcomingMatch>;
+}
+
+export async function publishMatchLineup(input: {
+  clubId: string;
+  matchId: string;
+}): Promise<UpcomingMatch> {
+  const response = await fetch('/api/matches/lineup/publish', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    throw await buildApiError(response, '전술을 공개하지 못했어요.');
+  }
+
+  return response.json() as Promise<UpcomingMatch>;
 }
 
 async function buildApiError(response: Response, fallback: string) {

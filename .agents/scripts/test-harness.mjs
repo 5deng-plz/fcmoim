@@ -97,36 +97,15 @@ function createRules() {
     ],
     commands: {
       baseline: 'node .agents/scripts/validate-harness.mjs',
-      ci: 'node .agents/scripts/validate-harness.mjs',
-      harnessTest: 'node .agents/scripts/test-harness.mjs',
       preCommit: 'node .agents/scripts/validate-harness.mjs',
-      prePush: 'node .agents/scripts/validate-harness.mjs',
       verify: 'node .agents/scripts/validate-harness.mjs'
     },
     evidencePolicy: {
       interface: { requiredEvidence: [{ type: 'visual', maxAgeMinutes: 1440, requireConsoleClean: true }] }
     },
     reviewPolicy: { required: true, readyStatus: 'ready' },
-    hookPolicy: { requiredPath: '.agents/hooks' },
-    bypassPolicy: {
-      allowedProfiles: ['preCommit'],
-      blockedProfiles: ['prePush', 'ci', 'handoff'],
-      bypassableSteps: ['guardDiffStaged'],
-      requiredReasonEnv: 'HARNESS_BYPASS_REASON'
-    },
-    coordinationPolicy: {
-      allowedPathLeases: {
-        enabled: true,
-        source: 'activeWork.allowedPaths',
-        scope: 'task',
-        issuer: 'main-orchestrator',
-        cannotOverrideForbidden: true
-      }
-    },
     statePolicy: {
-      updateVersionRequired: true,
-      writer: 'main-orchestrator',
-      incrementOnWrite: true
+      writer: 'orchestrator'
     },
     designPolicy: {
       tokenDefinitionFiles: ['app/styles/tokens.css'],
@@ -144,7 +123,10 @@ function createRules() {
           requiredContent: ['ConditionIcon', 'level="normal"'],
           forbiddenContent: ['CircleCheck', '컨디션 정상']
         }
-      ]
+      ],
+      inAppInstructionPolicy: {
+        forbiddenPatterns: ['드래그하세요', '클릭하세요', '사용법']
+      }
     },
     harnessPurity: { forbiddenTokens: [] }
   };
@@ -156,25 +138,23 @@ function createState() {
     projectName: 'fixture',
     updateVersion: 0,
     updatedAt: new Date().toISOString(),
-    updatedBy: 'main-orchestrator',
+    updatedBy: 'orchestrator',
     currentPhase: 'fixture',
-    agents: {},
     activeWork: {
-      agentId: 'writer',
       taskId: 'fixture-task',
       status: 'ready',
-      startedAt: '2026-01-01T00:00:00.000Z',
       baselineCommit: null,
       changedFiles: [],
       changedSurfaces: ['interface'],
       allowedPaths: [],
       evidence: {},
-      reviewVerdict: { status: 'ready', blockers: [] },
-      blockers: [],
-      guardResults: {}
+      reviewStatus: 'ready',
+      loopCounters: {
+        reviewRounds: 0,
+        guardRetries: 0
+      }
     },
     workstreams: [],
-    handoffs: [],
     blockers: [],
     nextActions: []
   };

@@ -7,7 +7,7 @@ type AuthContext = {
   };
 };
 
-type MembershipStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
+type MembershipStatus = 'pending' | 'approved' | 'rejected' | 'suspended' | 'withdrawn';
 type MembershipRole = 'admin' | 'operator' | 'member';
 
 type AccountRow = {
@@ -28,6 +28,7 @@ type MembershipRow = {
   heightCm: number | null;
   weightKg: number | null;
   birthDate: string | null;
+  residence: string | null;
   photoUrl: string | null;
   ovr: number;
   matchPoints: number;
@@ -66,6 +67,11 @@ type AccountMembershipService = {
     membershipId: string;
     role: 'operator' | 'member';
   }): Promise<MembershipRow>;
+  withdrawMembership(input: {
+    auth: AuthContext;
+    clubId: string;
+    membershipId: string;
+  }): Promise<MembershipRow>;
   listPendingMemberships(input: { auth: AuthContext; clubId: string }): Promise<Array<{
     id: string;
     nickname: string;
@@ -85,6 +91,8 @@ type MembershipRepository = {
   createPending: ReturnType<typeof vi.fn>;
   updateStatus: ReturnType<typeof vi.fn>;
   updateRole: ReturnType<typeof vi.fn>;
+  updatePhoto: ReturnType<typeof vi.fn>;
+  updateProfile: ReturnType<typeof vi.fn>;
 };
 
 function createMembershipRow(overrides: Partial<MembershipRow> = {}): MembershipRow {
@@ -99,6 +107,7 @@ function createMembershipRow(overrides: Partial<MembershipRow> = {}): Membership
     heightCm: null,
     weightKg: null,
     birthDate: null,
+    residence: null,
     photoUrl: null,
     ovr: 60,
     matchPoints: 100,
@@ -169,6 +178,7 @@ function createRepositories(options?: {
       heightCm: input.profile.heightCm,
       weightKg: input.profile.weightKg,
       birthDate: input.profile.birthDate,
+      residence: input.profile.residence,
       photoUrl: input.profile.photoUrl,
       preferredFoot: input.profile.preferredFoot ?? 'right',
     })),
@@ -180,6 +190,16 @@ function createRepositories(options?: {
       id: membershipId,
       status: 'approved',
       role,
+    })),
+    updatePhoto: vi.fn(async ({ membershipId, photoUrl }) => createMembershipRow({
+      id: membershipId,
+      status: 'approved',
+      photoUrl,
+    })),
+    updateProfile: vi.fn(async ({ membershipId, profile }) => createMembershipRow({
+      id: membershipId,
+      status: 'approved',
+      ...profile,
     })),
   };
 
@@ -247,6 +267,7 @@ describe('v1.0 Account + TeamMembership flows', () => {
         heightCm: null,
         weightKg: null,
         birthDate: null,
+        residence: null,
         photoUrl: null,
         preferredFoot: null,
       },
@@ -293,6 +314,41 @@ describe('v1.0 Account + TeamMembership flows', () => {
       }),
     );
   });
+
+  it.each([
+    ['approved', '이미 이 팀의 멤버입니다.'],
+    ['pending', '이미 입단신청이 접수되어 운영진 승인을 기다리고 있습니다.'],
+    ['rejected', '이 팀의 입단신청이 반려된 상태입니다. 팀 운영진에게 문의해주세요.'],
+    ['suspended', '이 팀의 멤버십이 일시 중지된 상태입니다. 팀 운영진에게 문의해주세요.'],
+    ['withdrawn', '이 팀에는 새 입단신청을 제출할 수 없습니다. 팀 운영진에게 문의해주세요.'],
+  ] satisfies Array<[MembershipStatus, string]>)(
+    'rejects duplicate join requests when the selected club membership is already %s',
+    async (status, message) => {
+      const repositories = createRepositories({
+        existingMembership: createMembershipRow({ status }),
+      });
+      const service = await loadService(repositories);
+
+      await expect(
+        service.joinClub({
+          auth: {
+            user: {
+              id: 'auth-current-user',
+              email: 'player@example.com',
+            },
+          },
+          clubId: 'club-1',
+          profile: {
+            nickname: 'Duplicate Player',
+          },
+        }),
+      ).rejects.toMatchObject({
+        code: 'conflict',
+        message,
+      });
+      expect(repositories.memberships.createPending).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([
     ['member', 'approved'],
@@ -492,7 +548,36 @@ describe('v1.0 Account + TeamMembership flows', () => {
     expect(repositories.memberships.listPendingByClub).not.toHaveBeenCalled();
   });
 
-  it.each(['pending', 'rejected', 'suspended'] satisfies MembershipStatus[])(
+  it('allows approved operators to withdraw approved non-admin members', async () => {
+    const repositories = createRepositories({
+      reviewerMembership: { role: 'operator', status: 'approved' },
+    });
+    const service = await loadService(repositories);
+    repositories.memberships.findById.mockResolvedValueOnce(
+      createMembershipRow({ status: 'approved', role: 'member', accountId: 'other-account' }),
+    );
+
+    await expect(
+      service.withdrawMembership({
+        auth: {
+          user: {
+            id: 'reviewer-auth-user',
+            email: 'operator@example.com',
+          },
+        },
+        clubId: 'club-1',
+        membershipId: 'membership-under-review',
+      }),
+    ).resolves.toMatchObject({ status: 'withdrawn' });
+
+    expect(repositories.memberships.updateStatus).toHaveBeenCalledWith({
+      membershipId: 'membership-under-review',
+      status: 'withdrawn',
+      reviewedByAccountId: 'reviewer-auth-user',
+    });
+  });
+
+  it.each(['pending', 'rejected', 'suspended', 'withdrawn'] satisfies MembershipStatus[])(
     'denies approved-member actions while membership is %s',
     async (status) => {
       const repositories = createRepositories({

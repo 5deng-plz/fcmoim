@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "2.0.0",
   "description": "Reusable agent harness manifest. Project-specific rules live outside this directory.",
   "sourceOfTruth": {
     "contracts": ".agents/contracts/agent-contracts.json",
@@ -7,29 +7,23 @@
     "validator": ".agents/scripts/validate-harness.mjs"
   },
   "agents": [
-    { "id": "architect", "name": "Architect Agent", "prompt": ".agents/agents/architect.md", "mayUpdateProjectState": false },
-    { "id": "backend", "name": "Backend Agent", "prompt": ".agents/agents/backend.md", "mayUpdateProjectState": false },
-    { "id": "data", "name": "Data Agent", "prompt": ".agents/agents/data.md", "mayUpdateProjectState": false },
-    { "id": "devops", "name": "DevOps Agent", "prompt": ".agents/agents/devops.md", "mayUpdateProjectState": false },
-    { "id": "frontend", "name": "Frontend Agent", "prompt": ".agents/agents/frontend.md", "mayUpdateProjectState": false },
-    { "id": "main-orchestrator", "name": "Main Orchestrator Agent", "prompt": ".agents/agents/main-orchestrator.md", "mayUpdateProjectState": true },
-    { "id": "qa", "name": "QA Agent", "prompt": ".agents/agents/qa.md", "mayUpdateProjectState": false },
-    { "id": "review", "name": "Review Agent", "prompt": ".agents/agents/review.md", "mayUpdateProjectState": false }
+    { "id": "builder", "name": "Builder Agent", "prompt": ".agents/agents/builder.md", "mayUpdateProjectState": false },
+    { "id": "infra", "name": "Infra Agent", "prompt": ".agents/agents/infra.md", "mayUpdateProjectState": false },
+    { "id": "verifier", "name": "Verifier Agent", "prompt": ".agents/agents/verifier.md", "mayUpdateProjectState": false },
+    { "id": "orchestrator", "name": "Orchestrator Agent", "prompt": ".agents/agents/orchestrator.md", "mayUpdateProjectState": true }
   ],
   "qualityGates": [
-    { "id": "baseline", "owner": "main-orchestrator", "requiredFor": "code changes" },
-    { "id": "deterministic-verify", "owner": "implementing-agent", "requiredFor": "handoff-sized changes" },
-    { "id": "runtime-evidence", "owner": "qa", "requiredFor": "runtime-affecting changes" },
-    { "id": "independent-review", "owner": "review", "requiredFor": "completion" }
+    { "id": "baseline", "owner": "orchestrator", "requiredFor": "code changes" },
+    { "id": "verify", "owner": "builder", "requiredFor": "handoff" }
   ],
   "executionRules": [
     "Read the root guide and project rules before each task.",
     "Read the selected role prompt before editing.",
-    "Use project rules for path ownership, required commands, evidence policy, and project documents.",
+    "Use project rules for path ownership, required commands, and evidence policy.",
     "When project rules define designPolicy, read the referenced design token document before any UI surface work.",
     "Only the orchestrator may update project state.",
     "Worker agents emit statePatchSuggestion instead of editing project state.",
     "Run configured guard profiles before handoff.",
-    "Review blockers prevent completion."
+    "Respect loop counters: escalate to user when maxGuardRetries or maxReviewRounds exceeded."
   ]
 }

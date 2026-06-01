@@ -1,6 +1,7 @@
 'use client';
 
-import { Bell, Home } from 'lucide-react';
+import { ArrowLeft, Bell, Sun, Moon } from 'lucide-react';
+import { useState } from 'react';
 import Image from 'next/image';
 import TeamEmblem from '@/components/brand/TeamEmblem';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
@@ -9,6 +10,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 
 export default function Header() {
   const memberProfile = useAuthStore((state) => state.memberProfile);
+  const hasCustomPhoto = Boolean(memberProfile?.photoUrl);
   const {
     userStatus,
     setShowMyPage,
@@ -20,83 +22,168 @@ export default function Header() {
     showNotifications,
     setShowNotifications,
     teamName,
+    setActiveTab,
   } = useAppStore();
 
-  const isSubPage = showMyPage || showCommunity || showJoinForm;
-  const subPageTitle = showMyPage ? '마이페이지' : showJoinForm ? '입단신청' : '커뮤니티';
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('theme') as 'light' | 'dark';
+      if (saved) return saved;
+      const isDark = typeof window.matchMedia === 'function'
+        ? window.matchMedia('(prefers-color-scheme: dark)').matches
+        : false;
+      return isDark ? 'dark' : 'light';
+    }
+    return 'light';
+  });
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(nextTheme);
+    localStorage.setItem('theme', nextTheme);
+    document.documentElement.setAttribute('data-theme', nextTheme);
+  };
+
+  const isGuestMode = userStatus === 'guest' || userStatus === 'pending' || userStatus === 'withdrawn';
+  const displayedTeamName = isGuestMode ? 'FC moim' : teamName;
+  const isCenteredSubPage = (showMyPage || showJoinForm) && !isGuestMode;
+  const subPageTitle = showMyPage ? '마이페이지' : '입단신청';
 
   const handleBack = () => {
     setShowMyPage(false);
-    setShowCommunity(false);
     setShowJoinForm(false);
   };
 
+  const handleCommunityBack = () => {
+    setShowCommunity(false);
+  };
+
+  const handleLogoHome = () => {
+    if (!isGuestMode) {
+      setActiveTab('home');
+    }
+  };
+
   return (
-    <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl px-4 py-3 flex justify-between items-center min-h-[56px] shadow-sm">
-      {isSubPage ? (
-        <>
+    <header className="sticky top-0 z-20 bg-surface-card/80 backdrop-blur-xl px-4 py-3 flex justify-between items-center min-h-[56px] shadow-sm animate-fadeIn">
+      {isCenteredSubPage ? (
+        <div className="relative w-full flex items-center justify-center h-10">
           <button
+            type="button"
+            aria-label={`${subPageTitle} 뒤로가기`}
             onClick={handleBack}
-            className="text-gray-500 hover:text-gray-900 active:scale-95 transition-all w-16 text-left"
+            className="absolute left-0 flex h-10 w-10 items-center justify-center rounded-full text-secondary transition-all hover:bg-surface-hover hover:text-primary active:scale-95"
           >
-            <Home size={20} />
+            <ArrowLeft size={20} />
           </button>
-          <h1 className="text-lg font-extrabold text-gray-900 tracking-tight">{subPageTitle}</h1>
-          <div className="w-16" />
+          <h1 className="text-base font-bold text-primary select-none">
+            {subPageTitle}
+          </h1>
+          <div className="absolute right-0">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="p-1.5 hover:bg-surface-hover rounded-full active:scale-90 transition-all text-secondary"
+              aria-label={theme === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환'}
+              title={theme === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환'}
+            >
+              {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+            </button>
+          </div>
+        </div>
+      ) : showCommunity ? (
+        <>
+          <LogoHomeButton teamName={displayedTeamName} onClick={handleLogoHome} />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="p-1.5 hover:bg-surface-hover rounded-full active:scale-90 transition-all text-secondary"
+              aria-label={theme === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환'}
+              title={theme === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환'}
+            >
+              {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+            </button>
+            <button
+              type="button"
+              aria-label="커뮤니티 뒤로가기"
+              onClick={handleCommunityBack}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-secondary transition-all hover:bg-surface-hover hover:text-primary active:scale-95"
+            >
+              <ArrowLeft size={20} />
+            </button>
+          </div>
         </>
       ) : (
         <>
-          <h1 className="flex items-center gap-1.5 text-xl font-black tracking-tight text-gray-900">
-            <span className="flex h-[36px] w-[36px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-green-100">
-              <TeamEmblem teamName={teamName} size={44} className="shrink-0 scale-[1.08]" />
-            </span>
-            <span className="truncate">{teamName}</span>
-          </h1>
+          <LogoHomeButton teamName={displayedTeamName} onClick={handleLogoHome} />
           <div className="flex items-center gap-3">
-            {/* 게스트 상태 배지 */}
-            {userStatus === 'guest' && (
-              <span className="text-[10px] font-bold bg-fee-partial/15 text-fee-partial px-2 py-0.5 rounded-full">
-                구경중 👀
-              </span>
-            )}
-
             <button
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-1.5 hover:bg-gray-100 rounded-full active:scale-90 transition-all text-gray-500"
+              type="button"
+              onClick={toggleTheme}
+              className="p-1.5 hover:bg-surface-hover rounded-full active:scale-90 transition-all text-secondary"
+              aria-label={theme === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환'}
+              title={theme === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환'}
             >
-              <Bell size={22} />
-              <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-matchst-live rounded-full ring-2 ring-white" />
+              {theme === 'light' ? <Moon size={22} /> : <Sun size={22} />}
             </button>
 
-            {userStatus === 'guest' ? (
-              <button
-                onClick={() => setShowJoinForm(true)}
-                className="text-[11px] font-bold bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 active:scale-95 transition-all"
-              >
-                입단신청
-              </button>
-            ) : (
-              <button
-                onClick={() => setShowMyPage(true)}
-                className="hover:ring-2 hover:ring-green-300 rounded-full active:scale-90 transition-all"
-              >
-                <Image
-                  src={memberProfile?.photoUrl || getFallbackAvatar(memberProfile?.name || 'member-profile')}
-                  alt="프로필"
-                  width={34}
-                  height={34}
-                  sizes="34px"
-                  loading="eager"
-                  priority
-                  className="rounded-full bg-gray-200 object-cover"
-                  style={{ width: 34, height: 34 }}
-                  unoptimized
-                />
-              </button>
+            {!isGuestMode && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="relative p-1.5 hover:bg-surface-hover rounded-full active:scale-90 transition-all text-secondary"
+                  aria-label="알림 열기"
+                >
+                  <Bell size={22} />
+                  <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-matchst-live rounded-full ring-2 ring-surface-card" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowMyPage(true)}
+                  className="hover:ring-2 hover:ring-green-300 rounded-full active:scale-90 transition-all"
+                  aria-label="마이페이지 열기"
+                >
+                  <Image
+                    src={memberProfile?.photoUrl || getFallbackAvatar(memberProfile?.name || 'member-profile')}
+                    alt="프로필"
+                    width={34}
+                    height={34}
+                    sizes="34px"
+                    loading="eager"
+                    priority
+                    className={
+                      hasCustomPhoto
+                        ? 'rounded-full bg-surface-hover object-cover'
+                        : 'rounded-full bg-surface-elevated object-contain p-0.5'
+                    }
+                    style={{ width: 34, height: 34 }}
+                    unoptimized
+                  />
+                </button>
+              </>
             )}
           </div>
         </>
       )}
     </header>
+  );
+}
+
+function LogoHomeButton({ teamName, onClick }: { teamName: string; onClick: () => void }) {
+  return (
+    <div className="flex min-w-0 items-center gap-1.5 text-xl font-black tracking-tight text-primary">
+      <button
+        type="button"
+        aria-label={`${teamName} 홈으로 이동`}
+        onClick={onClick}
+        className="group flex h-[36px] w-[36px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-card ring-1 ring-border-subtle transition-all duration-200 hover:-translate-y-0.5 hover:scale-105 hover:bg-surface-hover hover:shadow-md hover:ring-green-200 active:translate-y-0 active:scale-95"
+      >
+        <TeamEmblem teamName={teamName} size={44} className="shrink-0 scale-[1.08] transition-transform duration-200 group-hover:rotate-[-3deg]" />
+      </button>
+      <span className="truncate">{teamName}</span>
+    </div>
   );
 }

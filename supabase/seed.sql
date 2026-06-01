@@ -1,0 +1,3 @@
+-- Local Supabase seed placeholder.
+-- The Stage 1 baseline migration currently owns the canonical minimal app data.
+-- QA Auth users are seeded through scripts/seed-qa-auth-users.mjs after the local stack starts.

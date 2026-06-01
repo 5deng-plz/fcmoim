@@ -20,6 +20,7 @@ describe('frontend membership state mapping', () => {
     ['approved', 'approved', false],
     ['rejected', 'rejected', false],
     ['suspended', 'suspended', false],
+    ['withdrawn', 'withdrawn', false],
   ] as const)('maps API membershipState %s into UI status %s', (apiState, uiStatus, showJoinForm) => {
     expect(membershipStateToUserStatus(apiState)).toBe(uiStatus);
     expect(shouldShowJoinRequest(apiState)).toBe(showJoinForm);
@@ -46,6 +47,7 @@ describe('frontend membership state mapping', () => {
         heightCm: null,
         weightKg: null,
         birthDate: null,
+        residence: null,
         photoUrl: null,
         ovr: 74,
         stats: DEFAULT_STATS,
@@ -63,6 +65,7 @@ describe('frontend membership state mapping', () => {
       height: null,
       weight: null,
       birth: null,
+      residence: null,
       ovr: 74,
       matchPoints: 1280,
       preferredFoot: '양발',
@@ -96,6 +99,7 @@ describe('frontend membership state mapping', () => {
         heightCm: null,
         weightKg: null,
         birthDate: null,
+        residence: null,
         photoUrl: null,
         ovr: 60,
         stats: DEFAULT_STATS,
@@ -258,6 +262,7 @@ describe('frontend join request payload', () => {
           heightCm: 180,
           weightKg: null,
           birthDate: null,
+          residence: '서울 마포구',
           photoUrl: null,
           ovr: 68,
           stats: DEFAULT_STATS,
@@ -305,6 +310,7 @@ describe('frontend join request payload', () => {
       ovr: 68,
       matchPoints: 760,
       preferredFoot: '왼발',
+      residence: '서울 마포구',
     });
   });
 });

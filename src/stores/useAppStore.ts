@@ -11,12 +11,24 @@ export interface ClubOption {
   role: UserRole;
 }
 
+export type SettlementNotification = {
+  matchId: string;
+  title: string;
+};
+
 const SELECTED_JOIN_CLUB_KEY = 'fcmoim.selectedJoinClubId';
+const JOIN_INTENT_KEY = 'fcmoim.joinIntent';
+
+export type JoinIntent = {
+  clubId: string;
+};
 
 interface AppState {
   // ─── 탭 네비게이션 ───
   activeTab: Tab;
   setActiveTab: (tab: Tab) => void;
+  recordsSubTab: 'season' | 'announcements' | 'board' | 'gallery';
+  setRecordsSubTab: (subTab: 'season' | 'announcements' | 'board' | 'gallery') => void;
 
   // ─── 서브페이지 ───
   showMyPage: boolean;
@@ -25,8 +37,13 @@ interface AppState {
   setShowCommunity: (show: boolean) => void;
   showNotifications: boolean;
   setShowNotifications: (show: boolean) => void;
+  settlementNotification: SettlementNotification | null;
+  setSettlementNotification: (notification: SettlementNotification | null) => void;
   showJoinForm: boolean;
   setShowJoinForm: (show: boolean) => void;
+  joinIntent: JoinIntent | null;
+  setJoinIntent: (intent: JoinIntent | null) => void;
+  clearJoinIntent: () => void;
 
   // ─── 인증 & 권한 ───
   authView: 'login' | 'guest';
@@ -43,6 +60,8 @@ interface AppState {
   setAttendStatus: (status: AttendanceStatus) => void;
 
   // ─── 팀 정보 ───
+  // activeClubId drives the approved-member app shell; selectedJoinClubId/joinIntent
+  // drive browse-and-apply flows before a user is approved for that team.
   activeClubId: string;
   setActiveClubId: (clubId: string) => void;
   selectedJoinClubId: string;
@@ -57,6 +76,8 @@ export const useAppStore = create<AppState>((set) => ({
   // ─── 탭 네비게이션 ───
   activeTab: 'home',
   setActiveTab: (tab) => set({ activeTab: tab, showMyPage: false, showCommunity: false, showJoinForm: false }),
+  recordsSubTab: 'season',
+  setRecordsSubTab: (subTab) => set({ recordsSubTab: subTab }),
 
   // ─── 서브페이지 ───
   showMyPage: false,
@@ -65,8 +86,19 @@ export const useAppStore = create<AppState>((set) => ({
   setShowCommunity: (show) => set({ showCommunity: show, showMyPage: false, showJoinForm: false }),
   showNotifications: false,
   setShowNotifications: (show) => set({ showNotifications: show }),
+  settlementNotification: null,
+  setSettlementNotification: (notification) => set({ settlementNotification: notification }),
   showJoinForm: false,
   setShowJoinForm: (show) => set({ showJoinForm: show, showMyPage: false, showCommunity: false }),
+  joinIntent: readJoinIntent(),
+  setJoinIntent: (intent) => {
+    persistJoinIntent(intent);
+    set({ joinIntent: intent });
+  },
+  clearJoinIntent: () => {
+    persistJoinIntent(null);
+    set({ joinIntent: null });
+  },
 
   // ─── 인증 & 권한 ───
   authView: 'login',
@@ -110,4 +142,26 @@ function persistSelectedJoinClubId(clubId: string) {
   }
 
   window.sessionStorage.setItem(SELECTED_JOIN_CLUB_KEY, clubId);
+}
+
+function readJoinIntent(): JoinIntent | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const clubId = window.sessionStorage.getItem(JOIN_INTENT_KEY);
+  return clubId ? { clubId } : null;
+}
+
+function persistJoinIntent(intent: JoinIntent | null) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  if (!intent) {
+    window.sessionStorage.removeItem(JOIN_INTENT_KEY);
+    return;
+  }
+
+  window.sessionStorage.setItem(JOIN_INTENT_KEY, intent.clubId);
 }

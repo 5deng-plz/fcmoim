@@ -2,11 +2,15 @@
 
 import { useState } from 'react';
 import Modal from '@/components/ui/Modal';
+import { useAppStore } from '@/stores/useAppStore';
+import { useAnnouncementStore } from '@/stores/useAnnouncementStore';
 import { useModalStore } from '@/stores/useModalStore';
 import { useToastStore } from '@/stores/useToastStore';
 
 export default function AnnouncementCreateModal() {
   const { activeModal, closeModal } = useModalStore();
+  const { activeClubId } = useAppStore();
+  const createAnnouncement = useAnnouncementStore((state) => state.createAnnouncement);
   const { showToast } = useToastStore();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -14,12 +18,25 @@ export default function AnnouncementCreateModal() {
 
   const isValid = title.trim() && content.trim();
 
-  const handleSubmit = () => {
-    showToast('공지가 등록되었어요! 📢');
-    closeModal();
-    setTitle('');
-    setContent('');
-    setIsPinned(false);
+  const handleSubmit = async () => {
+    if (!isValid) return;
+
+    try {
+      await createAnnouncement({
+        clubId: activeClubId,
+        seasonId: null,
+        title: title.trim(),
+        content: content.trim(),
+        isPinned,
+      });
+      showToast('공지가 등록되었어요!');
+      setTitle('');
+      setContent('');
+      setIsPinned(false);
+      closeModal();
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '공지사항을 등록하지 못했어요.');
+    }
   };
 
   return (
@@ -68,7 +85,7 @@ export default function AnnouncementCreateModal() {
         </label>
 
         <button
-          onClick={handleSubmit}
+          onClick={() => void handleSubmit()}
           disabled={!isValid}
           className={`w-full py-3 rounded-xl font-bold text-sm transition-all duration-150 ${
             isValid

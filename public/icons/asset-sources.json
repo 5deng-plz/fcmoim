@@ -1,0 +1,14 @@
+{
+  "svgrepo-football.svg": {
+    "sourceUrl": "https://www.svgrepo.com/show/164867/football.svg",
+    "sha256": "b6ce7c00b1436975fae66fbd37a500bb1309fdc095db754609049c67128b15ae"
+  },
+  "svgrepo-soccer-player.svg": {
+    "sourceUrl": "https://www.svgrepo.com/show/317465/soccer-player.svg",
+    "sha256": "a9b6a8385243c2f76ec04609b486a497e6746a2f4c78b744ce2a428eb55d51cb"
+  },
+  "svgrepo-soccer-field.svg": {
+    "sourceUrl": "https://www.svgrepo.com/show/137442/soccer-field.svg",
+    "sha256": "e0dfbfe82eb5ecdd8f11347c9550abe17c76525527381e0131425b2e9791f4e4"
+  }
+}

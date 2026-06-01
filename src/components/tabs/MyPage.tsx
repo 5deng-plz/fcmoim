@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { useScheduleStore } from '@/stores/useScheduleStore';
 import { useToastStore } from '@/stores/useToastStore';
 import LockerProfile from '@/components/features/LockerProfile';
+import CardMarket from '@/components/features/CardMarket';
 
 export default function MyPage() {
   const {
@@ -33,8 +34,11 @@ export default function MyPage() {
   return (
     <div className="flex min-h-full flex-col animate-fadeIn pb-2">
       <LockerProfile />
+      <div className="mt-4">
+        <CardMarket />
+      </div>
 
-      <div className="mt-auto flex items-center justify-between gap-3 px-1 pt-6 text-gray-400">
+      <div className="mt-auto flex items-center justify-between gap-3 px-1 pt-6 text-secondary">
         <div className="flex min-w-0 items-center gap-1.5 text-xs font-medium">
           <span className="shrink-0">소속팀</span>
           <div className="relative min-w-0">
@@ -42,13 +46,13 @@ export default function MyPage() {
               value={activeClubId}
               onChange={(event) => void handleClubChange(event.target.value)}
               aria-label="소속팀 선택"
-              className="max-w-[150px] appearance-none truncate bg-transparent py-1 pl-0 pr-4 text-xs font-semibold text-gray-500 outline-none transition-colors hover:text-gray-600 focus:text-gray-700"
+              className="max-w-[150px] appearance-none truncate bg-transparent py-1 pl-0 pr-4 text-xs font-semibold text-secondary outline-none transition-colors hover:text-primary focus:text-primary"
             >
               {availableClubs.length === 0 ? (
-                <option value={activeClubId}>{teamName}</option>
+                <option value={activeClubId} className="bg-surface-card text-primary">{teamName}</option>
               ) : (
                 availableClubs.map((club) => (
-                  <option key={club.clubId} value={club.clubId}>
+                  <option key={club.clubId} value={club.clubId} className="bg-surface-card text-primary">
                     {club.clubName}
                   </option>
                 ))
@@ -56,7 +60,7 @@ export default function MyPage() {
             </select>
             <ChevronDown
               size={12}
-              className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-gray-300"
+              className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-tertiary"
             />
           </div>
         </div>
@@ -66,9 +70,9 @@ export default function MyPage() {
             await signOut();
             setShowMyPage(false);
           }}
-          className="flex items-center gap-1 rounded-full py-1 text-xs font-medium text-gray-400 transition-colors hover:text-gray-600 active:scale-95"
+          className="flex items-center gap-1 rounded-full py-1 text-xs font-medium text-secondary transition-colors hover:text-primary active:scale-95"
         >
-          <LogOut size={12} className="text-gray-300" />
+          <LogOut size={12} className="text-tertiary" />
           로그아웃
         </button>
       </div>

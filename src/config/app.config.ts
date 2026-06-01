@@ -25,6 +25,8 @@ export interface AppConfig {
   supabase: SupabaseConfig;
   vapidKey: string;
   defaultClubId: string;
+  settlementUrl: string;
+  settlementAccountLabel: string;
 }
 
 function parseJsonConfig<T extends object>(value: string | undefined, fallback: T): T {
@@ -60,9 +62,13 @@ const supabasePublicConfig = parseJsonConfig<SupabaseConfig>(
   },
 );
 
+assertSupabaseProfileBoundary(activeProfile, supabasePublicConfig.url);
+
 const defaultClubId =
   process.env.NEXT_PUBLIC_DEFAULT_CLUB_ID ||
   '00000000-0000-0000-0000-000000000001';
+const settlementUrl = process.env.NEXT_PUBLIC_SETTLEMENT_URL || '';
+const settlementAccountLabel = process.env.NEXT_PUBLIC_SETTLEMENT_ACCOUNT || '총무에게 계좌 확인';
 
 const localConfig: AppConfig = {
   profile: 'local',
@@ -76,6 +82,8 @@ const localConfig: AppConfig = {
   supabase: supabasePublicConfig,
   vapidKey: firebasePublicConfig.vapidKey || '',
   defaultClubId,
+  settlementUrl,
+  settlementAccountLabel,
 };
 
 const prodConfig: AppConfig = {
@@ -90,6 +98,8 @@ const prodConfig: AppConfig = {
   supabase: supabasePublicConfig,
   vapidKey: firebasePublicConfig.vapidKey || '',
   defaultClubId,
+  settlementUrl,
+  settlementAccountLabel,
 };
 
 const profiles: Record<AppProfile, AppConfig> = {
@@ -98,3 +108,29 @@ const profiles: Record<AppProfile, AppConfig> = {
 };
 
 export const appConfig = profiles[activeProfile] as AppConfig & Record<string, unknown>;
+
+function assertSupabaseProfileBoundary(profile: AppProfile, supabaseUrl: string) {
+  if (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true' || !supabaseUrl) {
+    return;
+  }
+
+  const isLocalSupabase =
+    supabaseUrl.startsWith('http://127.0.0.1:') ||
+    supabaseUrl.startsWith('http://localhost:') ||
+    supabaseUrl.startsWith('https://127.0.0.1:') ||
+    supabaseUrl.startsWith('https://localhost:');
+
+  if (profile === 'local' && !isLocalSupabase) {
+    throw new Error(
+      '[FC Moim] APP_PROFILE=local requires a local Supabase URL. ' +
+      'Run `npm run dev` after `npm run db:local:start`, or set NEXT_PUBLIC_SUPABASE_URL to http://127.0.0.1:54321.',
+    );
+  }
+
+  if (profile === 'prod' && isLocalSupabase) {
+    throw new Error(
+      '[FC Moim] APP_PROFILE=prod cannot use a localhost Supabase URL. ' +
+      'Set production Supabase environment variables before starting the app.',
+    );
+  }
+}

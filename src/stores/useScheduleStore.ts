@@ -15,8 +15,11 @@ import {
 } from './schedulePollClient';
 import {
   cancelMatch,
+  createMatch,
+  fetchCalendarMatches,
   fetchUpcomingMatches,
   type CancelMatchRequest,
+  type CreateMatchRequest,
   type UpcomingMatch,
 } from './matchClient';
 
@@ -31,14 +34,19 @@ interface ScheduleState {
   upcomingMatches: UpcomingMatch[];
   upcomingMatchesStatus: UpcomingMatchesStatus;
   upcomingMatchesError: string | null;
+  calendarMatches: UpcomingMatch[];
+  calendarMatchesStatus: UpcomingMatchesStatus;
+  calendarMatchesError: string | null;
   setSelectedDate: (date: number) => void;
   setActivePolls: (polls: SchedulePoll[]) => void;
   loadActivePolls: (clubId?: string) => Promise<void>;
   loadUpcomingMatches: (clubId?: string) => Promise<void>;
+  loadCalendarMatches: (input: { clubId?: string; from: string; to: string }) => Promise<void>;
   createPoll: (input: CreateSchedulePollRequest) => Promise<SchedulePoll>;
   submitPollVote: (input: VoteSchedulePollRequest) => Promise<SchedulePoll>;
   cancelPoll: (input: CancelSchedulePollRequest) => Promise<SchedulePoll>;
   promotePoll: (input: PromoteSchedulePollRequest) => Promise<PromoteSchedulePollResponse>;
+  createUpcomingMatch: (input: CreateMatchRequest) => Promise<UpcomingMatch>;
   cancelUpcomingMatch: (input: CancelMatchRequest) => Promise<UpcomingMatch>;
 }
 
@@ -50,6 +58,9 @@ export const useScheduleStore = create<ScheduleState>((set) => ({
   upcomingMatches: [],
   upcomingMatchesStatus: 'idle',
   upcomingMatchesError: null,
+  calendarMatches: [],
+  calendarMatchesStatus: 'idle',
+  calendarMatchesError: null,
   setSelectedDate: (date) => set({ selectedDate: date }),
   setActivePolls: (polls) => set({ activePolls: polls, activePollsStatus: 'ready', activePollsError: null }),
   loadActivePolls: async (clubId) => {
@@ -85,7 +96,7 @@ export const useScheduleStore = create<ScheduleState>((set) => ({
   cancelPoll: async (input) => {
     const poll = await cancelSchedulePoll(input);
     set((state) => ({
-      activePolls: upsertPoll(state.activePolls, poll),
+      activePolls: state.activePolls.filter((candidate) => candidate.id !== poll.id),
       activePollsStatus: 'ready',
       activePollsError: null,
     }));
@@ -94,11 +105,7 @@ export const useScheduleStore = create<ScheduleState>((set) => ({
   promotePoll: async (input) => {
     const result = await promoteSchedulePoll(input);
     set((state) => ({
-      activePolls: state.activePolls.map((poll) => (
-        poll.id === input.pollId
-          ? { ...poll, status: 'promoted', promotedMatchId: result.matchId }
-          : poll
-      )),
+      activePolls: state.activePolls.filter((poll) => poll.id !== input.pollId),
       activePollsStatus: 'ready',
       activePollsError: null,
     }));
@@ -109,19 +116,58 @@ export const useScheduleStore = create<ScheduleState>((set) => ({
 
     try {
       const upcomingMatches = await fetchUpcomingMatches(clubId);
-      set({ upcomingMatches, upcomingMatchesStatus: 'ready', upcomingMatchesError: null });
+      set({
+        upcomingMatches: upcomingMatches.filter(isFutureVisibleMatch),
+        upcomingMatchesStatus: 'ready',
+        upcomingMatchesError: null,
+      });
     } catch (error) {
       const message = getSchedulePollErrorMessage(error, '확정 일정을 불러오지 못했어요.');
       set({ upcomingMatchesStatus: 'error', upcomingMatchesError: message });
       throw error;
     }
   },
+  loadCalendarMatches: async (input) => {
+    set({ calendarMatchesStatus: 'loading', calendarMatchesError: null });
+
+    try {
+      const calendarMatches = await fetchCalendarMatches(input);
+      set({
+        calendarMatches: calendarMatches.filter((match) => match.status !== 'cancelled'),
+        calendarMatchesStatus: 'ready',
+        calendarMatchesError: null,
+      });
+    } catch (error) {
+      const message = getSchedulePollErrorMessage(error, '월간 일정을 불러오지 못했어요.');
+      set({ calendarMatchesStatus: 'error', calendarMatchesError: message });
+      throw error;
+    }
+  },
+  createUpcomingMatch: async (input) => {
+    const match = await createMatch(input);
+    set((state) => ({
+      upcomingMatches: upsertMatch(state.upcomingMatches, match).filter(isFutureVisibleMatch).sort((left, right) => (
+        left.date.localeCompare(right.date) || left.id.localeCompare(right.id)
+      )),
+      calendarMatches: upsertMatch(state.calendarMatches, match).sort((left, right) => (
+        left.date.localeCompare(right.date) || left.id.localeCompare(right.id)
+      )),
+      upcomingMatchesStatus: 'ready',
+      calendarMatchesStatus: 'ready',
+      upcomingMatchesError: null,
+      calendarMatchesError: null,
+    }));
+    return match;
+  },
   cancelUpcomingMatch: async (input) => {
     const match = await cancelMatch(input);
     set((state) => ({
-      upcomingMatches: upsertMatch(state.upcomingMatches, match),
+      upcomingMatches: state.upcomingMatches.filter((candidate) => candidate.id !== match.id),
+      calendarMatches: state.calendarMatches.filter((candidate) => candidate.id !== match.id),
       upcomingMatchesStatus: 'ready',
+      calendarMatchesStatus: 'ready',
       upcomingMatchesError: null,
+      calendarMatchesError: null,
     }));
     return match;
   },
@@ -139,10 +185,12 @@ function upsertPoll(polls: SchedulePoll[], poll: SchedulePoll) {
 function upsertMatch(matches: UpcomingMatch[], match: UpcomingMatch) {
   const existingIndex = matches.findIndex((candidate) => candidate.id === match.id);
   if (existingIndex === -1) {
-    return [match, ...matches].sort((left, right) => left.date.localeCompare(right.date));
+    return [match, ...matches];
   }
 
-  return matches
-    .map((candidate) => (candidate.id === match.id ? match : candidate))
-    .sort((left, right) => left.date.localeCompare(right.date));
+  return matches.map((candidate) => (candidate.id === match.id ? match : candidate));
+}
+
+function isFutureVisibleMatch(match: UpcomingMatch) {
+  return match.status !== 'cancelled' && new Date(match.date).getTime() >= Date.now();
 }

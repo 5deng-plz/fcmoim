@@ -6,13 +6,13 @@ interface BadgeProps {
 }
 
 const variantClasses: Record<string, string> = {
-  green: 'bg-green-100 text-green-700',
-  orange: 'bg-fee-partial/15 text-fee-partial',
-  gray: 'bg-gray-200 text-gray-600',
-  slate: 'bg-slate-200 text-slate-600',
-  red: 'bg-result-loss/10 text-result-loss',
-  yellow: 'bg-award-mvp/15 text-award-mvp',
-  amber: 'bg-stat-bronze text-white',
+  green: 'bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400',
+  orange: 'bg-fee-partial/10 text-fee-partial dark:bg-fee-partial/20 dark:text-fee-partial',
+  gray: 'bg-gray-100 text-gray-600 dark:bg-surface-hover dark:text-secondary',
+  slate: 'bg-slate-100 text-slate-600 dark:bg-surface-hover dark:text-secondary',
+  red: 'bg-result-loss/10 text-result-loss dark:bg-result-loss/20 dark:text-result-loss',
+  yellow: 'bg-award-mvp/10 text-award-mvp dark:bg-award-mvp/20 dark:text-award-mvp',
+  amber: 'bg-stat-bronze text-white dark:bg-stat-bronze/80 dark:text-gray-100',
 };
 
 export default function Badge({

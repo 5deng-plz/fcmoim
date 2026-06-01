@@ -2,21 +2,33 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { CalendarDays, ChevronRight, Eye, Shield, Trophy, Users } from 'lucide-react';
-import FcmoimLogo from '@/components/brand/FcmoimLogo';
+import { CalendarDays, ChevronRight, Shield, Trophy, Users } from 'lucide-react';
+import TeamEmblem from '@/components/brand/TeamEmblem';
+import AttendeeList from '@/components/features/AttendeeList';
+import { getScheduleEventTheme, type ScheduleEventThemeType } from '@/components/features/scheduleEventTheme';
 import { useAppStore } from '@/stores/useAppStore';
-import { useAuthStore } from '@/stores/useAuthStore';
 import {
+  fetchMembershipSnapshot,
   fetchPublicClubDetail,
   fetchPublicClubs,
   type PublicClubDetail,
   type PublicClubSummary,
 } from '@/stores/membershipClient';
+import { useAuthStore } from '@/stores/useAuthStore';
 import { useToastStore } from '@/stores/useToastStore';
 
 export default function GuestDashboard() {
-  const { selectedJoinClubId, setSelectedJoinClubId } = useAppStore();
-  const { signInKakao } = useAuthStore();
+  const {
+    isAuthenticated,
+    clearJoinIntent,
+    selectedJoinClubId,
+    setAuthView,
+    setJoinIntent,
+    setSelectedJoinClubId,
+    setShowJoinForm,
+    setUserStatus,
+  } = useAppStore();
+  const { switchClub } = useAuthStore();
   const { showToast } = useToastStore();
   const [clubs, setClubs] = useState<PublicClubSummary[]>([]);
   const [clubDetail, setClubDetail] = useState<PublicClubDetail | null>(null);
@@ -72,27 +84,45 @@ export default function GuestDashboard() {
   };
 
   const handleJoin = async () => {
-    if (selectedClub) {
-      setSelectedJoinClubId(selectedClub.id);
+    if (!selectedClub) {
+      return;
     }
-    await signInKakao();
+
+    setSelectedJoinClubId(selectedClub.id);
+    if (!isAuthenticated) {
+      setJoinIntent({ clubId: selectedClub.id });
+      setShowJoinForm(false);
+      setAuthView('login');
+      showToast('입단을 위해 로그인이 먼저 필요합니다. 로그인해주세요.');
+      return;
+    }
+
+    try {
+      const snapshot = await fetchMembershipSnapshot(selectedClub.id);
+      if (snapshot.membershipState === 'new') {
+        setJoinIntent({ clubId: selectedClub.id });
+        setUserStatus('guest');
+        setShowJoinForm(true);
+        return;
+      }
+      if (snapshot.membershipState === 'approved') {
+        await switchClub(selectedClub.id);
+        clearJoinIntent();
+        showToast('이미 이 팀의 멤버입니다.');
+        return;
+      }
+
+      setJoinIntent({ clubId: selectedClub.id });
+      setUserStatus(snapshot.membershipState);
+      setShowJoinForm(true);
+    } catch (error) {
+      console.error('[FC Moim] Membership snapshot failed:', error);
+      showToast(error instanceof Error ? error.message : '멤버십 상태를 확인하지 못했습니다.');
+    }
   };
 
   return (
     <div className="flex-1 flex flex-col overflow-y-auto no-scrollbar">
-      <div className="sticky top-0 z-10 bg-fee-partial/10 border-b border-fee-partial/20 px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Eye size={14} className="text-fee-partial" />
-          <span className="text-xs font-bold text-fee-partial">팀 둘러보기</span>
-        </div>
-        <button
-          onClick={() => void signInKakao()}
-          className="text-[11px] font-bold text-green-700 bg-green-100 px-3 py-1 rounded-full hover:bg-green-200 active:scale-95 transition-all"
-        >
-          카카오로 시작하기
-        </button>
-      </div>
-
       <div className="p-4 space-y-5 pb-24">
         <section className="space-y-3">
           <div className="flex items-center justify-between">
@@ -111,7 +141,7 @@ export default function GuestDashboard() {
             >
               <div className="flex items-center gap-3">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-green-50">
-                  <FcmoimLogo size={28} />
+                  <TeamEmblem teamName={club.name} size={28} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-black text-gray-900">{club.name}</p>
@@ -123,6 +153,14 @@ export default function GuestDashboard() {
               </div>
             </button>
           ))}
+          {!isLoading && clubs.length === 0 ? (
+            <div className="rounded-xl border border-gray-100 bg-white px-4 py-10 text-center">
+              <p className="text-sm font-black text-gray-900">공개된 팀이 아직 없어요</p>
+              <p className="mt-1 text-xs font-medium text-gray-400">
+                입단신청은 공개 팀이 등록된 뒤 시작할 수 있습니다.
+              </p>
+            </div>
+          ) : null}
         </section>
 
         {isLoading ? (
@@ -131,7 +169,7 @@ export default function GuestDashboard() {
           <section className="space-y-4">
             <div className="text-center py-3">
               <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-green-50">
-                <FcmoimLogo size={38} />
+                <TeamEmblem teamName={clubDetail.name} size={38} />
               </div>
               <h1 className="mt-3 text-xl font-black text-gray-900">{clubDetail.name}</h1>
               <p className="mt-1 text-xs font-medium leading-relaxed text-gray-500">
@@ -140,31 +178,23 @@ export default function GuestDashboard() {
             </div>
 
             <div className="grid grid-cols-3 gap-2">
-              <Metric icon={<Users size={16} />} label="승인 멤버" value={`${clubDetail.memberCount}`} />
-              <Metric icon={<Trophy size={16} />} label="시즌" value={clubDetail.activeSeason?.name || '-'} />
-              <Metric icon={<CalendarDays size={16} />} label="예정 경기" value={`${clubDetail.upcomingMatchCount}`} />
+              <Metric icon={<Users size={16} />} label="현재 멤버" value={`${clubDetail.memberCount}`} />
+              <Metric icon={<Trophy size={16} />} label="시즌 경기" value={`${clubDetail.recentMatchCount}`} />
+              <Metric icon={<CalendarDays size={16} />} label="최근 경기" value={formatRecentMatchDate(clubDetail.recentMatches[0]?.date)} />
             </div>
 
             <div className="rounded-xl border border-gray-100 bg-white p-4">
               <div className="mb-3 flex items-center gap-2">
                 <Shield size={16} className="text-green-600" />
-                <h3 className="text-sm font-black text-gray-900">공개 경기 요약</h3>
+                <h3 className="text-sm font-black text-gray-900">최근 경기 요약</h3>
               </div>
               <div className="space-y-2">
-                {[...clubDetail.upcomingMatches, ...clubDetail.recentMatches].slice(0, 3).map((match) => (
-                  <div key={match.id} className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-black text-gray-800">{match.title}</p>
-                      <p className="text-[11px] font-medium text-gray-400">{match.location}</p>
-                    </div>
-                    <span className="text-[11px] font-bold text-gray-500">
-                      {new Date(match.date).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
-                    </span>
-                  </div>
+                {clubDetail.recentMatches.slice(0, 3).map((match) => (
+                  <RecentMatchSummaryCard key={match.id} match={match} />
                 ))}
-                {clubDetail.upcomingMatches.length + clubDetail.recentMatches.length === 0 ? (
+                {clubDetail.recentMatches.length === 0 ? (
                   <p className="rounded-lg bg-gray-50 px-3 py-4 text-center text-xs font-bold text-gray-400">
-                    공개 가능한 경기 일정이 아직 없어요
+                    공개 가능한 최근 경기가 아직 없어요
                   </p>
                 ) : null}
               </div>
@@ -173,16 +203,65 @@ export default function GuestDashboard() {
         ) : null}
       </div>
 
+      {selectedClub ? (
       <div className="sticky bottom-0 p-4 bg-gradient-to-t from-gray-50 via-gray-50 to-transparent pt-8">
         <button
           onClick={() => void handleJoin()}
           className="w-full bg-gray-900 text-white font-bold py-3.5 rounded-xl text-sm hover:bg-gray-800 active:scale-[0.98] transition-all shadow-lg"
         >
-          입단신청
+          입단신청 시작
         </button>
       </div>
+      ) : null}
     </div>
   );
+}
+
+function RecentMatchSummaryCard({ match }: { match: PublicClubDetail['recentMatches'][number] }) {
+  const theme = getScheduleEventTheme(getPublicMatchThemeType(match.type));
+
+  return (
+    <div className={`rounded-lg border px-3 py-2 ${theme.cardClassName}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-xs font-black text-gray-800">{match.title}</p>
+          <p className="text-[11px] font-medium text-gray-500">{match.location}</p>
+        </div>
+        <div className="shrink-0 text-right">
+          <span className="block text-[11px] font-bold text-gray-500">
+            {new Date(match.date).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+          </span>
+          <span className={`mt-0.5 block text-[11px] font-black ${theme.comment.text}`}>
+            {formatMatchResult(match)}
+          </span>
+        </div>
+      </div>
+      <AttendeeList count={match.attendeeCount} total={match.attendeeTotal} />
+    </div>
+  );
+}
+
+function getPublicMatchThemeType(type: string): ScheduleEventThemeType {
+  if (type === 'match' || type === 'vote_match' || type === 'training' || type === 'seminar' || type === 'etc') {
+    return type;
+  }
+
+  return 'etc';
+}
+
+function formatRecentMatchDate(date?: string) {
+  if (!date) return '-';
+  return new Date(date).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+}
+
+function formatMatchResult(match: PublicClubDetail['recentMatches'][number]) {
+  if (match.ourScore !== null && match.oppScore !== null) {
+    return `${match.ourScore} : ${match.oppScore}`;
+  }
+
+  if (match.status === 'finished') return '결과 대기';
+  if (match.status === 'locker_room') return '라커룸';
+  return '확정';
 }
 
 function Metric({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {

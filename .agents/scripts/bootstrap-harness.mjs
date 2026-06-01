@@ -21,34 +21,33 @@ Record only durable decisions that future sessions must know.
 `);
 
 writeIfMissing(contextPath, JSON.stringify({
-  schemaVersion: '1.0.0',
+  schemaVersion: '2.0.0',
   projectName: path.basename(root),
+  updateVersion: 0,
   updatedAt: new Date().toISOString(),
-  updatedBy: 'main-orchestrator',
+  updatedBy: 'orchestrator',
   currentPhase: 'initialized',
-  agents: {},
   activeWork: {
-    agentId: null,
     taskId: null,
     status: 'idle',
-    startedAt: null,
     baselineCommit: null,
     changedFiles: [],
     changedSurfaces: [],
     allowedPaths: [],
     evidence: {},
-    reviewVerdict: null,
-    blockers: [],
-    guardResults: {}
+    reviewStatus: null,
+    loopCounters: {
+      reviewRounds: 0,
+      guardRetries: 0
+    }
   },
   workstreams: [],
-  handoffs: [],
   blockers: [],
   nextActions: []
 }, null, 2) + '\n');
 
 writeIfMissing(rulesPath, JSON.stringify({
-  schemaVersion: '1.0.0',
+  schemaVersion: '2.0.0',
   project: {
     name: path.basename(root),
     docs: {
@@ -61,27 +60,20 @@ writeIfMissing(rulesPath, JSON.stringify({
   surfaces: [],
   commands: {
     baseline: 'node .agents/scripts/validate-harness.mjs',
-    ci: 'node .agents/scripts/validate-harness.mjs',
-    harnessTest: 'node .agents/scripts/test-harness.mjs',
     preCommit: 'node .agents/scripts/validate-harness.mjs',
-    prePush: 'node .agents/scripts/validate-harness.mjs',
     verify: 'node .agents/scripts/validate-harness.mjs'
   },
   guardProfiles: {
-    preCommit: { steps: ['validateHarness', 'validateProject', 'guardHooks', 'guardDiffStaged', 'projectPreCommit'] },
-    prePush: { steps: ['projectPrePush', 'guardEvidence', 'guardReview'] },
-    ci: { steps: ['validateHarness', 'validateProject', 'harnessTest', 'projectCi'] },
-    handoff: { steps: ['guardDiff', 'guardEvidence', 'guardReview'] }
-  },
-  hookPolicy: { requiredPath: '.agents/hooks' },
-  bypassPolicy: {
-    allowedProfiles: ['preCommit'],
-    blockedProfiles: ['prePush', 'ci', 'handoff'],
-    bypassableSteps: ['guardDiffStaged'],
-    requiredReasonEnv: 'HARNESS_BYPASS_REASON'
+    preCommit: { steps: ['validateHarness', 'guardDesignStaged', 'projectPreCommit'] },
+    verify: { steps: ['validateHarness', 'guardDesign', 'guardDiff', 'projectVerify'] }
   },
   evidencePolicy: {},
   reviewPolicy: { required: true, readyStatus: 'ready' },
+  loopPolicy: {
+    maxGuardRetries: 3,
+    maxReviewRounds: 3,
+    escalationAction: 'Stop work and report current state, failure analysis, and next step suggestions'
+  },
   harnessPurity: { forbiddenTokens: [] }
 }, null, 2) + '\n');
 

@@ -105,8 +105,7 @@ export function isE2ETestAuthBypassEnabled() {
   return (
     process.env.NODE_ENV !== 'production' &&
     process.env.APP_PROFILE !== 'prod' &&
-    explicitFlag !== 'false' &&
-    (process.env.NODE_ENV === 'development' || explicitFlag === 'true')
+    explicitFlag === 'true'
   );
 }
 

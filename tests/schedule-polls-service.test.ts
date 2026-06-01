@@ -59,10 +59,14 @@ async function loadService(repositories: {
   memberships: {
     findByAccountAndClub: ReturnType<typeof vi.fn>;
   };
+  seasons: {
+    findActiveByClub: ReturnType<typeof vi.fn>;
+  };
   polls: {
     create: ReturnType<typeof vi.fn>;
     listActive: ReturnType<typeof vi.fn>;
     findById: ReturnType<typeof vi.fn>;
+    findActiveDateConflicts: ReturnType<typeof vi.fn>;
     replaceVote: ReturnType<typeof vi.fn>;
     cancel: ReturnType<typeof vi.fn>;
     promoteToMatch: ReturnType<typeof vi.fn>;
@@ -78,6 +82,9 @@ async function loadService(repositories: {
 function createRepositories(options?: {
   membership?: Membership | null;
   pollStatus?: 'open' | 'closed' | 'promoted' | 'cancelled';
+  pollSeasonId?: string | null;
+  activeSeasonId?: string | null;
+  activeDateConflicts?: Array<{ date: string; source: 'schedule' | 'poll' }>;
 }) {
   const membership = options?.membership ?? {
     id: 'operator-membership',
@@ -90,7 +97,7 @@ function createRepositories(options?: {
   const poll = {
     id: 'poll-1',
     clubId: 'club-1',
-    seasonId: 'season-1',
+    seasonId: options?.pollSeasonId === undefined ? 'season-1' : options.pollSeasonId,
     title: '3월 친선 경기 일정 투표',
     status: options?.pollStatus ?? 'open',
     commonTime: '18:00',
@@ -105,7 +112,11 @@ function createRepositories(options?: {
       { id: 'option-1', pollId: 'poll-1', optionDate: '2026-03-21', sortOrder: 0 },
       { id: 'option-2', pollId: 'poll-1', optionDate: '2026-03-22', sortOrder: 1 },
     ],
-    votes: [],
+    votes: [
+      { id: 'vote-red', pollId: 'poll-1', optionId: 'option-1', membershipId: 'member-red', isAvailable: true },
+      { id: 'vote-blue', pollId: 'poll-1', optionId: 'option-1', membershipId: 'member-blue', isAvailable: true },
+      { id: 'vote-away', pollId: 'poll-1', optionId: 'option-2', membershipId: 'member-away', isAvailable: true },
+    ],
   };
 
   return {
@@ -118,6 +129,11 @@ function createRepositories(options?: {
         return membership;
       }),
     },
+    seasons: {
+      findActiveByClub: vi.fn(async () => (
+        options?.activeSeasonId === null ? null : { id: options?.activeSeasonId ?? 'season-1' }
+      )),
+    },
     polls: {
       create: vi.fn(async (input) => ({
         ...poll,
@@ -127,6 +143,7 @@ function createRepositories(options?: {
       })),
       listActive: vi.fn(async () => [poll]),
       findById: vi.fn(async () => poll),
+      findActiveDateConflicts: vi.fn(async () => options?.activeDateConflicts ?? []),
       replaceVote: vi.fn(async (input) => ({
         ...poll,
         votes: input.selectedOptionIds.map((optionId: string) => ({
@@ -192,9 +209,96 @@ describe('v1.0 schedule poll service', () => {
       createdByMembershipId: 'operator-membership',
       optionDates: ['2026-03-21', '2026-03-22'],
     });
+    expect(repositories.polls.findActiveDateConflicts).toHaveBeenCalledWith({
+      clubId: 'club-1',
+      optionDates: ['2026-03-21', '2026-03-22'],
+    });
     expect(repositories.polls.create).not.toHaveBeenCalledWith(
       expect.objectContaining({ createdByMembershipId: 'spoofed-auth-user' }),
     );
+  });
+
+  it('rejects poll creation when an option date already has an open poll option', async () => {
+    const repositories = createRepositories({
+      activeDateConflicts: [{ date: '2026-03-21', source: 'poll' }],
+    });
+    const service = await loadService(repositories);
+
+    await expect(
+      service.createPoll({
+        auth: {
+          user: {
+            id: 'current-auth-user',
+            email: 'operator@example.com',
+          },
+        },
+        clubId: 'club-1',
+        title: '3월 일정 투표',
+        commonTime: '18:00',
+        location: '서울 용산 풋살장',
+        optionDates: ['2026-03-21', '2026-03-22'],
+      }),
+    ).rejects.toMatchObject({
+      code: 'conflict',
+      message: '이미 일정 또는 투표가 있는 날짜예요: 3월 21일',
+    });
+
+    expect(repositories.polls.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects poll creation when an option date already has a non-cancelled schedule', async () => {
+    const repositories = createRepositories({
+      activeDateConflicts: [{ date: '2026-03-22', source: 'schedule' }],
+    });
+    const service = await loadService(repositories);
+
+    await expect(
+      service.createPoll({
+        auth: {
+          user: {
+            id: 'current-auth-user',
+            email: 'operator@example.com',
+          },
+        },
+        clubId: 'club-1',
+        title: '3월 일정 투표',
+        commonTime: '18:00',
+        location: '서울 용산 풋살장',
+        optionDates: ['2026-03-21', '2026-03-22'],
+      }),
+    ).rejects.toMatchObject({
+      code: 'conflict',
+      message: '이미 일정 또는 투표가 있는 날짜예요: 3월 22일',
+    });
+
+    expect(repositories.polls.create).not.toHaveBeenCalled();
+  });
+
+  it('allows a poll with one option date because absence is an explicit response', async () => {
+    const repositories = createRepositories();
+    const service = await loadService(repositories);
+
+    await expect(
+      service.createPoll({
+        auth: {
+          user: {
+            id: 'current-auth-user',
+            email: 'operator@example.com',
+          },
+        },
+        clubId: 'club-1',
+        title: '단일 후보 투표',
+        commonTime: '18:00',
+        location: '서울 용산 풋살장',
+        optionDates: ['2026-03-21'],
+      }),
+    ).resolves.toMatchObject({
+      id: 'created-poll',
+    });
+
+    expect(repositories.polls.create).toHaveBeenCalledWith(expect.objectContaining({
+      optionDates: ['2026-03-21'],
+    }));
   });
 
   it.each([
@@ -280,6 +384,41 @@ describe('v1.0 schedule poll service', () => {
       pollId: 'poll-1',
       membershipId: 'member-membership',
       selectedOptionIds: ['option-1', 'option-2'],
+    });
+  });
+
+  it('allows an approved member to submit explicit absence with no selected dates', async () => {
+    const repositories = createRepositories({
+      membership: {
+        id: 'member-membership',
+        accountId: 'current-auth-user',
+        clubId: 'club-1',
+        role: 'member',
+        status: 'approved',
+      },
+    });
+    const service = await loadService(repositories);
+
+    await expect(
+      service.votePoll({
+        auth: {
+          user: {
+            id: 'current-auth-user',
+            email: 'member@example.com',
+          },
+        },
+        clubId: 'club-1',
+        pollId: 'poll-1',
+        selectedOptionIds: [],
+      }),
+    ).resolves.toMatchObject({
+      id: 'poll-1',
+    });
+
+    expect(repositories.polls.replaceVote).toHaveBeenCalledWith({
+      pollId: 'poll-1',
+      membershipId: 'member-membership',
+      selectedOptionIds: [],
     });
   });
 
@@ -379,8 +518,62 @@ describe('v1.0 schedule poll service', () => {
     expect(repositories.polls.promoteToMatch).toHaveBeenCalledWith({
       pollId: 'poll-1',
       optionId: 'option-1',
+      seasonId: 'season-1',
       promotedByMembershipId: 'operator-membership',
     });
+  });
+
+  it('uses the active season when a poll without season is promoted', async () => {
+    const repositories = createRepositories({ pollSeasonId: null, activeSeasonId: 'active-season' });
+    const service = await loadService(repositories);
+
+    await expect(
+      service.promotePoll({
+        auth: {
+          user: {
+            id: 'current-auth-user',
+            email: 'operator@example.com',
+          },
+        },
+        clubId: 'club-1',
+        pollId: 'poll-1',
+        optionId: 'option-1',
+      }),
+    ).resolves.toEqual({
+      pollId: 'poll-1',
+      matchId: 'match-created-from-poll',
+    });
+
+    expect(repositories.seasons.findActiveByClub).toHaveBeenCalledWith('club-1');
+    expect(repositories.polls.promoteToMatch).toHaveBeenCalledWith({
+      pollId: 'poll-1',
+      optionId: 'option-1',
+      seasonId: 'active-season',
+      promotedByMembershipId: 'operator-membership',
+    });
+  });
+
+  it('returns a Korean error when no active season exists for promotion', async () => {
+    const repositories = createRepositories({ pollSeasonId: null, activeSeasonId: null });
+    const service = await loadService(repositories);
+
+    await expect(
+      service.promotePoll({
+        auth: {
+          user: {
+            id: 'current-auth-user',
+            email: 'operator@example.com',
+          },
+        },
+        clubId: 'club-1',
+        pollId: 'poll-1',
+        optionId: 'option-1',
+      }),
+    ).rejects.toMatchObject({
+      code: 'bad_request',
+      message: '활성 시즌이 없어 확정 일정을 만들 수 없어요.',
+    });
+    expect(repositories.polls.promoteToMatch).not.toHaveBeenCalled();
   });
 
   it('allows an approved operator to cancel an open poll with a trimmed reason', async () => {

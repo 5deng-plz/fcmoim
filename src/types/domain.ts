@@ -1,6 +1,6 @@
 export type MembershipRole = 'admin' | 'operator' | 'member';
 
-export type MembershipStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
+export type MembershipStatus = 'pending' | 'approved' | 'rejected' | 'suspended' | 'withdrawn';
 
 export type MembershipState = 'new' | MembershipStatus;
 
@@ -9,12 +9,12 @@ export type PositionCode = 'FW' | 'MF' | 'DF';
 export type PreferredFootCode = 'left' | 'right' | 'both';
 
 export type MembershipStats = {
-  speed: number;
-  shooting: number;
-  passing: number;
+  attack: number;
   defense: number;
-  physical: number;
-  dribble: number;
+  stamina: number;
+  mentality: number;
+  speed: number;
+  manner: number;
 };
 
 export type SchedulePollStatus = 'open' | 'closed' | 'promoted' | 'cancelled';
@@ -49,6 +49,8 @@ export type PublicMatchSummaryRow = {
   status: MatchStatus;
   ourScore: number | null;
   oppScore: number | null;
+  attendeeCount: number;
+  attendeeTotal: number;
 };
 
 export type PublicSeasonSummaryRow = {
@@ -64,6 +66,7 @@ export type PublicClubSummaryRow = {
   slug: string;
   description: string | null;
   logoUrl: string | null;
+  isPublic: boolean;
   memberCount: number;
   activeSeason: PublicSeasonSummaryRow | null;
   recentMatchCount: number;
@@ -86,6 +89,7 @@ export type TeamMembershipRow = {
   heightCm: number | null;
   weightKg: number | null;
   birthDate: string | null;
+  residence: string | null;
   photoUrl: string | null;
   ovr: number;
   stats: MembershipStats;
@@ -151,10 +155,13 @@ export type MatchRow = {
   ourScore: number | null;
   oppScore: number | null;
   tacticsCompleted: boolean;
+  redLeaderConfirmed: boolean;
+  blueLeaderConfirmed: boolean;
   memo: string | null;
   createdByMembershipId: string | null;
   cancellationReason: string | null;
   cancelledAt: string | null;
+  updatedAt: string;
 };
 
 export type MatchLineupEntryRow = {
@@ -164,10 +171,86 @@ export type MatchLineupEntryRow = {
   teamNumber: MatchLineupTeamNumber;
   isLeader: boolean;
   position: PositionCode;
+  formationSlot: number | null;
   playerName: string;
   playerPosition: PositionCode | string | null;
   playerOvr: number;
   playerPhotoUrl: string | null;
+  playerMatchPoints: number;
+};
+
+export type MatchAttendeeRow = {
+  matchId: string;
+  membershipId: string;
+  status: 'attend';
+  playerName: string;
+  playerOvr: number;
+  playerPhotoUrl: string | null;
+  matchPoints: number;
+};
+
+export type EventCommentTargetType = 'match' | 'schedule_poll_option';
+
+export type EventCommentRow = {
+  id: string;
+  targetType: EventCommentTargetType;
+  targetId: string;
+  membershipId: string;
+  authorName: string;
+  content: string;
+  createdAt: string;
+};
+
+export type AnnouncementRow = {
+  id: string;
+  clubId: string;
+  seasonId: string | null;
+  title: string;
+  content: string;
+  authorMembershipId: string | null;
+  isPinned: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RecordsRankingRow = {
+  membershipId: string;
+  nickname: string;
+  photoUrl: string | null;
+  ovr: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  winRate: number;
+  leaguePoints: number;
+  goals: number;
+  assists: number;
+  momCount: number;
+  appearances: number;
+};
+
+export type RecordsLeader = {
+  membershipId: string;
+  nickname: string;
+  value: number;
+} | null;
+
+export type RecordsSeasonSummaryRow = {
+  totalMatches: number;
+  topVenue: {
+    location: string;
+    count: number;
+  } | null;
+  topAppearance: RecordsLeader;
+  topGoals: RecordsLeader;
+  topAssists: RecordsLeader;
+  topMom: RecordsLeader;
+};
+
+export type RecordsSeasonSummaryResponse = {
+  seasonId: string | null;
+  rankingRows: RecordsRankingRow[];
+  seasonSummary: RecordsSeasonSummaryRow;
 };
 
 export type AuthContext = {
@@ -185,6 +268,9 @@ export type JoinProfileInput = {
   birthDate?: string | null;
   photoUrl?: string | null;
   preferredFoot?: PreferredFootCode | null;
+  residence?: string | null;
+  stats?: MembershipStats | null;
+  ovr?: number | null;
 };
 
 export type NormalizedJoinProfile = {
@@ -193,8 +279,21 @@ export type NormalizedJoinProfile = {
   heightCm: number | null;
   weightKg: number | null;
   birthDate: string | null;
+  residence: string | null;
   photoUrl: string | null;
   preferredFoot: PreferredFootCode | null;
+  stats?: MembershipStats | null;
+  ovr?: number | null;
+};
+
+export type MembershipProfilePatch = {
+  nickname?: string | null;
+  heightCm?: number | null;
+  weightKg?: number | null;
+  birthDate?: string | null;
+  residence?: string | null;
+  photoUrl?: string | null;
+  preferredFoot?: PreferredFootCode | null;
 };
 
 export type ApprovedMemberAction =

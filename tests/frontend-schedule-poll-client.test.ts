@@ -111,6 +111,29 @@ describe('frontend schedule poll API client', () => {
     expect(body).not.toHaveProperty('authUid');
   });
 
+  it('posts explicit absence votes as an empty selected option list', async () => {
+    const fetchMock = vi.fn(async () => (
+      new Response(JSON.stringify({ ...apiPoll, votes: [] }), { status: 200 })
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await voteSchedulePoll({
+      clubId: 'club-1',
+      pollId: 'poll-1',
+      selectedOptionIds: [],
+    });
+
+    const requestInit = (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1];
+    const body = JSON.parse(requestInit.body as string);
+
+    expect(body).toEqual({
+      clubId: 'club-1',
+      pollId: 'poll-1',
+      selectedOptionIds: [],
+    });
+  });
+
+
   it('posts cancellation reasons without client authUid', async () => {
     const fetchMock = vi.fn(async () => (
       new Response(JSON.stringify({

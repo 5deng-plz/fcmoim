@@ -1,15 +1,20 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { AppError } from '../types/api';
-import { DEFAULT_STATS, type UserStats } from '../types';
+import type { UserStats } from '../types';
+import { normalizeUserStats } from '../utils/stats';
 import { createPrivilegedSupabaseClient } from '../lib/supabase-server';
 import type {
   AccountRow,
+  AnnouncementRow,
   ClubMembershipSummaryRow,
+  EventCommentRow,
+  EventCommentTargetType,
   MatchEventType,
   MatchLineupEntryRow,
   MatchLineupTeamNumber,
   MatchRow,
   MatchStatus,
+  MembershipProfilePatch,
   NormalizedJoinProfile,
   PendingMembershipReviewRow,
   PublicClubDetailRow,
@@ -22,10 +27,14 @@ import type {
   SchedulePollVoteRow,
   TeamMembershipRow,
 } from '../types/domain';
+import type { AnnouncementRepositories } from './announcements';
 import type { AccountMembershipRepositories } from './account-membership';
+import type { ClubAdminRepositories } from './club-admin';
+import type { CommentRepositories } from './comments';
 import type { MatchResultRepositories } from './match-results';
 import type { MatchRepositories } from './matches';
 import type { PublicClubRepositories } from './public-clubs';
+import type { RecordsRepositories } from './records';
 import type { SchedulePollRepositories } from './schedule-polls';
 
 type MembershipDbRow = {
@@ -39,6 +48,7 @@ type MembershipDbRow = {
   height: number | null;
   weight: number | null;
   birth: string | null;
+  residence: string | null;
   photo_url: string | null;
   ovr: number;
   stats: unknown;
@@ -80,6 +90,7 @@ type PublicClubDbRow = {
   slug: string;
   description: string | null;
   logo_url: string | null;
+  is_public?: boolean;
 };
 
 type PublicSeasonDbRow = {
@@ -104,6 +115,10 @@ type PublicMatchDbRow = {
 
 type PublicMembershipCountDbRow = {
   club_id: string;
+};
+
+type PublicAttendanceDbRow = {
+  match_id: string;
 };
 
 type SchedulePollMembershipDbRow = {
@@ -146,6 +161,45 @@ type SchedulePollDbRow = {
   schedule_poll_votes?: SchedulePollVoteDbRow[] | null;
 };
 
+type SchedulePollDateConflictDbRow = {
+  option_date: string;
+};
+
+type ScheduleMatchDateConflictDbRow = {
+  date: string;
+};
+
+type AnnouncementMembershipDbRow = {
+  id: string;
+  club_id: string;
+  role: TeamMembershipRow['role'];
+  status: TeamMembershipRow['status'];
+};
+
+type AnnouncementDbRow = {
+  id: string;
+  club_id: string;
+  season_id: string | null;
+  title: string;
+  content: string;
+  author_membership_id: string | null;
+  is_pinned: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+type RecordsAttendanceDbRow = {
+  match_id: string;
+  membership_id: string;
+};
+
+type RecordsPlayerStatDbRow = {
+  membership_id: string;
+  goals: number;
+  assists: number;
+  is_mom: boolean;
+};
+
 type MatchMembershipDbRow = {
   id: string;
   club_id: string;
@@ -166,10 +220,13 @@ type MatchDbRow = {
   our_score: number | null;
   opp_score: number | null;
   tactics_completed: boolean;
+  red_leader_confirmed: boolean;
+  blue_leader_confirmed: boolean;
   memo: string | null;
   created_by: string | null;
   cancellation_reason: string | null;
   cancelled_at: string | null;
+  updated_at: string;
 };
 
 type MatchTeamDbRow = {
@@ -179,11 +236,37 @@ type MatchTeamDbRow = {
   team_number: MatchLineupTeamNumber;
   is_leader: boolean;
   position: TeamMembershipRow['position'];
+  formation_slot: number | null;
   team_memberships: {
     profile_name: string;
     main_position: TeamMembershipRow['position'];
     photo_url: string | null;
     ovr: number;
+    match_points: number;
+  } | null;
+};
+
+type MatchAttendeeDbRow = {
+  match_id: string;
+  membership_id: string;
+  status: 'attend';
+  team_memberships: {
+    profile_name: string;
+    photo_url: string | null;
+    ovr: number;
+    match_points: number;
+  } | null;
+};
+
+type EventCommentDbRow = {
+  id: string;
+  target_type: EventCommentTargetType;
+  target_id: string;
+  membership_id: string;
+  content: string;
+  created_at: string;
+  team_memberships: {
+    profile_name: string;
   } | null;
 };
 
@@ -335,15 +418,22 @@ export function createSupabaseAccountMembershipRepositories(
         return mapMembership(data);
       },
       async updatePhoto(input) {
+        return this.updateProfile({
+          membershipId: input.membershipId,
+          profile: { photoUrl: input.photoUrl },
+        });
+      },
+      async updateProfile(input) {
+        const payload = toMembershipProfilePatch(input.profile);
         const { data, error } = await supabase
           .from('team_memberships')
-          .update({ photo_url: input.photoUrl })
+          .update(payload)
           .eq('id', input.membershipId)
           .select(MEMBERSHIP_SELECT)
           .single<MembershipDbRow>();
 
         if (error) {
-          throw new AppError('internal_error', 'Failed to update membership photo.', { cause: error });
+          throw new AppError('internal_error', 'Failed to update membership profile.', { cause: error });
         }
 
         return mapMembership(data);
@@ -359,11 +449,7 @@ export function createSupabasePublicClubRepositories(
   return {
     clubs: {
       async listPublic() {
-        const { data, error } = await supabase
-          .from('clubs')
-          .select('id, name, slug, description, logo_url')
-          .order('name', { ascending: true })
-          .returns<PublicClubDbRow[]>();
+        const { data, error } = await selectPublicClubs(supabase);
 
         if (error) {
           throw new AppError('internal_error', 'Failed to fetch public clubs.', { cause: error });
@@ -376,11 +462,7 @@ export function createSupabasePublicClubRepositories(
       },
 
       async findPublicDetail(clubId) {
-        const { data, error } = await supabase
-          .from('clubs')
-          .select('id, name, slug, description, logo_url')
-          .eq('id', clubId)
-          .maybeSingle<PublicClubDbRow>();
+        const { data, error } = await selectPublicClubById(supabase, clubId);
 
         if (error) {
           throw new AppError('internal_error', 'Failed to fetch public club.', { cause: error });
@@ -391,9 +473,10 @@ export function createSupabasePublicClubRepositories(
 
         const privilegedSupabase = getPrivilegedClient();
         const aggregates = await fetchPublicClubAggregates(privilegedSupabase, [clubId]);
+        const memberCount = aggregates.memberCounts.get(clubId) ?? 0;
         const [recentMatches, upcomingMatches] = await Promise.all([
-          fetchPublicMatches(privilegedSupabase, clubId, 'recent'),
-          fetchPublicMatches(privilegedSupabase, clubId, 'upcoming'),
+          fetchPublicMatches(privilegedSupabase, clubId, 'recent', memberCount),
+          fetchPublicMatches(privilegedSupabase, clubId, 'upcoming', memberCount),
         ]);
 
         return {
@@ -401,6 +484,72 @@ export function createSupabasePublicClubRepositories(
           recentMatches,
           upcomingMatches,
         } satisfies PublicClubDetailRow;
+      },
+    },
+  };
+}
+
+export function createSupabaseClubAdminRepositories(
+  supabase: SupabaseClient,
+): ClubAdminRepositories {
+  return {
+    memberships: {
+      async findByAccountAndClub(accountId, clubId) {
+        const { data, error } = await supabase
+          .from('team_memberships')
+          .select('role, status')
+          .eq('account_id', accountId)
+          .eq('club_id', clubId)
+          .maybeSingle<Pick<TeamMembershipRow, 'role' | 'status'>>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch membership.', { cause: error });
+        }
+
+        return data;
+      },
+    },
+    clubs: {
+      async findSettings(clubId) {
+        const { data, error } = await supabase
+          .from('clubs')
+          .select('id, name, slug, description, logo_url, is_public')
+          .eq('id', clubId)
+          .maybeSingle<PublicClubDbRow>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch club settings.', { cause: error });
+        }
+        if (!data) return null;
+
+        return mapPublicClubSummary(data, {
+          memberCounts: new Map(),
+          activeSeasons: new Map(),
+          recentMatchCounts: new Map(),
+          upcomingMatchCounts: new Map(),
+        });
+      },
+      async updateSettings(input) {
+        const { data, error } = await supabase
+          .from('clubs')
+          .update({
+            description: input.description,
+            is_public: input.isPublic,
+          })
+          .eq('id', input.clubId)
+          .select('id, name, slug, description, logo_url, is_public')
+          .single<PublicClubDbRow>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to update club settings.', { cause: error });
+        }
+
+        return mapPublicClubSummary(data, {
+          memberCounts: new Map(),
+          activeSeasons: new Map(),
+          recentMatchCounts: new Map(),
+          upcomingMatchCounts: new Map(),
+        });
       },
     },
   };
@@ -478,6 +627,24 @@ export function createSupabaseSchedulePollRepositories(
           : null;
       },
     },
+    seasons: {
+      async findActiveByClub(clubId) {
+        const { data, error } = await supabase
+          .from('seasons')
+          .select('id')
+          .eq('club_id', clubId)
+          .eq('is_active', true)
+          .order('start_date', { ascending: false })
+          .limit(1)
+          .maybeSingle<{ id: string }>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch active season.', { cause: error });
+        }
+
+        return data;
+      },
+    },
     polls: {
       async create(input) {
         const { data, error } = await supabase
@@ -522,7 +689,7 @@ export function createSupabaseSchedulePollRepositories(
           .from('schedule_polls')
           .select(SCHEDULE_POLL_SELECT)
           .eq('club_id', clubId)
-          .in('status', ['open', 'cancelled'])
+          .eq('status', 'open')
           .order('created_at', { ascending: false })
           .returns<SchedulePollDbRow[]>();
 
@@ -547,6 +714,56 @@ export function createSupabaseSchedulePollRepositories(
         return data ? mapSchedulePoll(data) : null;
       },
 
+      async findActiveDateConflicts(input) {
+        const optionDates = Array.from(new Set(input.optionDates)).sort();
+        if (optionDates.length === 0) return [];
+
+        const matchRange = getKoreaDateRangeForDates(optionDates);
+        const [pollOptions, matches] = await Promise.all([
+          supabase
+            .from('schedule_poll_options')
+            .select('option_date, schedule_polls!inner(club_id, status)')
+            .eq('schedule_polls.club_id', input.clubId)
+            .eq('schedule_polls.status', 'open')
+            .in('option_date', optionDates)
+            .returns<SchedulePollDateConflictDbRow[]>(),
+          supabase
+            .from('matches')
+            .select('date')
+            .eq('club_id', input.clubId)
+            .neq('status', 'cancelled')
+            .gte('date', matchRange.from)
+            .lt('date', matchRange.to)
+            .returns<ScheduleMatchDateConflictDbRow[]>(),
+        ]);
+
+        if (pollOptions.error) {
+          throw new AppError('internal_error', 'Failed to check duplicate schedule poll dates.', {
+            cause: pollOptions.error,
+          });
+        }
+        if (matches.error) {
+          throw new AppError('internal_error', 'Failed to check duplicate schedule dates.', {
+            cause: matches.error,
+          });
+        }
+
+        const optionDateSet = new Set(optionDates);
+        return [
+          ...(pollOptions.data ?? []).map((row) => ({
+            date: row.option_date,
+            source: 'poll' as const,
+          })),
+          ...(matches.data ?? [])
+            .map((row) => getKoreaDateOnly(row.date))
+            .filter((date) => optionDateSet.has(date))
+            .map((date) => ({
+              date,
+              source: 'schedule' as const,
+            })),
+        ];
+      },
+
       async replaceVote(input) {
         const { error: deleteError } = await supabase
           .from('schedule_poll_votes')
@@ -560,11 +777,15 @@ export function createSupabaseSchedulePollRepositories(
           });
         }
 
-        const votes = input.selectedOptionIds.map((optionId) => ({
+        const poll = await fetchSchedulePollById(supabase, input.pollId);
+        const votes = (input.selectedOptionIds.length > 0
+          ? input.selectedOptionIds.map((optionId) => ({ optionId, isAvailable: true }))
+          : poll.options.map((option) => ({ optionId: option.id, isAvailable: false }))
+        ).map((vote) => ({
           poll_id: input.pollId,
-          option_id: optionId,
+          option_id: vote.optionId,
           membership_id: input.membershipId,
-          is_available: true,
+          is_available: vote.isAvailable,
         }));
 
         if (votes.length > 0) {
@@ -603,20 +824,25 @@ export function createSupabaseSchedulePollRepositories(
         if (!selectedOption) {
           throw new AppError('bad_request', 'Selected option does not belong to this poll.');
         }
-        if (!poll.seasonId) {
-          throw new AppError('bad_request', 'Schedule poll needs a season before promotion.');
+        const matchDate = toKoreaIsoDateTime(selectedOption.optionDate, poll.commonTime);
+        const existingMatch = await findNonCancelledMatchOnKoreaDate(supabase, poll.clubId, matchDate);
+        if (existingMatch) {
+          throw new AppError('conflict', '이미 같은 날짜에 등록된 경기가 있어요.');
         }
 
         const { data: match, error: matchError } = await supabase
           .from('matches')
           .insert({
             club_id: poll.clubId,
-            season_id: poll.seasonId,
+            season_id: input.seasonId,
             title: poll.title,
-            date: toKoreaIsoDateTime(selectedOption.optionDate, poll.commonTime),
+            date: matchDate,
             location: poll.location,
             type: 'match',
             status: 'scheduled',
+            tactics_completed: false,
+            red_leader_confirmed: false,
+            blue_leader_confirmed: false,
             memo: poll.memo,
             created_by: input.promotedByMembershipId,
           })
@@ -627,6 +853,32 @@ export function createSupabaseSchedulePollRepositories(
           throw new AppError('internal_error', 'Failed to create match from schedule poll.', {
             cause: matchError,
           });
+        }
+
+        const attendanceRows = Array.from(
+          new Set(
+            poll.votes
+              .filter((vote) => vote.optionId === input.optionId && vote.isAvailable)
+              .map((vote) => vote.membershipId),
+          ),
+        ).map((membershipId) => ({
+          match_id: match.id,
+          membership_id: membershipId,
+          status: 'attend',
+          responded_at: new Date().toISOString(),
+        }));
+
+        if (attendanceRows.length > 0) {
+          const { error: attendanceError } = await supabase
+            .from('attendances')
+            .upsert(attendanceRows, { onConflict: 'match_id,membership_id' });
+
+          if (attendanceError) {
+            await supabase.from('matches').delete().eq('id', match.id);
+            throw new AppError('internal_error', 'Failed to add promoted match attendees.', {
+              cause: attendanceError,
+            });
+          }
         }
 
         const { error: pollError } = await supabase
@@ -645,6 +897,203 @@ export function createSupabaseSchedulePollRepositories(
         }
 
         return { pollId: input.pollId, matchId: match.id };
+      },
+    },
+  };
+}
+
+export function createSupabaseAnnouncementRepositories(
+  supabase: SupabaseClient,
+): AnnouncementRepositories {
+  return {
+    memberships: {
+      async findByAccountAndClub(accountId, clubId) {
+        const { data, error } = await supabase
+          .from('team_memberships')
+          .select('id, club_id, role, status')
+          .eq('account_id', accountId)
+          .eq('club_id', clubId)
+          .maybeSingle<AnnouncementMembershipDbRow>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch announcement membership.', { cause: error });
+        }
+
+        return data
+          ? {
+              id: data.id,
+              clubId: data.club_id,
+              role: data.role,
+              status: data.status,
+            }
+          : null;
+      },
+    },
+    announcements: {
+      async listByClub(clubId) {
+        const { data, error } = await supabase
+          .from('announcements')
+          .select(ANNOUNCEMENT_SELECT)
+          .eq('club_id', clubId)
+          .order('is_pinned', { ascending: false })
+          .order('created_at', { ascending: false })
+          .returns<AnnouncementDbRow[]>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch announcements.', { cause: error });
+        }
+
+        return (data ?? []).map(mapAnnouncement);
+      },
+
+      async create(input) {
+        const { data, error } = await supabase
+          .from('announcements')
+          .insert({
+            club_id: input.clubId,
+            season_id: input.seasonId,
+            title: input.title,
+            content: input.content,
+            author_membership_id: input.authorMembershipId,
+            is_pinned: input.isPinned,
+          })
+          .select(ANNOUNCEMENT_SELECT)
+          .single<AnnouncementDbRow>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to create announcement.', { cause: error });
+        }
+
+        return mapAnnouncement(data);
+      },
+    },
+  };
+}
+
+export function createSupabaseRecordsRepositories(
+  supabase: SupabaseClient,
+): RecordsRepositories {
+  return {
+    memberships: {
+      async findByAccountAndClub(accountId, clubId) {
+        const { data, error } = await supabase
+          .from('team_memberships')
+          .select('id, club_id, role, status')
+          .eq('account_id', accountId)
+          .eq('club_id', clubId)
+          .maybeSingle<AnnouncementMembershipDbRow>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch records membership.', { cause: error });
+        }
+
+        return data
+          ? {
+              id: data.id,
+              clubId: data.club_id,
+              role: data.role,
+              status: data.status,
+            }
+          : null;
+      },
+
+      async listApproved(clubId) {
+        const { data, error } = await supabase
+          .from('team_memberships')
+          .select('id, profile_name, photo_url, ovr')
+          .eq('club_id', clubId)
+          .eq('status', 'approved')
+          .returns<Array<{ id: string; profile_name: string; photo_url: string | null; ovr: number }>>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch records memberships.', { cause: error });
+        }
+
+        return (data ?? []).map((member) => ({
+          id: member.id,
+          nickname: member.profile_name,
+          photoUrl: member.photo_url,
+          ovr: member.ovr,
+        }));
+      },
+    },
+    seasons: {
+      async findActiveByClub(clubId) {
+        const { data, error } = await supabase
+          .from('seasons')
+          .select('id')
+          .eq('club_id', clubId)
+          .eq('is_active', true)
+          .order('start_date', { ascending: false })
+          .limit(1)
+          .maybeSingle<{ id: string }>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch records active season.', { cause: error });
+        }
+
+        return data;
+      },
+    },
+    matches: {
+      async listFinishedBySeason(clubId, seasonId) {
+        const { data, error } = await supabase
+          .from('matches')
+          .select('id, club_id, season_id, round, title, date, location, type, status, our_score, opp_score, tactics_completed, red_leader_confirmed, blue_leader_confirmed, memo, created_by, cancellation_reason, cancelled_at, updated_at')
+          .eq('club_id', clubId)
+          .eq('season_id', seasonId)
+          .eq('status', 'finished')
+          .returns<MatchDbRow[]>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch records matches.', { cause: error });
+        }
+
+        return (data ?? []).map((match) => ({
+          id: match.id,
+          location: match.location,
+          ourScore: match.our_score,
+          oppScore: match.opp_score,
+        }));
+      },
+    },
+    attendances: {
+      async listAttendingByMatchIds(matchIds) {
+        const { data, error } = await supabase
+          .from('attendances')
+          .select('match_id, membership_id')
+          .in('match_id', matchIds)
+          .eq('status', 'attend')
+          .returns<RecordsAttendanceDbRow[]>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch records attendances.', { cause: error });
+        }
+
+        return (data ?? []).map((attendance) => ({
+          matchId: attendance.match_id,
+          membershipId: attendance.membership_id,
+        }));
+      },
+    },
+    playerStats: {
+      async listByMatchIds(matchIds) {
+        const { data, error } = await supabase
+          .from('player_stats')
+          .select('membership_id, goals, assists, is_mom')
+          .in('match_id', matchIds)
+          .returns<RecordsPlayerStatDbRow[]>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch records player stats.', { cause: error });
+        }
+
+        return (data ?? []).map((stat) => ({
+          membershipId: stat.membership_id,
+          goals: stat.goals,
+          assists: stat.assists,
+          isMom: stat.is_mom,
+        }));
       },
     },
   };
@@ -677,13 +1126,32 @@ export function createSupabaseMatchRepositories(
           : null;
       },
     },
+    seasons: {
+      async findActiveByClub(clubId) {
+        const { data, error } = await supabase
+          .from('seasons')
+          .select('id')
+          .eq('club_id', clubId)
+          .eq('is_active', true)
+          .order('start_date', { ascending: false })
+          .limit(1)
+          .maybeSingle<{ id: string }>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch match active season.', { cause: error });
+        }
+
+        return data;
+      },
+    },
     matches: {
-      async listUpcoming(clubId) {
+      async listUpcoming(input) {
         const { data, error } = await supabase
           .from('matches')
           .select(MATCH_SELECT)
-          .eq('club_id', clubId)
-          .in('status', ['scheduled', 'locker_room', 'cancelled'])
+          .eq('club_id', input.clubId)
+          .in('status', ['scheduled', 'locker_room'])
+          .gte('date', input.now)
           .order('date', { ascending: true })
           .returns<MatchDbRow[]>();
 
@@ -692,6 +1160,73 @@ export function createSupabaseMatchRepositories(
         }
 
         return (data ?? []).map(mapMatch);
+      },
+
+      async listCalendar(input) {
+        const { data, error } = await supabase
+          .from('matches')
+          .select(MATCH_SELECT)
+          .eq('club_id', input.clubId)
+          .neq('status', 'cancelled')
+          .gte('date', input.from)
+          .lt('date', input.to)
+          .order('date', { ascending: true })
+          .returns<MatchDbRow[]>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch calendar matches.', { cause: error });
+        }
+
+        return (data ?? []).map(mapMatch);
+      },
+
+      async findNonCancelledMatchOnDate(input) {
+        return findNonCancelledMatchOnKoreaDate(supabase, input.clubId, input.date);
+      },
+
+      async findMaxRoundBySeason(seasonId) {
+        const { data, error } = await supabase
+          .from('matches')
+          .select('round')
+          .eq('season_id', seasonId)
+          .not('round', 'is', null)
+          .order('round', { ascending: false })
+          .limit(1)
+          .maybeSingle<{ round: number | null }>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch latest match round.', { cause: error });
+        }
+
+        return data?.round ?? null;
+      },
+
+      async create(input) {
+        const { data, error } = await supabase
+          .from('matches')
+          .insert({
+            club_id: input.clubId,
+            season_id: input.seasonId,
+            round: input.round,
+            title: input.title,
+            date: input.date,
+            location: input.location,
+            type: input.type,
+            status: 'scheduled',
+            tactics_completed: false,
+            red_leader_confirmed: false,
+            blue_leader_confirmed: false,
+            memo: input.memo,
+            created_by: input.createdByMembershipId,
+          })
+          .select(MATCH_SELECT)
+          .single<MatchDbRow>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to create match.', { cause: error });
+        }
+
+        return mapMatch(data);
       },
 
       async findById(matchId) {
@@ -715,7 +1250,7 @@ export function createSupabaseMatchRepositories(
             status: 'cancelled',
             cancellation_reason: input.cancellationReason,
             cancelled_at: new Date().toISOString(),
-            updated_by: input.cancelledByMembershipId,
+          updated_by: input.cancelledByMembershipId,
           })
           .eq('id', input.matchId)
           .select(MATCH_SELECT)
@@ -726,6 +1261,94 @@ export function createSupabaseMatchRepositories(
         }
 
         return mapMatch(data);
+      },
+
+      async updateLineupConfirmation(input) {
+        const redLeaderConfirmed = input.teamNumber === 1 ? input.confirmed : input.redLeaderConfirmed;
+        const blueLeaderConfirmed = input.teamNumber === 2 ? input.confirmed : input.blueLeaderConfirmed;
+        const { data, error } = await supabase
+          .from('matches')
+          .update({
+            red_leader_confirmed: redLeaderConfirmed,
+            blue_leader_confirmed: blueLeaderConfirmed,
+            tactics_completed: redLeaderConfirmed && blueLeaderConfirmed,
+            updated_by: input.updatedByMembershipId,
+          })
+          .eq('id', input.matchId)
+          .select(MATCH_SELECT)
+          .single<MatchDbRow>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to confirm match lineup.', { cause: error });
+        }
+
+        return mapMatch(data);
+      },
+
+      async publishLineup(input) {
+        const { data, error } = await supabase
+          .from('matches')
+          .update({
+            red_leader_confirmed: true,
+            blue_leader_confirmed: true,
+            tactics_completed: true,
+            updated_by: input.updatedByMembershipId,
+          })
+          .eq('id', input.matchId)
+          .select(MATCH_SELECT)
+          .single<MatchDbRow>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to publish match lineup.', { cause: error });
+        }
+
+        return mapMatch(data);
+      },
+    },
+    attendees: {
+      async listForMatch(matchId) {
+        return fetchMatchAttendeesByMatchId(supabase, matchId);
+      },
+
+      async add(input) {
+        const rows = input.membershipIds
+          ? input.membershipIds.map((id) => ({
+              match_id: input.matchId,
+              membership_id: id,
+              status: 'attend',
+              responded_at: new Date().toISOString(),
+            }))
+          : [
+              {
+                match_id: input.matchId,
+                membership_id: input.membershipId!,
+                status: 'attend',
+                responded_at: new Date().toISOString(),
+              },
+            ];
+
+        const { error } = await supabase
+          .from('attendances')
+          .upsert(rows, { onConflict: 'match_id,membership_id' });
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to add match attendee.', { cause: error });
+        }
+
+        const { error: matchError } = await supabase
+          .from('matches')
+          .update({
+            red_leader_confirmed: false,
+            blue_leader_confirmed: false,
+            tactics_completed: false,
+          })
+          .eq('id', input.matchId);
+
+        if (matchError) {
+          throw new AppError('internal_error', 'Failed to reset lineup confirmation.', { cause: matchError });
+        }
+
+        return fetchMatchAttendeesByMatchId(supabase, input.matchId);
       },
     },
     lineups: {
@@ -751,6 +1374,7 @@ export function createSupabaseMatchRepositories(
             team_number: entry.teamNumber,
             is_leader: entry.isLeader,
             position: entry.position,
+            formation_slot: entry.formationSlot ?? null,
           })));
 
         if (insertError) {
@@ -761,7 +1385,9 @@ export function createSupabaseMatchRepositories(
           .from('matches')
           .update({
             status: 'locker_room',
-            tactics_completed: true,
+            red_leader_confirmed: input.redLeaderConfirmed,
+            blue_leader_confirmed: input.blueLeaderConfirmed,
+            tactics_completed: input.redLeaderConfirmed && input.blueLeaderConfirmed,
             updated_by: input.updatedByMembershipId,
           })
           .eq('id', input.matchId);
@@ -771,6 +1397,122 @@ export function createSupabaseMatchRepositories(
         }
 
         return fetchMatchLineupByMatchId(supabase, input.matchId);
+      },
+
+      async addPick(input) {
+        const { error: insertError } = await supabase
+          .from('match_teams')
+          .insert({
+            match_id: input.matchId,
+            membership_id: input.membershipId,
+            team_number: input.teamNumber,
+            is_leader: false,
+            position: 'MF',
+            formation_slot: input.formationSlot,
+          });
+
+        if (insertError) {
+          throw new AppError('internal_error', 'Failed to save draft pick.', { cause: insertError });
+        }
+
+        const { error: matchError } = await supabase
+          .from('matches')
+          .update({
+            status: 'locker_room',
+            red_leader_confirmed: false,
+            blue_leader_confirmed: false,
+            tactics_completed: false,
+          })
+          .eq('id', input.matchId);
+
+        if (matchError) {
+          throw new AppError('internal_error', 'Failed to update draft state.', { cause: matchError });
+        }
+
+        return fetchMatchLineupByMatchId(supabase, input.matchId);
+      },
+    },
+  };
+}
+
+export function createSupabaseCommentRepositories(
+  supabase: SupabaseClient,
+): CommentRepositories {
+  return {
+    memberships: {
+      async findByAccountAndClub(accountId, clubId) {
+        const { data, error } = await supabase
+          .from('team_memberships')
+          .select('id, club_id, role, status')
+          .eq('account_id', accountId)
+          .eq('club_id', clubId)
+          .maybeSingle<MatchMembershipDbRow>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch comment membership.', { cause: error });
+        }
+
+        return data
+          ? {
+              id: data.id,
+              clubId: data.club_id,
+              role: data.role,
+              status: data.status,
+            }
+          : null;
+      },
+    },
+    targets: {
+      async findClubId(targetType, targetId) {
+        if (targetType === 'match') {
+          const { data, error } = await supabase
+            .from('matches')
+            .select('club_id')
+            .eq('id', targetId)
+            .maybeSingle<{ club_id: string }>();
+
+          if (error) {
+            throw new AppError('internal_error', 'Failed to fetch comment match target.', { cause: error });
+          }
+
+          return data?.club_id ?? null;
+        }
+
+        const { data, error } = await supabase
+          .from('schedule_poll_options')
+          .select('schedule_polls(club_id)')
+          .eq('id', targetId)
+          .maybeSingle<{ schedule_polls: { club_id: string } | null }>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch comment poll option target.', { cause: error });
+        }
+
+        return data?.schedule_polls?.club_id ?? null;
+      },
+    },
+    comments: {
+      async listForTarget(input) {
+        return fetchEventCommentsByTarget(supabase, input.targetType, input.targetId);
+      },
+
+      async create(input) {
+        const { data, error } = await supabase
+          .from('comments')
+          .insert({
+            target_type: input.targetType,
+            target_id: input.targetId,
+            membership_id: input.membershipId,
+            content: input.content,
+          })
+          .select(EVENT_COMMENT_SELECT)
+          .single<EventCommentDbRow>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to create event comment.', { cause: error });
+        }
+
+        return mapEventComment(data);
       },
     },
   };
@@ -782,6 +1524,44 @@ type PublicClubAggregates = {
   recentMatchCounts: Map<string, number>;
   upcomingMatchCounts: Map<string, number>;
 };
+
+async function selectPublicClubs(supabase: SupabaseClient) {
+  const result = await supabase
+    .from('clubs')
+    .select('id, name, slug, description, logo_url, is_public')
+    .eq('is_public', true)
+    .order('name', { ascending: true })
+    .returns<PublicClubDbRow[]>();
+
+  if (!isMissingColumnError(result.error, 'is_public')) {
+    return result;
+  }
+
+  return supabase
+    .from('clubs')
+    .select('id, name, slug, description, logo_url')
+    .order('name', { ascending: true })
+    .returns<PublicClubDbRow[]>();
+}
+
+async function selectPublicClubById(supabase: SupabaseClient, clubId: string) {
+  const result = await supabase
+    .from('clubs')
+    .select('id, name, slug, description, logo_url, is_public')
+    .eq('id', clubId)
+    .eq('is_public', true)
+    .maybeSingle<PublicClubDbRow>();
+
+  if (!isMissingColumnError(result.error, 'is_public')) {
+    return result;
+  }
+
+  return supabase
+    .from('clubs')
+    .select('id, name, slug, description, logo_url')
+    .eq('id', clubId)
+    .maybeSingle<PublicClubDbRow>();
+}
 
 async function fetchPublicClubAggregates(
   supabase: SupabaseClient,
@@ -816,13 +1596,15 @@ async function fetchPublicClubAggregates(
       .from('matches')
       .select('club_id')
       .in('club_id', clubIds)
-      .lt('date', nowIso)
+      .lte('date', nowIso)
+      .neq('status', 'cancelled')
       .returns<Pick<PublicMatchDbRow, 'club_id'>[]>(),
     supabase
       .from('matches')
       .select('club_id')
       .in('club_id', clubIds)
       .gte('date', nowIso)
+      .neq('status', 'cancelled')
       .returns<Pick<PublicMatchDbRow, 'club_id'>[]>(),
   ]);
 
@@ -867,15 +1649,17 @@ async function fetchPublicMatches(
   supabase: SupabaseClient,
   clubId: string,
   direction: 'recent' | 'upcoming',
+  attendeeTotal: number,
 ): Promise<PublicMatchSummaryRow[]> {
   const nowIso = new Date().toISOString();
   const baseQuery = supabase
     .from('matches')
     .select('id, club_id, title, date, location, type, status, our_score, opp_score')
-    .eq('club_id', clubId);
+    .eq('club_id', clubId)
+    .neq('status', 'cancelled');
 
   const query = direction === 'recent'
-    ? baseQuery.lt('date', nowIso).order('date', { ascending: false }).limit(3)
+    ? baseQuery.lte('date', nowIso).order('date', { ascending: false }).limit(3)
     : baseQuery.gte('date', nowIso).order('date', { ascending: true }).limit(3);
 
   const { data, error } = await query.returns<PublicMatchDbRow[]>();
@@ -883,7 +1667,13 @@ async function fetchPublicMatches(
     throw new AppError('internal_error', 'Failed to fetch public club matches.', { cause: error });
   }
 
-  return (data ?? []).map((match) => ({
+  const matches = data ?? [];
+  const attendeeCounts = await fetchPublicMatchAttendeeCounts(
+    supabase,
+    matches.map((match) => match.id),
+  );
+
+  return matches.map((match) => ({
     id: match.id,
     title: match.title,
     date: match.date,
@@ -892,7 +1682,34 @@ async function fetchPublicMatches(
     status: match.status,
     ourScore: match.our_score,
     oppScore: match.opp_score,
+    attendeeCount: attendeeCounts.get(match.id) ?? 0,
+    attendeeTotal: Math.max(attendeeTotal, attendeeCounts.get(match.id) ?? 0, 1),
   }));
+}
+
+async function fetchPublicMatchAttendeeCounts(
+  supabase: SupabaseClient,
+  matchIds: string[],
+) {
+  const counts = new Map<string, number>();
+  if (matchIds.length === 0) return counts;
+
+  const { data, error } = await supabase
+    .from('attendances')
+    .select('match_id')
+    .in('match_id', matchIds)
+    .eq('status', 'attend')
+    .returns<PublicAttendanceDbRow[]>();
+
+  if (error) {
+    throw new AppError('internal_error', 'Failed to fetch public match attendees.', { cause: error });
+  }
+
+  for (const attendance of data ?? []) {
+    counts.set(attendance.match_id, (counts.get(attendance.match_id) ?? 0) + 1);
+  }
+
+  return counts;
 }
 
 function mapPublicClubSummary(
@@ -905,6 +1722,7 @@ function mapPublicClubSummary(
     slug: club.slug,
     description: club.description,
     logoUrl: club.logo_url,
+    isPublic: club.is_public ?? true,
     memberCount: aggregates.memberCounts.get(club.id) ?? 0,
     activeSeason: aggregates.activeSeasons.get(club.id) ?? null,
     recentMatchCount: aggregates.recentMatchCounts.get(club.id) ?? 0,
@@ -920,17 +1738,32 @@ function countRowsByClub(rows: Array<{ club_id: string }>) {
   return counts;
 }
 
+function isMissingColumnError(error: { code?: string; message?: string } | null, columnName: string) {
+  return error?.code === '42703' && Boolean(error.message?.includes(columnName));
+}
+
 const MEMBERSHIP_SELECT =
-  'id, account_id, club_id, role, status, profile_name, main_position, height, weight, birth, photo_url, ovr, stats, match_points, preferred_foot';
+  'id, account_id, club_id, role, status, profile_name, main_position, height, weight, birth, residence, photo_url, ovr, stats, match_points, preferred_foot';
 
 const SCHEDULE_POLL_SELECT =
   'id, club_id, season_id, title, status, common_time, location, memo, closes_at, created_by, cancellation_reason, cancelled_at, promoted_match_id, schedule_poll_options(id, poll_id, option_date, sort_order), schedule_poll_votes(id, poll_id, option_id, membership_id, is_available)';
 
+const ANNOUNCEMENT_SELECT =
+  'id, club_id, season_id, title, content, author_membership_id, is_pinned, created_at, updated_at';
+
 const MATCH_SELECT =
-  'id, club_id, season_id, round, title, date, location, type, status, our_score, opp_score, tactics_completed, memo, created_by, cancellation_reason, cancelled_at';
+  'id, club_id, season_id, round, title, date, location, type, status, our_score, opp_score, tactics_completed, red_leader_confirmed, blue_leader_confirmed, memo, created_by, cancellation_reason, cancelled_at, updated_at';
 
 const MATCH_LINEUP_SELECT =
-  'id, match_id, membership_id, team_number, is_leader, position, team_memberships(profile_name, main_position, photo_url, ovr)';
+  'id, match_id, membership_id, team_number, is_leader, position, formation_slot, team_memberships(profile_name, main_position, photo_url, ovr, match_points)';
+const MATCH_LINEUP_LEGACY_SELECT =
+  'id, match_id, membership_id, team_number, is_leader, position, team_memberships(profile_name, main_position, photo_url, ovr, match_points)';
+
+const MATCH_ATTENDEE_SELECT =
+  'match_id, membership_id, status, team_memberships(profile_name, photo_url, ovr, match_points)';
+
+const EVENT_COMMENT_SELECT =
+  'id, target_type, target_id, membership_id, content, created_at, team_memberships(profile_name)';
 
 function mapMembership(row: MembershipDbRow): TeamMembershipRow {
   return {
@@ -944,6 +1777,7 @@ function mapMembership(row: MembershipDbRow): TeamMembershipRow {
     heightCm: row.height,
     weightKg: row.weight,
     birthDate: row.birth,
+    residence: row.residence,
     photoUrl: row.photo_url,
     ovr: row.ovr,
     stats: normalizeStats(row.stats),
@@ -953,23 +1787,7 @@ function mapMembership(row: MembershipDbRow): TeamMembershipRow {
 }
 
 function normalizeStats(value: unknown): UserStats {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return DEFAULT_STATS;
-  }
-
-  const stats = value as Partial<Record<keyof UserStats, unknown>>;
-  return {
-    speed: toStatNumber(stats.speed, DEFAULT_STATS.speed),
-    shooting: toStatNumber(stats.shooting, DEFAULT_STATS.shooting),
-    passing: toStatNumber(stats.passing, DEFAULT_STATS.passing),
-    defense: toStatNumber(stats.defense, DEFAULT_STATS.defense),
-    physical: toStatNumber(stats.physical, DEFAULT_STATS.physical),
-    dribble: toStatNumber(stats.dribble, DEFAULT_STATS.dribble),
-  };
-}
-
-function toStatNumber(value: unknown, fallback: number) {
-  return typeof value === 'number' ? value : fallback;
+  return normalizeUserStats(value);
 }
 
 function mapPendingMembership(row: PendingMembershipDbRow): PendingMembershipReviewRow {
@@ -998,6 +1816,7 @@ function toPendingMembershipInsert(input: {
     height: input.profile.heightCm,
     weight: input.profile.weightKg,
     birth: input.profile.birthDate,
+    residence: input.profile.residence,
     photo_url: input.profile.photoUrl,
     role: 'member',
     status: 'pending',
@@ -1009,6 +1828,26 @@ function toPendingMembershipInsert(input: {
   if (input.profile.preferredFoot) {
     payload.preferred_foot = input.profile.preferredFoot;
   }
+  if (input.profile.stats) {
+    payload.stats = input.profile.stats;
+  }
+  if (typeof input.profile.ovr === 'number' && input.profile.ovr !== null) {
+    payload.ovr = input.profile.ovr;
+  }
+
+  return payload;
+}
+
+function toMembershipProfilePatch(profile: MembershipProfilePatch) {
+  const payload: Record<string, unknown> = {};
+
+  if ('nickname' in profile) payload.profile_name = profile.nickname;
+  if ('heightCm' in profile) payload.height = profile.heightCm;
+  if ('weightKg' in profile) payload.weight = profile.weightKg;
+  if ('birthDate' in profile) payload.birth = profile.birthDate;
+  if ('residence' in profile) payload.residence = profile.residence;
+  if ('photoUrl' in profile) payload.photo_url = profile.photoUrl;
+  if ('preferredFoot' in profile && profile.preferredFoot) payload.preferred_foot = profile.preferredFoot;
 
   return payload;
 }
@@ -1047,6 +1886,20 @@ function mapSchedulePoll(row: SchedulePollDbRow): SchedulePollRow {
   };
 }
 
+function mapAnnouncement(row: AnnouncementDbRow): AnnouncementRow {
+  return {
+    id: row.id,
+    clubId: row.club_id,
+    seasonId: row.season_id,
+    title: row.title,
+    content: row.content,
+    authorMembershipId: row.author_membership_id,
+    isPinned: row.is_pinned,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 function mapMatch(row: MatchDbRow): MatchRow {
   return {
     id: row.id,
@@ -1061,15 +1914,18 @@ function mapMatch(row: MatchDbRow): MatchRow {
     ourScore: row.our_score,
     oppScore: row.opp_score,
     tacticsCompleted: row.tactics_completed,
+    redLeaderConfirmed: row.red_leader_confirmed,
+    blueLeaderConfirmed: row.blue_leader_confirmed,
     memo: row.memo,
     createdByMembershipId: row.created_by,
     cancellationReason: row.cancellation_reason ?? null,
     cancelledAt: row.cancelled_at ?? null,
+    updatedAt: row.updated_at,
   };
 }
 
 async function fetchMatchLineupByMatchId(supabase: SupabaseClient, matchId: string) {
-  const { data, error } = await supabase
+  const result = await supabase
     .from('match_teams')
     .select(MATCH_LINEUP_SELECT)
     .eq('match_id', matchId)
@@ -1077,11 +1933,83 @@ async function fetchMatchLineupByMatchId(supabase: SupabaseClient, matchId: stri
     .order('created_at', { ascending: true })
     .returns<MatchTeamDbRow[]>();
 
-  if (error) {
-    throw new AppError('internal_error', 'Failed to fetch match lineup.', { cause: error });
+  if (isMissingColumnError(result.error, 'formation_slot')) {
+    const legacyResult = await supabase
+      .from('match_teams')
+      .select(MATCH_LINEUP_LEGACY_SELECT)
+      .eq('match_id', matchId)
+      .order('team_number', { ascending: true })
+      .order('created_at', { ascending: true })
+      .returns<Array<Omit<MatchTeamDbRow, 'formation_slot'>>>();
+
+    if (legacyResult.error) {
+      throw new AppError('internal_error', 'Failed to fetch match lineup.', { cause: legacyResult.error });
+    }
+
+    return (legacyResult.data ?? []).map((row) => mapMatchLineupEntry({ ...row, formation_slot: null }));
   }
 
-  return (data ?? []).map(mapMatchLineupEntry);
+  if (result.error) {
+    throw new AppError('internal_error', 'Failed to fetch match lineup.', { cause: result.error });
+  }
+
+  return (result.data ?? []).map(mapMatchLineupEntry);
+}
+
+async function fetchMatchAttendeesByMatchId(supabase: SupabaseClient, matchId: string) {
+  const { data, error } = await supabase
+    .from('attendances')
+    .select(MATCH_ATTENDEE_SELECT)
+    .eq('match_id', matchId)
+    .eq('status', 'attend')
+    .order('created_at', { ascending: true })
+    .returns<MatchAttendeeDbRow[]>();
+
+  if (error) {
+    throw new AppError('internal_error', 'Failed to fetch match attendees.', { cause: error });
+  }
+
+  return (data ?? []).map((row) => ({
+    matchId: row.match_id,
+    membershipId: row.membership_id,
+    status: 'attend' as const,
+    playerName: row.team_memberships?.profile_name || '이름 없는 선수',
+    playerOvr: row.team_memberships?.ovr ?? 60,
+    playerPhotoUrl: row.team_memberships?.photo_url ?? null,
+    matchPoints: row.team_memberships?.match_points ?? 0,
+  }));
+}
+
+async function fetchEventCommentsByTarget(
+  supabase: SupabaseClient,
+  targetType: EventCommentTargetType,
+  targetId: string,
+) {
+  const { data, error } = await supabase
+    .from('comments')
+    .select(EVENT_COMMENT_SELECT)
+    .eq('target_type', targetType)
+    .eq('target_id', targetId)
+    .order('created_at', { ascending: true })
+    .returns<EventCommentDbRow[]>();
+
+  if (error) {
+    throw new AppError('internal_error', 'Failed to fetch event comments.', { cause: error });
+  }
+
+  return (data ?? []).map(mapEventComment);
+}
+
+function mapEventComment(row: EventCommentDbRow): EventCommentRow {
+  return {
+    id: row.id,
+    targetType: row.target_type,
+    targetId: row.target_id,
+    membershipId: row.membership_id,
+    authorName: row.team_memberships?.profile_name || '알 수 없는 멤버',
+    content: row.content,
+    createdAt: row.created_at,
+  };
 }
 
 function mapMatchLineupEntry(row: MatchTeamDbRow): MatchLineupEntryRow {
@@ -1092,10 +2020,12 @@ function mapMatchLineupEntry(row: MatchTeamDbRow): MatchLineupEntryRow {
     teamNumber: row.team_number,
     isLeader: row.is_leader,
     position: row.position === 'FW' || row.position === 'MF' || row.position === 'DF' ? row.position : 'MF',
+    formationSlot: typeof row.formation_slot === 'number' ? row.formation_slot : null,
     playerName: row.team_memberships?.profile_name || '이름 없는 선수',
     playerPosition: row.team_memberships?.main_position ?? null,
     playerOvr: row.team_memberships?.ovr ?? 60,
     playerPhotoUrl: row.team_memberships?.photo_url ?? null,
+    playerMatchPoints: row.team_memberships?.match_points ?? 0,
   };
 }
 
@@ -1122,6 +2052,66 @@ function mapSchedulePollVotes(rows: SchedulePollVoteDbRow[]): SchedulePollVoteRo
 
 function toKoreaIsoDateTime(optionDate: string, commonTime: string) {
   return `${optionDate}T${commonTime}:00+09:00`;
+}
+
+function getKoreaDateRange(value: string) {
+  const date = value.slice(0, 10);
+  const [year, month, day] = date.split('-').map(Number);
+  const nextDate = new Date(Date.UTC(year, month - 1, day + 1));
+  const next = [
+    nextDate.getUTCFullYear(),
+    String(nextDate.getUTCMonth() + 1).padStart(2, '0'),
+    String(nextDate.getUTCDate()).padStart(2, '0'),
+  ].join('-');
+
+  return {
+    from: `${date}T00:00:00+09:00`,
+    to: `${next}T00:00:00+09:00`,
+  };
+}
+
+function getKoreaDateRangeForDates(dates: string[]) {
+  const sorted = [...dates].sort();
+  const first = sorted[0];
+  const last = sorted[sorted.length - 1];
+  return {
+    from: `${first}T00:00:00+09:00`,
+    to: getKoreaDateRange(last).to,
+  };
+}
+
+function getKoreaDateOnly(value: string) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(value));
+}
+
+async function findNonCancelledMatchOnKoreaDate(
+  supabase: SupabaseClient,
+  clubId: string,
+  date: string,
+) {
+  const range = getKoreaDateRange(date);
+  const { data, error } = await supabase
+    .from('matches')
+    .select(MATCH_SELECT)
+    .eq('club_id', clubId)
+    .eq('type', 'match')
+    .neq('status', 'cancelled')
+    .gte('date', range.from)
+    .lt('date', range.to)
+    .order('date', { ascending: true })
+    .limit(1)
+    .maybeSingle<MatchDbRow>();
+
+  if (error) {
+    throw new AppError('internal_error', 'Failed to check duplicate match date.', { cause: error });
+  }
+
+  return data ? mapMatch(data) : null;
 }
 
 function createMatchResultCommandBuffer() {

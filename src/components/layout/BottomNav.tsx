@@ -15,7 +15,7 @@ const tabs = [
 const GUEST_ALLOWED_TABS = new Set(['home']);
 
 export default function BottomNav() {
-  const { activeTab, setActiveTab, showMyPage, showCommunity, showJoinForm, userStatus } = useAppStore();
+  const { activeTab, setActiveTab, showMyPage, showJoinForm, userStatus } = useAppStore();
   const { showToast } = useToastStore();
 
   const isGuest = userStatus === 'guest';
@@ -29,10 +29,10 @@ export default function BottomNav() {
   };
 
   return (
-    <nav className="sticky bottom-0 z-20 bg-white/80 backdrop-blur-xl px-2 pb-[env(safe-area-inset-bottom)] shadow-sm">
+    <nav className="sticky bottom-0 z-20 bg-surface-card/80 backdrop-blur-xl px-2 pb-[env(safe-area-inset-bottom)] shadow-sm">
       <div className="flex justify-around">
         {tabs.map(({ key, label, Icon }) => {
-          const isActive = activeTab === key && !showMyPage && !showCommunity && !showJoinForm;
+          const isActive = activeTab === key && !showMyPage && !showJoinForm;
           const isLocked = isGuest && !GUEST_ALLOWED_TABS.has(key);
 
           return (
@@ -43,8 +43,8 @@ export default function BottomNav() {
                 isActive
                   ? 'text-green-600'
                   : isLocked
-                  ? 'text-gray-300'
-                  : 'text-gray-400 hover:text-gray-600'
+                  ? 'text-action-disabled'
+                  : 'text-tertiary hover:text-secondary'
               }`}
             >
               {/* 활성 탭 인디케이터 pill */}
@@ -57,7 +57,7 @@ export default function BottomNav() {
                   strokeWidth={isActive ? 2.5 : 1.8}
                 />
                 {isLocked && (
-                  <Lock size={8} className="absolute -top-0.5 -right-1 text-gray-400" />
+                  <Lock size={8} className="absolute -top-0.5 -right-1 text-tertiary" />
                 )}
               </div>
               <span

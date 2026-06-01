@@ -25,7 +25,7 @@ FC Moim is a mobile-first web app prototype for football and futsal club operati
 
 ## Product Rules
 
-- Authentication UI exposes Kakao login for the current release path.
+- Authentication UI exposes email, Google, and Kakao login choices. Local QA uses Supabase email/password first.
 - Account identity and club membership stay separated.
 - Club-specific role, approval status, profile, OVR, and points belong to membership data.
 - Server routes must authorize through the current Supabase server user, not client-submitted identity fields.
@@ -37,12 +37,13 @@ FC Moim is a mobile-first web app prototype for football and futsal club operati
 ## Runtime Reality
 
 - Infrastructure setup for Firebase App Hosting, Supabase Postgres, Kakao OAuth, and secret environment configuration has been prepared.
-- `src/config/app.config.ts` supports `local` and `prod` profiles for real runtime configuration.
+- `src/config/app.config.ts` supports `local` and `prod` profiles and blocks localhost/hosted Supabase mixups at runtime.
 
 ## Docs
 
 - `docs/README.md`: consolidated project overview, scope, and current direction
 - `docs/agent-rules.json`: project-specific Agent ownership, command map, surface classification, and evidence policy
+- `docs/agent-feedback.md`: repeat failure feedback and prevention rules for future Agent sessions
 - `docs/decisions.md`: durable decision log
 - `docs/design-tokens.md`: allowed UI color token palette and design guard policy
 - `docs/project-context.json`: current project state for Agent recovery
@@ -53,13 +54,14 @@ FC Moim is a mobile-first web app prototype for football and futsal club operati
 1. Read `AGENT.md`.
 2. Read `.agents/manifest.json` and `.agents/contracts/agent-contracts.json`.
 3. Read `docs/agent-rules.json`.
-4. Read the project docs named by `docs/agent-rules.json`.
-5. Read the current role prompt under `.agents/agents/`.
-6. Run baseline checks before code changes when practical.
-7. Implement one task inside the responsible Agent's owned paths.
-8. Collect QA evidence for changed runtime surfaces.
-9. Run Review Agent on the diff and evidence.
-10. Worker Agents leave `statePatchSuggestion`; Main Orchestrator updates `docs/project-context.json`.
+4. Read `docs/agent-feedback.md`.
+5. Read the project docs named by `docs/agent-rules.json`.
+6. Read the current role prompt under `.agents/agents/`.
+7. Run baseline checks before code changes when practical.
+8. Implement one task inside the responsible Agent's owned paths.
+9. Collect QA evidence for changed runtime surfaces.
+10. Run Verifier on the diff and evidence.
+11. Worker Agents leave `statePatchSuggestion`; Orchestrator updates `docs/project-context.json`.
 
 ## Quick Start
 
@@ -74,18 +76,28 @@ npm run dev
 
 ```bash
 npm run harness:validate
-npm run harness:validate-project
 npm run harness:test
 npm run harness:guard:precommit
-npm run harness:guard:handoff
-npm run harness:guard:prepush
-npm run harness:ci
+npm run harness:guard:diff
+npm run harness:guard:verify
 npm run verify:baseline
+npm run verify:harness
 npm run db:check
+npm run db:local:start
+npm run db:local:seed-demo
+npm run verify:db:local
+npm run prod:backup
+npm run prod:reset:db
+npm run prod:cleanup:auth-storage
+npm run prod:verify-empty
 npm run lint
 npm run typecheck
 npm run test
 npm run verify
 ```
 
-`harness:validate` only confirms reusable harness structure and purity. Runtime readiness additionally needs fresh evidence required by `docs/agent-rules.json`, hook installation, CI guard, and a Review Agent verdict with no blockers.
+`harness:validate` only confirms reusable harness structure and purity. The default completion gate is `harness:guard:verify`, which runs the `verify` guard profile without resetting Local Supabase. API/Auth/Data runtime readiness additionally needs `npm run verify:db:local` or full `npm run verify` when Local Supabase is available.
+
+Local Supabase verification uses the Supabase CLI and a Docker-compatible runtime such as OrbStack. Start the stack once with `npm run db:local:start`; `npm run dev` and `npm run dev:local` both inject local Supabase env automatically. `npm run verify:db:local` resets local schema/data, seeds QA Auth users plus rich demo data, and runs API integration tests without touching the hosted Supabase project. `npm run verify` includes that runtime gate and is reserved for API/Auth/Data/Supabase changes, release readiness, or explicit full verification. API/Auth/Data runtime evidence must come from the local Supabase stack, not mocks.
+
+Production reset commands are intentionally split. Run `npm run prod:backup` first, then destructive commands require explicit confirmation environment variables: `FC_PROD_RESET_CONFIRM=DELETE_PRODUCTION_DATA` for DB reset and `FC_PROD_CLEANUP_CONFIRM=DELETE_PRODUCTION_DATA` for Auth/Storage cleanup. Production commands refuse localhost Supabase URLs and must not be used for local demo seeding.

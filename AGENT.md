@@ -9,41 +9,39 @@
 ## Core Files
 
 - Harness manifest: `.agents/manifest.json`
-- Ownership contracts: `.agents/contracts/agent-contracts.json`
+- Contracts: `.agents/contracts/agent-contracts.json`
 - Role prompts: `.agents/agents/*`
-- Project state schema: `.agents/state/project-context.schema.json`
-- Harness validator: `.agents/scripts/validate-harness.mjs`
 - Project rules: `docs/agent-rules.json`
 - Project overview: `docs/README.md`
 - Durable decisions: `docs/decisions.md`
+- Agent feedback log: `docs/agent-feedback.md`
+- Design tokens: `docs/design-tokens.md`
 - Current state: `docs/project-context.json`
 
 ## Session Loop
 
-1. Orient: read `AGENT.md`, `.agents/manifest.json`, `.agents/contracts/agent-contracts.json`, `docs/agent-rules.json`, the project docs named in that rules file, project state, and the relevant role prompt.
-2. Verify baseline before changing code when practical: use the configured `commands.baseline`.
-3. Select one task and stay within the responsible Agent's owned paths from `docs/agent-rules.json`.
-4. Implement without placeholder behavior unless the task explicitly asks for a stub.
-5. Run deterministic checks: use the narrowest relevant command, then broaden to configured `commands.verify` for handoff-sized changes.
-6. Capture runtime evidence required by `evidencePolicy`.
-7. Review gate: run the Review Agent on the diff and evidence. Any Review Agent blocker keeps the task open.
-8. Update `docs/project-context.json` only as Main Orchestrator; Worker Agents leave `statePatchSuggestion`.
+1. **Orient**: read `AGENT.md`, `docs/agent-rules.json`, `docs/agent-feedback.md`, `docs/project-context.json`, and the relevant role prompt.
+2. **Plan & Scope**: list expected changed files, confirm they fall within `allowedPaths`. Do not touch files outside scope.
+3. **Implement & Verify**: implement the task and run deterministic checks (`lint`, `typecheck`, `test`). Retry up to `loopPolicy.maxGuardRetries` times on guard failures, then escalate to user.
+4. **Self-Review**: run `guard-design`, compare changed files vs plan, confirm tests pass. Retry up to `loopPolicy.maxReviewRounds` times, then escalate to user.
+5. **Complete**: update `docs/project-context.json` (orchestrator only) and summarize results.
 
 ## Quality Gates
 
-- `npm run harness:validate` means reusable harness structure and purity passed. It does not mean the app is release-ready.
-- `npm run harness:validate-project` means project-specific rules are valid.
-- `commands.baseline` means the configured deterministic baseline checks passed.
-- `commands.verify` means the configured project verification checks passed.
-- Runtime/database readiness requires relevant Browser Use, Supabase, and API evidence plus Review Agent approval.
-- If a required tool or environment is unavailable, mark the task blocked or conditional instead of calling it complete.
+- `npm run harness:validate` — harness structure and purity.
+- `npm run verify:baseline` — lint, typecheck, and tests.
+- `npm run harness:guard:verify` — default completion gate: harness validation, design guard, diff guard, lint, typecheck, tests, and tracked SQL contract checks.
+- `npm run verify:db:local` — DB runtime gate for API/Auth/Data/Supabase changes when Local Supabase is available.
+- `npm run verify` — full verification, including the DB runtime gate, for release readiness or explicit full checks.
+- Guard failures beyond `maxGuardRetries` → stop and report to user.
+- Review rounds beyond `maxReviewRounds` → stop and report to user.
 
 ## Operating Rules
 
 - Repository files are the system of record; do not rely on chat history for durable facts.
 - Keep `AGENT.md` compact. Add project knowledge to `docs/`, not here.
-- Read `docs/decisions.md` before changing architecture, data, auth, deployment, quality gates, or Agent operations.
-- Run `npm run harness:validate` after harness, Agent, decision log, contract, or state changes.
-- Run configured guard profiles before handoff-sized code changes unless the task is explicitly documentation-only or environment-blocked.
-- Do not mark a runtime-affecting task complete without QA evidence and a Review Agent result.
+- When user feedback exposes a repeatable Agent failure, record the prevention rule in `docs/agent-feedback.md`.
+- Read `docs/decisions.md` before changing architecture, data, auth, deployment, or quality gates.
+- Run `npm run harness:validate` after harness, Agent, or contract changes.
+- Do not mark a runtime-affecting task complete without configured QA evidence.
 - Preserve role boundaries. If another Agent owns the affected path, document the needed change instead of silently crossing ownership.

@@ -29,6 +29,8 @@ const semanticSlots = policy.semanticSlots || [];
 const customSvgAllowedPaths = policy.customSvgAllowedPaths || [];
 const forbiddenLayoutClasses = policy.layoutPolicy?.forbiddenClasses || [];
 const forbiddenLayoutClassSet = new Set(forbiddenLayoutClasses);
+const instructionPolicy = policy.inAppInstructionPolicy || {};
+const forbiddenInstructionPatterns = (instructionPolicy.forbiddenPatterns || []).map((pattern) => new RegExp(pattern));
 
 const guardedFiles = files.filter((file) => {
   if (tokenFiles.has(file)) return false;
@@ -76,6 +78,13 @@ for (const file of guardedFiles) {
       // DES-003: Inline SVG path
       if (!matchAny(file, customSvgAllowedPaths) && (/<svg[\s>]/.test(line) || /<path[\s>]/.test(line) || /<polygon[\s>]/.test(line))) {
         errors.push(`DES-003 [${file}:${lineNumber}] Inline SVG element`);
+      }
+
+      // DES-007: Visible how-to copy in product UI
+      for (const pattern of forbiddenInstructionPatterns) {
+        if (pattern.test(line)) {
+          errors.push(`DES-007 [${file}:${lineNumber}] Forbidden instructional UI copy: ${pattern.source}`);
+        }
       }
     }
 

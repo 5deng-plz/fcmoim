@@ -1,37 +1,33 @@
 {
-  "schemaVersion": "1.0.0",
-  "agents": {
-    "architect": {
-      "capabilities": ["scope", "architecture", "decision policy", "cross-role alignment"],
-      "requiredOutputs": ["decision or proposal", "contract impact note", "statePatchSuggestion"]
+  "schemaVersion": "2.0.0",
+  "contracts": [
+    {
+      "id": "state-writer",
+      "description": "Only the orchestrator may write to the project state file.",
+      "enforcedBy": "statePolicy in agent-rules.json",
+      "parties": ["orchestrator"],
+      "rule": "Worker agents use statePatchSuggestion; orchestrator merges."
     },
-    "backend": {
-      "capabilities": ["server behavior", "authorization", "validation", "service contracts"],
-      "requiredOutputs": ["implementation notes", "runtime evidence when required", "tests", "statePatchSuggestion"]
+    {
+      "id": "path-ownership",
+      "description": "Each agent may only modify files within its owns paths and must not touch forbidden paths.",
+      "enforcedBy": "agents[].owns and agents[].forbidden in agent-rules.json + guard-diff.mjs",
+      "parties": ["all"],
+      "rule": "Cross-boundary edits are documented, not silently applied."
     },
-    "data": {
-      "capabilities": ["data model", "schema policy", "access policy", "data quality"],
-      "requiredOutputs": ["data model or schema note", "data evidence when required", "statePatchSuggestion"]
+    {
+      "id": "design-token-compliance",
+      "description": "UI surface code must use only registered design tokens.",
+      "enforcedBy": "designPolicy in agent-rules.json + guard-design.mjs",
+      "parties": ["builder", "verifier"],
+      "rule": "Hardcoded colors, unregistered prefixes, and forbidden patterns are blocked."
     },
-    "devops": {
-      "capabilities": ["commands", "hooks", "deployment", "environment", "observability"],
-      "requiredOutputs": ["operational change note", "verification command note", "statePatchSuggestion"]
-    },
-    "frontend": {
-      "capabilities": ["user interface", "client integration", "accessibility", "runtime rendering"],
-      "requiredOutputs": ["screen or state implementation note", "design token compliance note", "semantic slot compliance note", "runtime evidence when required", "statePatchSuggestion"]
-    },
-    "main-orchestrator": {
-      "capabilities": ["coordination", "state updates", "gate enforcement", "handoff"],
-      "requiredOutputs": ["handoff summary", "guard results", "state update"]
-    },
-    "qa": {
-      "capabilities": ["acceptance criteria", "test strategy", "runtime evidence", "release readiness"],
-      "requiredOutputs": ["test matrix", "evidence summary", "release readiness", "statePatchSuggestion"]
-    },
-    "review": {
-      "capabilities": ["diff review", "evidence review", "blocker classification", "residual risk"],
-      "requiredOutputs": ["findings by severity", "design compliance results DC-1 through DC-6", "missing evidence", "release verdict", "statePatchSuggestion"]
+    {
+      "id": "loop-escalation",
+      "description": "Agents must escalate to user when loop counters exceed configured maximums.",
+      "enforcedBy": "loopPolicy in agent-rules.json",
+      "parties": ["all"],
+      "rule": "Stop work and report current state, failure analysis, and next step suggestions."
     }
-  }
+  ]
 }

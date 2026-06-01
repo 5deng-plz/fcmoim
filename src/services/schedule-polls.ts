@@ -19,14 +19,26 @@ type CreatePollRepositoryInput = {
   optionDates: string[];
 };
 
+type SchedulePollDateConflict = {
+  date: string;
+  source: 'schedule' | 'poll';
+};
+
 export type SchedulePollRepositories = {
   memberships: {
     findByAccountAndClub(accountId: string, clubId: string): Promise<SchedulePollMembership | null>;
+  };
+  seasons: {
+    findActiveByClub(clubId: string): Promise<{ id: string } | null>;
   };
   polls: {
     create(input: CreatePollRepositoryInput): Promise<SchedulePollRow>;
     listActive(clubId: string): Promise<SchedulePollRow[]>;
     findById(pollId: string): Promise<SchedulePollRow | null>;
+    findActiveDateConflicts(input: {
+      clubId: string;
+      optionDates: string[];
+    }): Promise<SchedulePollDateConflict[]>;
     replaceVote(input: {
       pollId: string;
       membershipId: string;
@@ -40,6 +52,7 @@ export type SchedulePollRepositories = {
     promoteToMatch(input: {
       pollId: string;
       optionId: string;
+      seasonId: string;
       promotedByMembershipId: string;
     }): Promise<{ pollId: string; matchId: string }>;
   };
@@ -63,6 +76,9 @@ export function createSchedulePollService(repositories: SchedulePollRepositories
       const membership = await findMembership(repositories, input.auth, input.clubId);
       assertCanManageSchedulePolls(membership);
 
+      const optionDates = normalizeOptionDates(input.optionDates);
+      await assertNoDateConflicts(repositories, input.clubId, optionDates);
+
       return repositories.polls.create({
         clubId: input.clubId,
         seasonId: input.seasonId ?? null,
@@ -72,7 +88,7 @@ export function createSchedulePollService(repositories: SchedulePollRepositories
         memo: normalizeOptionalText(input.memo),
         closesAt: input.closesAt ?? null,
         createdByMembershipId: membership.id,
-        optionDates: normalizeOptionDates(input.optionDates),
+        optionDates,
       });
     },
 
@@ -119,9 +135,15 @@ export function createSchedulePollService(repositories: SchedulePollRepositories
       assertPollBelongsToClub(poll, input.clubId);
       assertPollOptionBelongsToPoll(input.optionId, poll);
 
+      const seasonId = poll.seasonId ?? (await repositories.seasons.findActiveByClub(input.clubId))?.id;
+      if (!seasonId) {
+        throw new AppError('bad_request', '활성 시즌이 없어 확정 일정을 만들 수 없어요.');
+      }
+
       return repositories.polls.promoteToMatch({
         pollId: input.pollId,
         optionId: input.optionId,
+        seasonId,
         promotedByMembershipId: membership.id,
       });
     },
@@ -146,6 +168,21 @@ export function createSchedulePollService(repositories: SchedulePollRepositories
       });
     },
   };
+}
+
+async function assertNoDateConflicts(
+  repositories: SchedulePollRepositories,
+  clubId: string,
+  optionDates: string[],
+) {
+  const conflicts = await repositories.polls.findActiveDateConflicts({ clubId, optionDates });
+  if (conflicts.length === 0) return;
+
+  const conflictDates = Array.from(new Set(conflicts.map((conflict) => conflict.date))).sort();
+  throw new AppError(
+    'conflict',
+    `이미 일정 또는 투표가 있는 날짜예요: ${conflictDates.map(formatKoreanDate).join(', ')}`,
+  );
 }
 
 async function findMembership(
@@ -252,8 +289,8 @@ function normalizeOptionDates(optionDates: string[]) {
 
     return date.trim();
   }).filter(Boolean))).sort();
-  if (uniqueDates.length < 2 || uniqueDates.length > 4) {
-    throw new AppError('bad_request', 'Schedule polls require between 2 and 4 option dates.');
+  if (uniqueDates.length < 1 || uniqueDates.length > 4) {
+    throw new AppError('bad_request', 'Schedule polls require between 1 and 4 option dates.');
   }
 
   for (const date of uniqueDates) {
@@ -277,11 +314,12 @@ function normalizeSelectedOptionIds(optionIds: string[], poll: SchedulePollRow) 
 
     return optionId.trim();
   }).filter(Boolean))).sort();
-  if (selectedOptionIds.length === 0) {
-    throw new AppError('bad_request', 'At least one poll option must be selected.');
-  }
-
   selectedOptionIds.forEach((optionId) => assertPollOptionBelongsToPoll(optionId, poll));
 
   return selectedOptionIds;
+}
+
+function formatKoreanDate(date: string) {
+  const [, month, day] = date.split('-');
+  return `${Number(month)}월 ${Number(day)}일`;
 }
