@@ -57,10 +57,17 @@ export default function ScheduleTab() {
     () => collapseDuplicateMatchEvents(scheduleMatches),
     [scheduleMatches],
   );
-  const scheduleCalendarEvents = [
-    ...buildMatchCalendarEvents(visibleScheduleMatches),
-    ...buildPollCalendarEvents(activePolls),
-  ];
+  const scheduleCalendarEvents = useMemo(
+    () => [
+      ...buildMatchCalendarEvents(visibleScheduleMatches),
+      ...buildPollCalendarEvents(activePolls),
+    ],
+    [activePolls, visibleScheduleMatches],
+  );
+  const firstVisibleEventDate = useMemo(
+    () => getFirstEventDateInMonth(scheduleCalendarEvents, visibleMonth),
+    [scheduleCalendarEvents, visibleMonth],
+  );
   const refreshSchedule = async () => {
     await Promise.allSettled([
       loadActivePolls(activeClubId),
@@ -203,6 +210,20 @@ export default function ScheduleTab() {
     selectedMatchDetail,
     selectedMatchDetailStatus,
     setSettlementNotification,
+  ]);
+
+  useEffect(() => {
+    if (!firstVisibleEventDate) return;
+    if (selectedEvents.length > 0 || selectedPollOptions.length > 0) return;
+    if (selectedDate === firstVisibleEventDate.getDate()) return;
+
+    setSelectedDate(firstVisibleEventDate.getDate());
+  }, [
+    firstVisibleEventDate,
+    selectedDate,
+    selectedEvents.length,
+    selectedPollOptions.length,
+    setSelectedDate,
   ]);
 
   return (
@@ -838,6 +859,17 @@ function collapseDuplicateMatchEvents(matches: UpcomingMatch[]) {
   }
 
   return result;
+}
+
+function getFirstEventDateInMonth(events: Array<{ date?: string }>, visibleMonth: Date) {
+  const year = visibleMonth.getFullYear();
+  const month = visibleMonth.getMonth();
+
+  return events
+    .filter((event): event is { date: string } => Boolean(event.date))
+    .map((event) => new Date(`${event.date.slice(0, 10)}T00:00:00`))
+    .filter((date) => date.getFullYear() === year && date.getMonth() === month)
+    .sort((left, right) => left.getTime() - right.getTime())[0] ?? null;
 }
 
 function stripDatePrefix(title: string | null | undefined): string {

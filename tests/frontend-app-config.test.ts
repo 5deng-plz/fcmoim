@@ -55,4 +55,15 @@ describe('v1.0 frontend runtime config', () => {
 
     expect(appConfig).not.toHaveProperty('enableAdminTestBypass');
   });
+
+  it('uses the public app profile in browser-safe runtime config', async () => {
+    const { appConfig, activeProfile } = await loadAppConfig({
+      APP_PROFILE: '',
+      NEXT_PUBLIC_APP_PROFILE: 'prod',
+      NEXT_PUBLIC_SUPABASE_PUBLIC_CONFIG: '{"url":"https://project.supabase.co","publishableKey":"publishable"}',
+    });
+
+    expect(activeProfile).toBe('prod');
+    expect(appConfig.profile).toBe('prod');
+  });
 });

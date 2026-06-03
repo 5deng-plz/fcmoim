@@ -1,72 +1,64 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 36,
-  "updatedAt": "2026-06-02T00:42:00.000+09:00",
+  "updateVersion": 42,
+  "updatedAt": "2026-06-03T14:28:00.000+09:00",
   "updatedBy": "orchestrator",
-  "currentPhase": "join-onboarding-hardening",
+  "currentPhase": "google-login-ui-polish",
   "activeWork": {
-    "taskId": "join-onboarding-hardening",
+    "taskId": "google-login-ui-polish",
     "status": "complete",
-    "baselineCommit": "1441f5f5015af6e2bb3c3743a490bc3adaa34ffa",
+    "baselineCommit": "6ed66b62779f2d1d1caf6cdaf62003d25a79d03f",
     "changedFiles": [
-      "scripts/seed-local-demo-data.mjs",
-      "src/app/page.tsx",
-      "src/stores/useAppStore.ts",
-      "tests/account-membership-flows.test.ts",
-      "tests/local-supabase-api.test.ts",
+      "public/brand/google-g.svg",
+      "src/components/features/LoginScreen.tsx",
+      "src/components/layout/Header.tsx",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
-    "changedSurfaces": ["ui", "api", "data", "tests", "docs"],
+    "changedSurfaces": ["ui", "tests", "docs"],
     "allowedPaths": [
       "src/**",
-      "supabase/**",
-      "scripts/**",
       "tests/**",
-      "docs/project-context.json"
+      "public/brand/**",
+      "docs/project-context.json",
+      ".env.local.example",
+      "apphosting.yaml"
     ],
     "evidence": {
-      "verifyBaseline": {
+      "prodBuild": {
         "status": "passed",
-        "command": "npm run verify:baseline",
-        "summary": "Harness validation, lint, typecheck, and full Vitest suite passed: 18 files passed, 1 local-Supabase-gated file skipped; 190 tests passed, 7 gated tests skipped."
+        "command": "APP_PROFILE=prod NEXT_PUBLIC_APP_PROFILE=prod ... npm run build",
+        "summary": "App Hosting-style production build completed after replacing the Google button mark asset and adding guest logo navigation."
       },
-      "lint": {
+      "harnessGuardVerifyUtc": {
         "status": "passed",
-        "command": "npm run lint"
-      },
-      "typecheck": {
-        "status": "passed",
-        "command": "npm run typecheck"
+        "command": "npm run harness:guard:precommit && node .agents/scripts/guard-diff.mjs --staged && TZ=UTC npm run verify:harness",
+        "summary": "Staged Harness guards passed while unrelated AGENT.md remained dirty; lint, typecheck, full Vitest, and db:check passed under UTC: 197 tests passed, 7 local-Supabase-gated tests skipped."
       },
       "targetedTests": {
         "status": "passed",
-        "command": "npm run test -- --run tests/frontend-auth-and-schedule-ui.test.tsx tests/frontend-membership-client.test.ts tests/account-membership-flows.test.ts tests/local-supabase-api.test.ts",
-        "summary": "82 tests passed and 7 local-Supabase-gated tests skipped without FC_RUN_LOCAL_SUPABASE_API_TESTS."
-      },
-      "dbCheck": {
-        "status": "passed",
-        "command": "npm run db:check",
-        "summary": "Supabase contract check passed for 15 tracked SQL files."
-      },
-      "verifyDbLocal": {
-        "status": "passed",
-        "command": "npm run verify:db:local",
-        "summary": "Local DB reset, QA Auth seed, 3-team demo seed, and 7 local Supabase API integration tests passed."
-      },
-      "harnessGuardVerify": {
-        "status": "passed",
-        "command": "npm run harness:guard:verify",
-        "summary": "Harness validation, design guard, diff guard, verify:baseline, and db:check passed."
-      },
-      "scenarioCoverage": {
-        "status": "passed",
-        "summary": "Added hardening coverage for pending blocked duplicate path, rejected/suspended/withdrawn blocked states, full duplicate join conflict messages, public club response allowlists, reusable local Supabase clients, fixed date cleanup, and seed fixture structure."
+        "command": "TZ=UTC npm test -- tests/frontend-auth-and-schedule-ui.test.tsx",
+        "summary": "Auth/header UI suite passed: Google login uses the Google G asset button, and unauthenticated guest browsing users return to the login screen by clicking the FC moim logo."
       },
       "designChangePolicy": {
         "status": "passed",
-        "summary": "No redesign introduced; only routing cleanup, comments, seed structure, and tests changed."
+        "summary": "No broad redesign introduced; Google button was aligned to the standard white bordered Google sign-in style and guest logo navigation was added."
+      },
+      "remoteRuntime": {
+        "status": "pending",
+        "command": "Playwright mobile smoke against https://guppy--fcmoim.asia-east1.hosted.app/",
+        "summary": "Run after App Hosting deploys the UI polish commit."
+      },
+      "localRuntime": {
+        "status": "passed",
+        "command": "next start -p 3101 + Playwright mobile smoke",
+        "summary": "Google button rendered as a 280x40 white bordered sign-in button with google-g.svg, and team browse logo returned unauthenticated guests to the login screen without page errors."
+      },
+      "googleProviderConfig": {
+        "status": "passed",
+        "command": "Supabase Auth settings check",
+        "summary": "Supabase Auth external provider settings report google true, kakao true, and email true."
       }
     },
     "reviewStatus": "ready",

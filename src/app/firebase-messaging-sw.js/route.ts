@@ -14,7 +14,7 @@ firebase.initializeApp(${JSON.stringify(firebaseConfig)});
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  const notificationTitle = payload.notification?.title || 'FC Moim';
+  const notificationTitle = payload.notification?.title || 'FC moim';
   const notificationOptions = {
     body: payload.notification?.body || '',
     icon: '/brand/fcmoimLogo.svg',

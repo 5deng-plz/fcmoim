@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "FC Moim",
+  title: "FC moim",
   description: "아마추어 풋살 동호회 전용 매니지먼트 PWA",
   manifest: "/manifest.json",
   icons: {
@@ -26,7 +26,6 @@ export default function RootLayout({
       <head>
         <link
           rel="stylesheet"
-          as="style"
           crossOrigin="anonymous"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />

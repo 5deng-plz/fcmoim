@@ -39,7 +39,7 @@ const dotenvEnv = loadDotenv('.env.local');
 const qaTestPassword =
   process.env.QA_TEST_PASSWORD ||
   dotenvEnv.QA_TEST_PASSWORD ||
-  'local-supabase-qa-password';
+  'password';
 const defaultClubId =
   process.env.NEXT_PUBLIC_DEFAULT_CLUB_ID ||
   dotenvEnv.NEXT_PUBLIC_DEFAULT_CLUB_ID ||

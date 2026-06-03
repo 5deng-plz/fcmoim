@@ -4,7 +4,9 @@ function resolveProfile(value: string | undefined): AppProfile {
   return value === 'prod' ? 'prod' : 'local';
 }
 
-export const activeProfile: AppProfile = resolveProfile(process.env.APP_PROFILE);
+export const activeProfile: AppProfile = resolveProfile(
+  process.env.NEXT_PUBLIC_APP_PROFILE || process.env.APP_PROFILE,
+);
 
 export interface FirebaseConfig {
   apiKey: string;

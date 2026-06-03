@@ -122,7 +122,7 @@ export const useAppStore = create<AppState>((set) => ({
     persistSelectedJoinClubId(clubId);
     set({ selectedJoinClubId: clubId });
   },
-  teamName: 'FC Moim',
+  teamName: 'FC moim',
   setTeamName: (name) => set({ teamName: name }),
   availableClubs: [],
   setAvailableClubs: (clubs) => set({ availableClubs: clubs }),

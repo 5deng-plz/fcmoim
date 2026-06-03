@@ -74,7 +74,7 @@ async function applyAuthState(
     useAppStore.setState({
       availableClubs: [],
       activeClubId: appConfig.defaultClubId,
-      teamName: 'FC Moim',
+      teamName: 'FC moim',
       isAuthenticated: false,
       userStatus: 'guest',
       authView: 'login',
@@ -90,7 +90,7 @@ async function applyAuthState(
 
   const appState = useAppStore.getState();
   const joinIntent = appState.joinIntent;
-  const joinClubId = joinIntent?.clubId || appState.selectedJoinClubId || appConfig.defaultClubId;
+  const joinClubId = joinIntent?.clubId || appConfig.defaultClubId;
 
   try {
     const snapshot = await fetchMembershipSnapshot(joinClubId);
@@ -114,7 +114,7 @@ async function applyAuthState(
       activeClubId: currentClubId,
       selectedJoinClubId: joinClubId,
       availableClubs,
-      teamName: currentClub?.clubName || 'FC Moim',
+      teamName: currentClub?.clubName || 'FC moim',
       isAuthenticated: true,
       userStatus: requestedStatus,
       userRole: memberProfile?.role || snapshot.membership?.role || 'member',
@@ -140,7 +140,7 @@ async function applyAuthState(
     useAppStore.setState({
       availableClubs: [],
       activeClubId: appConfig.defaultClubId,
-      teamName: 'FC Moim',
+      teamName: 'FC moim',
       isAuthenticated: false,
       userStatus: 'guest',
       authView: 'login',
@@ -214,7 +214,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     useAppStore.setState({
       availableClubs: [],
       activeClubId: appConfig.defaultClubId,
-      teamName: 'FC Moim',
+      teamName: 'FC moim',
       isAuthenticated: false,
       userStatus: 'guest',
       authView: 'login',
@@ -273,7 +273,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     useAppStore.setState({
       activeClubId: clubId,
-      teamName: currentClub?.clubName || 'FC Moim',
+      teamName: currentClub?.clubName || 'FC moim',
       isAuthenticated: true,
       userStatus: membershipStateToUserStatus(snapshot.membershipState),
       userRole: memberProfile?.role || snapshot.membership?.role || 'member',

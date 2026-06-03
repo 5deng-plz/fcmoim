@@ -149,13 +149,43 @@ describe('v1.0 auth provider UI', () => {
     });
   });
 
-  it('shows email, Google, and Kakao login choices', () => {
+  it('shows production-safe OAuth login choices without email password login by default', () => {
     render(<LoginScreen />);
 
-    expect(screen.getByRole('button', { name: /이메일로 로그인/ })).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: '이메일' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Google로 시작하기/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /이메일로 로그인/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: '이메일' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('비밀번호')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Google로 계속하기/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Google로 계속하기/ }).querySelector('img[src="/brand/google-g.svg"]')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /카카오로 시작하기/ })).toBeInTheDocument();
+  });
+
+  it('starts Google OAuth from the login choice', async () => {
+    const signInGoogle = vi.fn().mockResolvedValue(undefined);
+    useAuthStore.setState({ signInGoogle });
+
+    render(<LoginScreen />);
+
+    await userEvent.click(screen.getByRole('button', { name: /Google로 계속하기/ }));
+
+    expect(signInGoogle).toHaveBeenCalledOnce();
+  });
+
+  it('shows an error when Google OAuth cannot start', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    useAuthStore.setState({
+      signInGoogle: vi.fn().mockRejectedValue(new Error('provider disabled')),
+    });
+
+    render(<LoginScreen />);
+
+    await userEvent.click(screen.getByRole('button', { name: /Google로 계속하기/ }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Google 로그인을 시작하지 못했습니다. 잠시 후 다시 시도해주세요.',
+    );
+
+    consoleError.mockRestore();
   });
 
   it('shows public team browse feedback and returns to login', async () => {
@@ -294,7 +324,7 @@ describe('v1.0 auth provider UI', () => {
     expect(screen.getByText('5월 전지훈련').closest('.rounded-lg')).toHaveClass('bg-event-training-bg', 'border-event-training-border');
     expect(screen.getByText('5월 장비 점검').closest('.rounded-lg')).toHaveClass('bg-event-etc-bg', 'border-event-etc-border');
     expect(screen.getByRole('button', { name: /입단신청 시작/ })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /FC Moim 랜딩으로 이동/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /FC moim 랜딩으로 이동/ })).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: /FC Orca/ }));
 
@@ -407,7 +437,7 @@ describe('v1.0 auth provider UI', () => {
 
     expect(await screen.findByRole('dialog', { name: '입단신청' })).toBeInTheDocument();
     expect(screen.getByPlaceholderText('이름 입력 *')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'FC Orca' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /FC Orca Second club/ })).toBeInTheDocument();
   });
 
   it('renders pending join state after login without opening a duplicate submit path', async () => {
@@ -1077,7 +1107,7 @@ describe('v1.0 schedule and poll UX', () => {
 
     try {
       useAppStore.setState({
-        availableClubs: [{ membershipId: 'membership-red', clubId: 'club-test', clubName: 'FC Moim', role: 'member' }],
+        availableClubs: [{ membershipId: 'membership-red', clubId: 'club-test', clubName: 'FC moim', role: 'member' }],
       });
       useScheduleStore.setState({
         selectedDate: 17,
@@ -1194,7 +1224,7 @@ describe('v1.0 schedule and poll UX', () => {
 
     try {
       useAppStore.setState({
-        availableClubs: [{ membershipId: 'membership-blue', clubId: 'club-test', clubName: 'FC Moim', role: 'member' }],
+        availableClubs: [{ membershipId: 'membership-blue', clubId: 'club-test', clubName: 'FC moim', role: 'member' }],
       });
       useScheduleStore.setState({
         selectedDate: 17,
@@ -1398,9 +1428,13 @@ describe('v1.0 schedule and poll UX', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date(2026, 2, 1));
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const originalShowToast = useToastStore.getState().showToast;
+    const showToast = vi.fn((message: string) => {
+      useToastStore.setState({ message });
+    });
 
     try {
-      useToastStore.setState({ message: null });
+      useToastStore.setState({ message: null, showToast });
       useScheduleStore.setState({
         selectedDate: 21,
         activePolls: [activePoll],
@@ -1464,8 +1498,9 @@ describe('v1.0 schedule and poll UX', () => {
         method: 'POST',
       })));
       expect(useScheduleStore.getState().selectedDate).toBe(21);
-      expect(useToastStore.getState().message).toBe('일정 확정');
+      await waitFor(() => expect(showToast).toHaveBeenCalledWith('일정 확정'));
     } finally {
+      useToastStore.setState({ message: null, showToast: originalShowToast });
       vi.useRealTimers();
     }
   });
@@ -2375,6 +2410,25 @@ describe('records and header polish UI', () => {
     expect(screen.getByText('FC Guppy')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '커뮤니티 뒤로가기' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^홈$/ })).not.toBeInTheDocument();
+  });
+
+  it('returns unauthenticated guest browsing users to the login screen from the logo', async () => {
+    const user = userEvent.setup();
+    useAppStore.setState({
+      isAuthenticated: false,
+      userStatus: 'guest',
+      authView: 'guest',
+      showJoinForm: true,
+      teamName: 'FC Moim',
+    });
+
+    render(<Header />);
+
+    await user.click(screen.getByRole('button', { name: 'FC moim 로그인 화면으로 이동' }));
+    expect(useAppStore.getState()).toMatchObject({
+      authView: 'login',
+      showJoinForm: false,
+    });
   });
 
   it('switches Community board and gallery tabs to clear preparing states', async () => {

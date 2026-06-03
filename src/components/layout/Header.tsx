@@ -23,6 +23,7 @@ export default function Header() {
     setShowNotifications,
     teamName,
     setActiveTab,
+    setAuthView,
   } = useAppStore();
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -59,7 +60,10 @@ export default function Header() {
   };
 
   const handleLogoHome = () => {
-    if (!isGuestMode) {
+    if (isGuestMode) {
+      setShowJoinForm(false);
+      setAuthView('login');
+    } else {
       setActiveTab('home');
     }
   };
@@ -93,7 +97,7 @@ export default function Header() {
         </div>
       ) : showCommunity ? (
         <>
-          <LogoHomeButton teamName={displayedTeamName} onClick={handleLogoHome} />
+          <LogoHomeButton teamName={displayedTeamName} onClick={handleLogoHome} isGuestMode={isGuestMode} />
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -116,7 +120,7 @@ export default function Header() {
         </>
       ) : (
         <>
-          <LogoHomeButton teamName={displayedTeamName} onClick={handleLogoHome} />
+          <LogoHomeButton teamName={displayedTeamName} onClick={handleLogoHome} isGuestMode={isGuestMode} />
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -172,12 +176,12 @@ export default function Header() {
   );
 }
 
-function LogoHomeButton({ teamName, onClick }: { teamName: string; onClick: () => void }) {
+function LogoHomeButton({ teamName, onClick, isGuestMode }: { teamName: string; onClick: () => void; isGuestMode: boolean }) {
   return (
     <div className="flex min-w-0 items-center gap-1.5 text-xl font-black tracking-tight text-primary">
       <button
         type="button"
-        aria-label={`${teamName} 홈으로 이동`}
+        aria-label={isGuestMode ? `${teamName} 로그인 화면으로 이동` : `${teamName} 홈으로 이동`}
         onClick={onClick}
         className="group flex h-[36px] w-[36px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-card ring-1 ring-border-subtle transition-all duration-200 hover:-translate-y-0.5 hover:scale-105 hover:bg-surface-hover hover:shadow-md hover:ring-green-200 active:translate-y-0 active:scale-95"
       >

@@ -22,13 +22,13 @@ if (!password || password.length < 8) {
 }
 
 const qaUsers = [
-  { email: 'qa-admin@fcmoim.test', name: 'QA 관리자', role: 'admin', position: 'MF' },
-  { email: 'qa-operator@fcmoim.test', name: 'QA 운영진', role: 'operator', position: 'DF' },
-  { email: 'qa-member1@fcmoim.test', name: 'QA 멤버 1', role: 'member', position: 'FW' },
-  { email: 'qa-member2@fcmoim.test', name: 'QA 멤버 2', role: 'member', position: 'MF' },
-  { email: 'qa-member3@fcmoim.test', name: 'QA 멤버 3', role: 'member', position: 'DF' },
-  { email: 'qa-member4@fcmoim.test', name: 'QA 멤버 4', role: 'member', position: 'MF' },
-  { email: 'qa-new@fcmoim.test', name: 'QA 신규', role: 'member', position: 'MF' },
+  { email: 'qa-admin@fcmoim.test', name: '김영수', role: 'admin', position: 'MF' },
+  { email: 'qa-operator@fcmoim.test', name: '박영철', role: 'operator', position: 'DF' },
+  { email: 'qa-member1@fcmoim.test', name: '이영식', role: 'member', position: 'FW' },
+  { email: 'qa-member2@fcmoim.test', name: '최광수', role: 'member', position: 'MF' },
+  { email: 'qa-member3@fcmoim.test', name: '정상철', role: 'member', position: 'DF' },
+  { email: 'qa-member4@fcmoim.test', name: '한민수', role: 'member', position: 'MF' },
+  { email: 'qa-new@fcmoim.test', name: '오현우', role: 'member', position: 'MF' },
 ];
 
 const supabase = createClient(supabaseUrl, serviceRoleKey, {

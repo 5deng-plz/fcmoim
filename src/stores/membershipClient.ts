@@ -270,12 +270,18 @@ export async function fetchClubMemberships(): Promise<ClubOption[]> {
   }
 
   const memberships = await response.json() as ClubMembershipSummary[];
-  return memberships.map((membership) => ({
-    membershipId: membership.membershipId,
-    clubId: membership.clubId,
-    clubName: membership.clubName,
-    role: membership.role,
-  }));
+  return memberships
+    .map((membership) => ({
+      membershipId: membership.membershipId,
+      clubId: membership.clubId,
+      clubName: membership.clubName,
+      role: membership.role,
+    }))
+    .sort((left, right) => {
+      if (left.clubId === appConfig.defaultClubId) return -1;
+      if (right.clubId === appConfig.defaultClubId) return 1;
+      return left.clubName.localeCompare(right.clubName, 'ko');
+    });
 }
 
 export async function patchMembershipPhoto(input: { clubId: string; photoUrl: string | null }) {

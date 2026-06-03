@@ -24,6 +24,7 @@ const publicClubDetailKeys = [
   'upcomingMatches',
 ] as const;
 const schedulePollOptionDates = ['2031-01-11', '2031-01-12'];
+const schedulePollTitle = 'Local Demo API smoke poll';
 let authorization = '';
 let authClient: SupabaseClient | null = null;
 let adminClient: SupabaseClient | null = null;
@@ -206,102 +207,106 @@ describeLocal('local Supabase API integration', () => {
     const pendingRoute = await import('../src/app/api/membership/pending/route');
     const reviewRoute = await import('../src/app/api/membership/review/route');
 
-    const initialResponse = await membershipRoute.GET(
-      new Request(`http://localhost/api/membership?clubId=${clubIds.lynx}`),
-    );
-    const initial = await initialResponse.json();
+    try {
+      const initialResponse = await membershipRoute.GET(
+        new Request(`http://localhost/api/membership?clubId=${clubIds.lynx}`),
+      );
+      const initial = await initialResponse.json();
 
-    expect(initialResponse.status).toBe(200);
-    expect(initial.membershipState).toBe('new');
+      expect(initialResponse.status).toBe(200);
+      expect(initial.membershipState).toBe('new');
 
-    const createResponse = await membershipRoute.POST(new Request('http://localhost/api/membership', {
-      method: 'POST',
-      body: JSON.stringify({
+      const createResponse = await membershipRoute.POST(new Request('http://localhost/api/membership', {
+        method: 'POST',
+        body: JSON.stringify({
+          clubId: clubIds.lynx,
+          profile: {
+            nickname: '오현우',
+            position: 'MF',
+            heightCm: 175,
+            weightKg: 71,
+            birthDate: '1996-01-27',
+            residence: '서울 은평구',
+            photoUrl: null,
+            preferredFoot: 'right',
+            stats: { attack: 61, defense: 60, stamina: 66, mentality: 63, speed: 65, manner: 69 },
+            ovr: 64,
+          },
+        }),
+      }));
+      const created = await createResponse.json();
+
+      expect(createResponse.status).toBe(201);
+      expect(created).toEqual(expect.objectContaining({
         clubId: clubIds.lynx,
-        profile: {
-          nickname: 'QA 신규',
-          position: 'MF',
-          heightCm: null,
-          weightKg: null,
-          birthDate: null,
-          residence: '서울 마포구',
-          photoUrl: null,
-          preferredFoot: 'right',
-          stats: { attack: 66, defense: 64, stamina: 70, mentality: 70, speed: 68, manner: 72 },
-          ovr: 68,
-        },
-      }),
-    }));
-    const created = await createResponse.json();
+        status: 'pending',
+        nickname: '오현우',
+      }));
 
-    expect(createResponse.status).toBe(201);
-    expect(created).toEqual(expect.objectContaining({
-      clubId: clubIds.lynx,
-      status: 'pending',
-      nickname: 'QA 신규',
-    }));
+      const duplicateResponse = await membershipRoute.POST(new Request('http://localhost/api/membership', {
+        method: 'POST',
+        body: JSON.stringify({
+          clubId: clubIds.lynx,
+          profile: {
+            nickname: '오현우',
+            position: 'MF',
+            heightCm: 175,
+            weightKg: 71,
+            birthDate: '1996-01-27',
+            photoUrl: null,
+            preferredFoot: 'right',
+          },
+        }),
+      }));
+      const duplicate = await duplicateResponse.json();
 
-    const duplicateResponse = await membershipRoute.POST(new Request('http://localhost/api/membership', {
-      method: 'POST',
-      body: JSON.stringify({
+      expect(duplicateResponse.status).toBe(409);
+      expect(duplicate.error.message).toContain('이미 입단신청이 접수');
+
+      await signIn('qa-operator@fcmoim.test');
+      const pendingResponse = await pendingRoute.GET(
+        new Request(`http://localhost/api/membership/pending?clubId=${clubIds.lynx}`),
+      );
+      const pending = await pendingResponse.json();
+
+      expect(pendingResponse.status).toBe(200);
+      expect(pending).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: created.id, clubId: clubIds.lynx, nickname: '오현우' }),
+      ]));
+
+      const reviewResponse = await reviewRoute.PATCH(new Request('http://localhost/api/membership/review', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          clubId: clubIds.lynx,
+          membershipId: created.id,
+          decision: 'approved',
+        }),
+      }));
+      const reviewed = await reviewResponse.json();
+
+      expect(reviewResponse.status).toBe(200);
+      expect(reviewed).toEqual(expect.objectContaining({
+        id: created.id,
         clubId: clubIds.lynx,
-        profile: {
-          nickname: 'QA 신규',
-          position: 'MF',
-          heightCm: null,
-          weightKg: null,
-          birthDate: null,
-          photoUrl: null,
-          preferredFoot: 'right',
-        },
-      }),
-    }));
-    const duplicate = await duplicateResponse.json();
+        status: 'approved',
+      }));
 
-    expect(duplicateResponse.status).toBe(409);
-    expect(duplicate.error.message).toContain('이미 입단신청이 접수');
+      await signIn('qa-new@fcmoim.test');
+      const approvedResponse = await membershipRoute.GET(
+        new Request(`http://localhost/api/membership?clubId=${clubIds.lynx}`),
+      );
+      const approved = await approvedResponse.json();
 
-    await signIn('qa-operator@fcmoim.test');
-    const pendingResponse = await pendingRoute.GET(
-      new Request(`http://localhost/api/membership/pending?clubId=${clubIds.lynx}`),
-    );
-    const pending = await pendingResponse.json();
-
-    expect(pendingResponse.status).toBe(200);
-    expect(pending).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: created.id, clubId: clubIds.lynx, nickname: 'QA 신규' }),
-    ]));
-
-    const reviewResponse = await reviewRoute.PATCH(new Request('http://localhost/api/membership/review', {
-      method: 'PATCH',
-      body: JSON.stringify({
+      expect(approvedResponse.status).toBe(200);
+      expect(approved.membershipState).toBe('approved');
+      expect(approved.membership).toEqual(expect.objectContaining({
+        id: created.id,
         clubId: clubIds.lynx,
-        membershipId: created.id,
-        decision: 'approved',
-      }),
-    }));
-    const reviewed = await reviewResponse.json();
-
-    expect(reviewResponse.status).toBe(200);
-    expect(reviewed).toEqual(expect.objectContaining({
-      id: created.id,
-      clubId: clubIds.lynx,
-      status: 'approved',
-    }));
-
-    await signIn('qa-new@fcmoim.test');
-    const approvedResponse = await membershipRoute.GET(
-      new Request(`http://localhost/api/membership?clubId=${clubIds.lynx}`),
-    );
-    const approved = await approvedResponse.json();
-
-    expect(approvedResponse.status).toBe(200);
-    expect(approved.membershipState).toBe('approved');
-    expect(approved.membership).toEqual(expect.objectContaining({
-      id: created.id,
-      clubId: clubIds.lynx,
-      status: 'approved',
-    }));
+        status: 'approved',
+      }));
+    } finally {
+      await deleteMembershipForAccountId(newAccountId, clubIds.lynx);
+    }
   });
 
   it('rejects pending list and review access for a regular member', async () => {
@@ -334,7 +339,7 @@ describeLocal('local Supabase API integration', () => {
   it('creates and lists a schedule poll through API routes backed by local Supabase', async () => {
     await signIn('qa-operator@fcmoim.test');
     const route = await import('../src/app/api/schedule-polls/route');
-    const title = `Local API poll ${Date.now()}`;
+    const title = schedulePollTitle;
     await deleteSchedulePollsByOptionDates(clubIds.guppy, schedulePollOptionDates);
 
     const createResponse = await route.POST(new Request('http://localhost/api/schedule-polls', {
@@ -376,6 +381,8 @@ describeLocal('local Supabase API integration', () => {
         }),
       ]),
     );
+
+    await deleteSchedulePollsByOptionDates(clubIds.guppy, schedulePollOptionDates);
   });
 
   it('serves rich local demo announcements and records through API routes', async () => {
@@ -407,7 +414,7 @@ describeLocal('local Supabase API integration', () => {
     expect(records.seasonSummary).toEqual(expect.objectContaining({
       totalMatches: 2,
       topVenue: expect.objectContaining({ location: '상암 풋살장' }),
-      topGoals: expect.objectContaining({ nickname: 'QA 멤버 1' }),
+      topGoals: expect.objectContaining({ nickname: '이영식' }),
     }));
   });
 });

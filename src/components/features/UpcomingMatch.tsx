@@ -295,13 +295,17 @@ function getDDay(dateStr: string) {
 }
 
 function formatMatchDate(value: string) {
-  const date = new Date(value);
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-  const weekday = weekdays[date.getDay()] ?? '';
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const parts = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    month: 'numeric',
+    day: 'numeric',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date(value));
+  const getPart = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? '';
 
-  return `${month}월 ${day}일 ${weekday} ${hours}:${minutes}`;
+  return `${getPart('month')}월 ${getPart('day')}일 ${getPart('weekday')} ${getPart('hour')}:${getPart('minute')}`;
 }

@@ -15,7 +15,7 @@ function TeamIntro() {
         <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-primary-bg rounded-2xl mb-3">
           <FcmoimLogo size={38} />
         </div>
-        <h2 className="text-xl font-extrabold text-primary mb-1">FC Moim</h2>
+        <h2 className="text-xl font-extrabold text-primary mb-1">FC moim</h2>
         <p className="text-sm text-secondary">서울 · 매주 토요일 · 풋살 동호회</p>
       </div>
 
@@ -72,7 +72,7 @@ function TeamDescription() {
   return (
     <section className="space-y-3">
       <h3 className="text-sm font-bold text-primary flex items-center gap-1.5">
-        ⚽ FC Moim은 이런 팀이에요!
+        ⚽ FC moim은 이런 팀이에요!
       </h3>
       <div className="bg-surface-bg rounded-xl p-5">
         <ul className="space-y-2 text-sm text-secondary">

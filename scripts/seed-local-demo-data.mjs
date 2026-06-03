@@ -25,13 +25,13 @@ const supabase = createClient(supabaseUrl, secretKey, {
 });
 
 const qaUsers = [
-  { email: 'qa-admin@fcmoim.test', nickname: 'QA 관리자', role: 'admin', position: 'MF', ovr: 86, points: 132, stats: { attack: 78, defense: 76, stamina: 84, mentality: 88, speed: 73, manner: 91 } },
-  { email: 'qa-operator@fcmoim.test', nickname: 'QA 운영진', role: 'operator', position: 'DF', ovr: 82, points: 126, stats: { attack: 67, defense: 87, stamina: 80, mentality: 84, speed: 70, manner: 88 } },
-  { email: 'qa-member1@fcmoim.test', nickname: 'QA 멤버 1', role: 'member', position: 'FW', ovr: 79, points: 118, stats: { attack: 86, defense: 58, stamina: 76, mentality: 74, speed: 83, manner: 80 } },
-  { email: 'qa-member2@fcmoim.test', nickname: 'QA 멤버 2', role: 'member', position: 'MF', ovr: 76, points: 111, stats: { attack: 74, defense: 72, stamina: 82, mentality: 77, speed: 75, manner: 82 } },
-  { email: 'qa-member3@fcmoim.test', nickname: 'QA 멤버 3', role: 'member', position: 'DF', ovr: 74, points: 104, stats: { attack: 58, defense: 83, stamina: 74, mentality: 79, speed: 69, manner: 84 } },
-  { email: 'qa-member4@fcmoim.test', nickname: 'QA 멤버 4', role: 'member', position: 'MF', ovr: 72, points: 98, stats: { attack: 70, defense: 68, stamina: 79, mentality: 73, speed: 76, manner: 79 } },
-  { email: 'qa-new@fcmoim.test', nickname: 'QA 신규', role: 'member', position: 'MF', ovr: 68, points: 100, stats: { attack: 66, defense: 64, stamina: 70, mentality: 70, speed: 68, manner: 72 } },
+  { email: 'qa-admin@fcmoim.test', nickname: '김영수', role: 'admin', position: 'MF', ovr: 78, points: 132, stats: { attack: 76, defense: 75, stamina: 80, mentality: 81, speed: 74, manner: 82 }, height: 176, weight: 72, birth: '1988-03-14', residence: '서울 마포구', preferredFoot: 'right' },
+  { email: 'qa-operator@fcmoim.test', nickname: '박영철', role: 'operator', position: 'DF', ovr: 76, points: 126, stats: { attack: 61, defense: 84, stamina: 77, mentality: 83, speed: 68, manner: 80 }, height: 181, weight: 78, birth: '1986-11-02', residence: '서울 송파구', preferredFoot: 'left' },
+  { email: 'qa-member1@fcmoim.test', nickname: '이영식', role: 'member', position: 'FW', ovr: 81, points: 118, stats: { attack: 88, defense: 55, stamina: 78, mentality: 77, speed: 86, manner: 78 }, height: 174, weight: 70, birth: '1991-07-21', residence: '경기 성남시', preferredFoot: 'right' },
+  { email: 'qa-member2@fcmoim.test', nickname: '최광수', role: 'member', position: 'MF', ovr: 74, points: 111, stats: { attack: 72, defense: 70, stamina: 84, mentality: 73, speed: 72, manner: 81 }, height: 178, weight: 74, birth: '1990-09-09', residence: '서울 강동구', preferredFoot: 'both' },
+  { email: 'qa-member3@fcmoim.test', nickname: '정상철', role: 'member', position: 'DF', ovr: 71, points: 104, stats: { attack: 52, defense: 82, stamina: 72, mentality: 75, speed: 64, manner: 80 }, height: 183, weight: 80, birth: '1989-12-18', residence: '경기 하남시', preferredFoot: 'left' },
+  { email: 'qa-member4@fcmoim.test', nickname: '한민수', role: 'member', position: 'MF', ovr: 69, points: 98, stats: { attack: 68, defense: 66, stamina: 73, mentality: 69, speed: 70, manner: 72 }, height: 172, weight: 68, birth: '1994-05-06', residence: '서울 광진구', preferredFoot: 'right' },
+  { email: 'qa-new@fcmoim.test', nickname: '오현우', role: 'member', position: 'MF', ovr: 64, points: 100, stats: { attack: 61, defense: 60, stamina: 66, mentality: 63, speed: 65, manner: 69 }, height: 175, weight: 71, birth: '1996-01-27', residence: '서울 은평구', preferredFoot: 'right' },
 ];
 
 const qaMembershipFixtures = [
@@ -160,6 +160,12 @@ async function fetchUsersByEmail() {
 }
 
 async function upsertMemberships(usersByEmail) {
+  const { error: accountError } = await supabase.from('accounts').upsert(qaUsers.map((fixture) => ({
+    id: usersByEmail.get(fixture.email).id,
+    display_name: fixture.nickname,
+  })));
+  if (accountError) throw new Error(`Failed to sync demo account names: ${accountError.message}`);
+
   const rows = qaMembershipFixtures.map((fixture) => {
     const user = usersByEmail.get(fixture.email);
     return {
@@ -172,9 +178,11 @@ async function upsertMemberships(usersByEmail) {
       ovr: fixture.ovr,
       stats: fixture.stats,
       match_points: fixture.points,
-      preferred_foot: fixture.position === 'DF' ? 'left' : 'right',
-      residence: '서울',
-      birth: fixture.email === 'qa-member2@fcmoim.test' ? '1990-09-09' : null,
+      preferred_foot: fixture.preferredFoot,
+      residence: fixture.residence,
+      birth: fixture.birth,
+      height: fixture.height,
+      weight: fixture.weight,
     };
   });
 
