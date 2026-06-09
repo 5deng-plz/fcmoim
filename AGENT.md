@@ -24,13 +24,14 @@
 2. **Plan & Scope**: list expected changed files, confirm they fall within `allowedPaths`. Do not touch files outside scope.
 3. **Implement & Verify**: implement the task and run deterministic checks (`lint`, `typecheck`, `test`). Retry up to `loopPolicy.maxGuardRetries` times on guard failures, then escalate to user.
 4. **Self-Review**: run `guard-design`, compare changed files vs plan, confirm tests pass. Retry up to `loopPolicy.maxReviewRounds` times, then escalate to user.
-5. **Complete**: update `docs/project-context.json` (orchestrator only) and summarize results.
+5. **Complete**: update `docs/project-context.json` with evidence and retrospective (orchestrator only), rerun the final guard, and summarize results.
 
 ## Quality Gates
 
 - `npm run harness:validate` — harness structure and purity.
 - `npm run verify:baseline` — lint, typecheck, and tests.
 - `npm run harness:guard:verify` — default completion gate: harness validation, design guard, diff guard, lint, typecheck, tests, and tracked SQL contract checks.
+- Evidence guard — included in `harness:guard:verify`; blocks ready/complete state when required evidence or completion retrospective is missing.
 - `npm run verify:db:local` — DB runtime gate for API/Auth/Data/Supabase changes when Local Supabase is available.
 - `npm run verify` — full verification, including the DB runtime gate, for release readiness or explicit full checks.
 - Guard failures beyond `maxGuardRetries` → stop and report to user.

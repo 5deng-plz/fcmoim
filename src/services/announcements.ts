@@ -9,6 +9,7 @@ export type AnnouncementRepositories = {
   };
   announcements: {
     listByClub(clubId: string): Promise<AnnouncementRow[]>;
+    findById(announcementId: string): Promise<AnnouncementRow | null>;
     create(input: {
       clubId: string;
       seasonId: string | null;
@@ -17,6 +18,13 @@ export type AnnouncementRepositories = {
       authorMembershipId: string;
       isPinned: boolean;
     }): Promise<AnnouncementRow>;
+    update(input: {
+      announcementId: string;
+      title: string;
+      content: string;
+      isPinned: boolean;
+    }): Promise<AnnouncementRow>;
+    delete(announcementId: string): Promise<void>;
   };
 };
 
@@ -49,6 +57,36 @@ export function createAnnouncementService(repositories: AnnouncementRepositories
         isPinned: input.isPinned === true,
       });
     },
+
+    async updateAnnouncement(input: {
+      auth: AuthContext;
+      announcementId: string;
+      title: string;
+      content: string;
+      isPinned?: boolean;
+    }) {
+      const announcement = await getExistingAnnouncement(repositories, input.announcementId);
+      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, announcement.clubId);
+      assertCanWriteAnnouncements(membership);
+
+      return repositories.announcements.update({
+        announcementId: announcement.id,
+        title: normalizeRequiredText(input.title, '공지 제목을 입력해주세요.'),
+        content: normalizeRequiredText(input.content, '공지 내용을 입력해주세요.'),
+        isPinned: input.isPinned === true,
+      });
+    },
+
+    async deleteAnnouncement(input: {
+      auth: AuthContext;
+      announcementId: string;
+    }) {
+      const announcement = await getExistingAnnouncement(repositories, input.announcementId);
+      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, announcement.clubId);
+      assertCanWriteAnnouncements(membership);
+
+      await repositories.announcements.delete(announcement.id);
+    },
   };
 }
 
@@ -75,4 +113,17 @@ function normalizeRequiredText(value: string | null | undefined, message: string
   }
 
   return normalized;
+}
+
+async function getExistingAnnouncement(
+  repositories: AnnouncementRepositories,
+  announcementId: string | null | undefined,
+) {
+  const normalizedId = normalizeRequiredText(announcementId, 'announcementId is required.');
+  const announcement = await repositories.announcements.findById(normalizedId);
+  if (!announcement) {
+    throw new AppError('not_found', '공지사항을 찾을 수 없어요.');
+  }
+
+  return announcement;
 }

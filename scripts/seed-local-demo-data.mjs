@@ -215,8 +215,8 @@ async function upsertAnnouncements(authorMembershipId) {
       id: '10000000-0000-0000-0000-000000000001',
       club_id: clubId,
       season_id: seasonId,
-      title: '이번 주 정기전 공지',
-      content: '토요일 저녁 8시, 잠실 풋살장에서 정기전을 진행합니다.',
+      title: 'Round 7 공지',
+      content: '토요일 저녁 8시, 잠실 풋살장에서 Round 7을 진행합니다.',
       author_membership_id: authorMembershipId,
       is_pinned: true,
     },
@@ -304,7 +304,7 @@ async function upsertMatches(byEmail) {
     {
       id: '30000000-0000-0000-0000-000000000001',
       round: 1,
-      title: '5월 정기전 1R',
+      title: 'Round 5',
       date: '2026-05-02T11:00:00.000Z',
       location: '잠실 풋살파크',
       status: 'finished',
@@ -315,7 +315,7 @@ async function upsertMatches(byEmail) {
     {
       id: '30000000-0000-0000-0000-000000000002',
       round: 2,
-      title: '5월 정기전 2R',
+      title: 'Round 6',
       date: '2026-05-09T11:00:00.000Z',
       location: '상암 풋살장',
       status: 'finished',
@@ -326,7 +326,7 @@ async function upsertMatches(byEmail) {
     {
       id: '30000000-0000-0000-0000-000000000003',
       round: 3,
-      title: '6월 정기전',
+      title: 'Round 7',
       date: '2026-06-06T11:00:00.000Z',
       location: '잠실 풋살파크',
       status: 'scheduled',

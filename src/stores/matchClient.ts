@@ -83,6 +83,20 @@ export type SaveMatchLineupRequest = {
   entries: SaveMatchLineupEntry[];
 };
 
+export type SaveMatchResultRequest = {
+  clubId: string;
+  matchId: string;
+  score: {
+    home: number;
+    away: number;
+  };
+  playerStats: Array<{
+    membershipId: string;
+    goals: number;
+    assists: number;
+  }>;
+};
+
 type ApiErrorBody = {
   error?: {
     code?: string;
@@ -301,6 +315,23 @@ export async function publishMatchLineup(input: {
   }
 
   return response.json() as Promise<UpcomingMatch>;
+}
+
+export async function saveMatchResult(input: SaveMatchResultRequest): Promise<{ matchId: string; saved: true }> {
+  const response = await fetch('/api/match-results', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    throw await buildApiError(response, '경기 결과를 저장하지 못했어요.');
+  }
+
+  return response.json() as Promise<{ matchId: string; saved: true }>;
 }
 
 async function buildApiError(response: Response, fallback: string) {

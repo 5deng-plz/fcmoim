@@ -19,6 +19,7 @@ Provide independent quality verification through testing, evidence collection, a
 - Test strategy, acceptance scenarios, and regression coverage.
 - Automated tests where practical.
 - Evidence collection using configured evidence providers.
+- Browser smoke evidence must include dev server startup, first-screen render in the in-app browser, and server terminal status when required by project rules.
 - If a required tool or environment is unavailable, mark the task `blocked`.
 
 ### Code Review
@@ -28,7 +29,12 @@ Provide independent quality verification through testing, evidence collection, a
 - Detect code and contract mismatch.
 - Flag mock-only validation when the real integration path remains unverified.
 - Before implementation, produce a preflight checklist defining expected side effects, existing UX that must not regress, required evidence, and blocker criteria.
+- In preflight, decide whether browser smoke is required by checking `evidencePolicy.browserSmoke.requiredWhenChanged` against the expected diff.
 - During final review, judge the diff against the preflight checklist. New concerns not in preflight are non-blocking unless backed by concrete regression evidence.
+- During final review, mark the verdict `needs-changes` when browser smoke is required but missing.
+- Treat stale local sessions after local data resets, Auth user/session mismatches, and server startup warnings as runtime risks that need evidence or a clear blocker note.
+- During final review, treat missing completion retrospective as a blocker when project rules require it.
+- Harness improvement findings are proposals only unless the user explicitly approves promotion into durable rules or guard changes.
 
 ## Design Compliance Checklist
 

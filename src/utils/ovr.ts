@@ -2,7 +2,7 @@
 // FC Moim — OVR helpers
 // ========================================
 
-import { STAT_KEYS, type Position, type UserStats } from '@/types';
+import { STAT_KEYS, type UserStats } from '@/types';
 import { calculateStatsOvr } from './stats';
 
 export function calculateOVR(stats: UserStats): number {
@@ -32,10 +32,21 @@ export function getOvrGradeNameOnly(ovr: number): string {
 
 export function applyPerformanceBoost(
   currentStats: UserStats,
-  _position: Position,
-  performance: { goals: number; assists: number; isMom: boolean },
+  performance: { goals: number; assists: number; isMom: boolean; result: 'win' | 'draw' | 'loss' },
 ): UserStats {
   const newStats = { ...currentStats };
+
+  if (performance.result === 'win') {
+    STAT_KEYS.forEach((key) => {
+      newStats[key] = Math.min(99, newStats[key] + 1);
+    });
+  }
+
+  if (performance.result === 'loss') {
+    newStats.stamina = Math.max(1, newStats.stamina - 1);
+    newStats.mentality = Math.max(1, newStats.mentality - 1);
+    newStats.speed = Math.max(1, newStats.speed - 1);
+  }
 
   if (performance.isMom) {
     STAT_KEYS.forEach((key) => {

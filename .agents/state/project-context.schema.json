@@ -22,6 +22,17 @@
         "allowedPaths": { "type": "array", "items": { "type": "string" } },
         "evidence": { "type": "object" },
         "reviewStatus": { "type": ["string", "null"] },
+        "retrospective": {
+          "type": "object",
+          "properties": {
+            "issuesObserved": { "type": "array", "items": { "type": "string" } },
+            "missedEvidence": { "type": "array", "items": { "type": "string" } },
+            "harnessImprovementProposal": { "type": "array", "items": { "type": "string" } },
+            "promotionRecommendation": { "type": "string", "enum": ["none", "propose", "defer"] },
+            "reason": { "type": "string" }
+          },
+          "additionalProperties": true
+        },
         "loopCounters": {
           "type": "object",
           "properties": {

@@ -1,7 +1,7 @@
 'use client';
 
-import { ArrowLeft, Bell, Sun, Moon } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowLeft, Bell, LogOut, Sun, Moon } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import TeamEmblem from '@/components/brand/TeamEmblem';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
@@ -9,9 +9,11 @@ import { useAppStore } from '@/stores/useAppStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 
 export default function Header() {
+  const authUser = useAuthStore((state) => state.authUser);
   const memberProfile = useAuthStore((state) => state.memberProfile);
-  const hasCustomPhoto = Boolean(memberProfile?.photoUrl);
+  const signOut = useAuthStore((state) => state.signOut);
   const {
+    isAuthenticated,
     userStatus,
     setShowMyPage,
     showMyPage,
@@ -25,6 +27,8 @@ export default function Header() {
     setActiveTab,
     setAuthView,
   } = useAppStore();
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window !== 'undefined') {
@@ -49,6 +53,26 @@ export default function Header() {
   const displayedTeamName = isGuestMode ? 'FC moim' : teamName;
   const isCenteredSubPage = (showMyPage || showJoinForm) && !isGuestMode;
   const subPageTitle = showMyPage ? '마이페이지' : '입단신청';
+  const shouldShowProfile = isGuestMode ? isAuthenticated && Boolean(authUser || memberProfile) : true;
+  const authDisplayName = getAuthDisplayName(authUser);
+  const profileName = memberProfile?.name || authDisplayName || authUser?.email || '로그인 계정';
+  const profileEmail = authUser?.email || null;
+  const profilePhotoUrl = memberProfile?.photoUrl || getAuthAvatarUrl(authUser);
+  const avatarSrc = profilePhotoUrl || getFallbackAvatar(profileName);
+  const hasCustomPhoto = Boolean(profilePhotoUrl);
+
+  useEffect(() => {
+    if (!isProfileMenuOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!profileMenuRef.current?.contains(event.target as Node)) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [isProfileMenuOpen]);
 
   const handleBack = () => {
     setShowMyPage(false);
@@ -66,6 +90,20 @@ export default function Header() {
     } else {
       setActiveTab('home');
     }
+  };
+
+  const handleProfileClick = () => {
+    if (isGuestMode) {
+      setIsProfileMenuOpen((isOpen) => !isOpen);
+      return;
+    }
+
+    setShowMyPage(true);
+  };
+
+  const handleSignOut = async () => {
+    setIsProfileMenuOpen(false);
+    await signOut();
   };
 
   return (
@@ -132,41 +170,63 @@ export default function Header() {
               {theme === 'light' ? <Moon size={22} /> : <Sun size={22} />}
             </button>
 
-            {!isGuestMode && (
+            {shouldShowProfile && (
               <>
-                <button
-                  type="button"
-                  onClick={() => setShowNotifications(!showNotifications)}
-                  className="relative p-1.5 hover:bg-surface-hover rounded-full active:scale-90 transition-all text-secondary"
-                  aria-label="알림 열기"
-                >
-                  <Bell size={22} />
-                  <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-matchst-live rounded-full ring-2 ring-surface-card" />
-                </button>
+                {!isGuestMode ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="relative p-1.5 hover:bg-surface-hover rounded-full active:scale-90 transition-all text-secondary"
+                    aria-label="알림 열기"
+                  >
+                    <Bell size={22} />
+                    <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-matchst-live rounded-full ring-2 ring-surface-card" />
+                  </button>
+                ) : null}
 
-                <button
-                  type="button"
-                  onClick={() => setShowMyPage(true)}
-                  className="hover:ring-2 hover:ring-green-300 rounded-full active:scale-90 transition-all"
-                  aria-label="마이페이지 열기"
-                >
-                  <Image
-                    src={memberProfile?.photoUrl || getFallbackAvatar(memberProfile?.name || 'member-profile')}
-                    alt="프로필"
-                    width={34}
-                    height={34}
-                    sizes="34px"
-                    loading="eager"
-                    priority
-                    className={
-                      hasCustomPhoto
-                        ? 'rounded-full bg-surface-hover object-cover'
-                        : 'rounded-full bg-surface-elevated object-contain p-0.5'
-                    }
-                    style={{ width: 34, height: 34 }}
-                    unoptimized
-                  />
-                </button>
+                <div ref={profileMenuRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={handleProfileClick}
+                    className="hover:ring-2 hover:ring-green-300 rounded-full active:scale-90 transition-all"
+                    aria-label={isGuestMode ? '계정 메뉴 열기' : '마이페이지 열기'}
+                    aria-expanded={isGuestMode ? isProfileMenuOpen : undefined}
+                  >
+                    <Image
+                      src={avatarSrc}
+                      alt="프로필"
+                      width={34}
+                      height={34}
+                      sizes="34px"
+                      loading="eager"
+                      priority
+                      className={
+                        hasCustomPhoto
+                          ? 'rounded-full bg-surface-hover object-cover'
+                          : 'rounded-full bg-surface-elevated object-contain p-0.5'
+                      }
+                      style={{ width: 34, height: 34 }}
+                      unoptimized
+                    />
+                  </button>
+
+                  {isGuestMode && isProfileMenuOpen ? (
+                    <div className="absolute right-0 top-11 z-50 w-52 rounded-xl border border-border-subtle bg-surface-card p-3 shadow-xl animate-slideDown">
+                      <p className="truncate text-xs font-black text-primary">{profileName}</p>
+                      {profileEmail ? (
+                        <p className="mt-0.5 truncate text-[11px] font-bold text-tertiary">{profileEmail}</p>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => void handleSignOut()}
+                        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-result-loss/10 px-3 py-2 text-xs font-black text-result-loss transition-all hover:bg-result-loss/20 active:scale-[0.98]"
+                      >
+                        <LogOut size={14} />
+                        로그아웃
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               </>
             )}
           </div>
@@ -174,6 +234,17 @@ export default function Header() {
       )}
     </header>
   );
+}
+
+function getAuthDisplayName(authUser: ReturnType<typeof useAuthStore.getState>['authUser']) {
+  const metadata = authUser?.user_metadata;
+  const displayName = metadata?.full_name || metadata?.name || metadata?.display_name;
+  return typeof displayName === 'string' && displayName.trim() ? displayName.trim() : null;
+}
+
+function getAuthAvatarUrl(authUser: ReturnType<typeof useAuthStore.getState>['authUser']) {
+  const avatarUrl = authUser?.user_metadata?.avatar_url || authUser?.user_metadata?.picture;
+  return typeof avatarUrl === 'string' && avatarUrl.trim() ? avatarUrl : null;
 }
 
 function LogoHomeButton({ teamName, onClick, isGuestMode }: { teamName: string; onClick: () => void; isGuestMode: boolean }) {

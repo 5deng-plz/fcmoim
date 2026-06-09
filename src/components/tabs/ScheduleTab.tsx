@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import CalendarView from '@/components/features/CalendarView';
-import { CalendarCheck2, CalendarX2, Check, Clock3, MapPin, Trophy, Vote, X } from 'lucide-react';
+import { CalendarCheck2, CalendarX2, Check, Clock3, MapPin, NotebookPen, Vote, X } from 'lucide-react';
 import { buildMatchCalendarEvents, buildPollCalendarEvents } from '@/components/features/calendarEventUtils';
-import TacticsDragBuilder, { type Player } from '@/components/features/TacticsDragBuilder';
+import TacticsDragBuilder, { TacticsPlayerAvatar, type Player } from '@/components/features/TacticsDragBuilder';
 import EventComments from '@/components/features/EventComments';
+import MatchResultInputModal from '@/components/features/MatchResultInputModal';
 import NaverMapLink from '@/components/features/NaverMapLink';
 import SoccerPitch from '@/components/features/SoccerPitch';
 import { getScheduleEventTheme } from '@/components/features/scheduleEventTheme';
@@ -20,7 +21,6 @@ import AttendeeList from '@/components/features/AttendeeList';
 import Badge from '@/components/ui/Badge';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
 import type { SchedulePoll, SchedulePollOption } from '@/stores/schedulePollClient';
-import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 
 export default function ScheduleTab() {
   const {
@@ -334,11 +334,12 @@ export default function ScheduleTab() {
           <SelectedMatchPanel
             match={selectedMatch}
             matches={selectedMatches}
-            allMatches={scheduleMatches}
             clubId={activeClubId}
             players={selectedMatchDetail?.players ?? []}
             lineup={selectedMatchDetail?.lineup ?? []}
             detailStatus={selectedMatchDetailStatus}
+            canManageSchedule={canManageSchedule}
+            nowMs={nowMs}
             onLineupUpdated={(nextLineup) => {
               setMatchDetail((prev) => prev ? { ...prev, lineup: nextLineup } : null);
             }}
@@ -350,6 +351,19 @@ export default function ScheduleTab() {
                 upcomingMatches: state.upcomingMatches.map((m) => m.id === nextMatch.id ? nextMatch : m),
                 calendarMatches: state.calendarMatches.map((m) => m.id === nextMatch.id ? nextMatch : m),
               }));
+            }}
+            onResultSaved={async (matchId) => {
+              await refreshSchedule();
+              const [attendees, nextLineup] = await Promise.all([
+                fetchMatchAttendees({ clubId: activeClubId, matchId }),
+                fetchMatchLineup({ clubId: activeClubId, matchId }),
+              ]);
+              setMatchDetail({
+                matchId,
+                players: attendees.map(mapAttendeeToPlayer),
+                lineup: nextLineup,
+                status: 'ready',
+              });
             }}
           />
         ) : null}
@@ -380,29 +394,54 @@ export default function ScheduleTab() {
 function SelectedMatchPanel({
   match,
   matches,
-  allMatches,
   clubId,
   players,
   lineup,
   detailStatus,
+  canManageSchedule,
+  nowMs,
   onLineupUpdated,
   onPlayersUpdated,
   onMatchUpdated,
+  onResultSaved,
 }: {
   match: UpcomingMatch | null;
   matches: UpcomingMatch[];
-  allMatches: UpcomingMatch[];
   clubId: string;
   players: Player[];
   lineup: MatchLineupEntry[];
   detailStatus: 'idle' | 'loading' | 'ready' | 'error';
+  canManageSchedule: boolean;
+  nowMs: number;
   onLineupUpdated?: (nextLineup: MatchLineupEntry[]) => void;
   onPlayersUpdated?: (nextPlayers: Player[]) => void;
   onMatchUpdated?: (nextMatch: UpcomingMatch) => void;
+  onResultSaved?: (matchId: string) => Promise<void>;
 }) {
+  const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   if (!match) return null;
 
   const isFinished = match.status === 'finished';
+  const statusBadge = getScheduleStatusBadge(match, nowMs);
+  const hasResultReadyLineup = hasBothTeamLineup(lineup);
+  const canShowResultAction = canManageSchedule
+    && !isFinished
+    && match.status !== 'cancelled'
+    && new Date(match.date).getTime() <= nowMs
+    && hasResultReadyLineup
+    && detailStatus === 'ready';
+  const handleResultSaved = async (score: { home: number; away: number }) => {
+    const nextMatch = {
+      ...match,
+      status: 'finished' as const,
+      ourScore: score.home,
+      oppScore: score.away,
+      tacticsCompleted: true,
+      updatedAt: new Date().toISOString(),
+    };
+    onMatchUpdated?.(nextMatch);
+    await onResultSaved?.(match.id);
+  };
 
   return (
     <section className="space-y-3">
@@ -410,9 +449,22 @@ function SelectedMatchPanel({
         <div className="overflow-hidden rounded-3xl border border-event-match-border bg-event-match-bg p-5 shadow-sm">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <h3 className="text-base font-black text-primary">{stripDatePrefix(formatMatchPanelTitle(match, allMatches))}</h3>
+              <h3 className="text-base font-black text-primary">{stripDatePrefix(match.title)}</h3>
             </div>
-            <Badge label="경기" variant="green" />
+            <div className="flex items-center gap-2">
+              {canShowResultAction ? (
+                <button
+                  type="button"
+                  onClick={() => setIsResultModalOpen(true)}
+                  title="경기 결과 입력"
+                  aria-label="경기 결과 입력"
+                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-result-loss/30 bg-result-loss/10 text-result-loss shadow-sm shadow-result-loss/20 transition-all hover:bg-result-loss/15 hover:brightness-95 active:scale-95"
+                >
+                  <NotebookPen size={16} className="animate-pulse" aria-hidden="true" />
+                </button>
+              ) : null}
+              <Badge label={statusBadge.label} variant={statusBadge.variant} />
+            </div>
           </div>
           <div className="space-y-3">
             {matches.map((candidate) => {
@@ -424,9 +476,9 @@ function SelectedMatchPanel({
                 >
                   <MatchSummaryCard
                     match={candidate}
-                    allMatches={allMatches}
                     attendeeCount={isSelected ? players.length : 0}
                     showTitle={matches.length > 1}
+                    nowMs={nowMs}
                   />
                   {isSelected ? (
                     <div className="mt-3">
@@ -494,6 +546,16 @@ function SelectedMatchPanel({
             />
           ) : null}
         </>
+      ) : null}
+      {canShowResultAction ? (
+        <MatchResultInputModal
+          isOpen={isResultModalOpen}
+          onClose={() => setIsResultModalOpen(false)}
+          clubId={clubId}
+          match={match}
+          lineup={lineup}
+          onSaved={handleResultSaved}
+        />
       ) : null}
     </section>
   );
@@ -563,15 +625,17 @@ function PollPromoteAction({
 
 function MatchSummaryCard({
   match,
-  allMatches,
   attendeeCount,
   showTitle,
+  nowMs,
 }: {
   match: UpcomingMatch;
-  allMatches: UpcomingMatch[];
   attendeeCount: number;
   showTitle: boolean;
+  nowMs: number;
 }) {
+  const statusBadge = getScheduleStatusBadge(match, nowMs);
+
   return (
     <div className="flex min-w-0 items-center gap-3">
       <div className="flex h-12 w-12 shrink-0 items-center justify-center">
@@ -587,8 +651,8 @@ function MatchSummaryCard({
       <div className="min-w-0 flex-1">
         {showTitle ? (
           <div className="mb-1 flex flex-wrap items-center gap-2">
-            <p className="truncate text-base font-black leading-tight text-primary">{stripDatePrefix(formatMatchDisplayTitle(match, allMatches))}</p>
-            <Badge label="예정" variant="green" />
+            <p className="truncate text-base font-black leading-tight text-primary">{stripDatePrefix(match.title)}</p>
+            <Badge label={statusBadge.label} variant={statusBadge.variant} />
           </div>
         ) : null}
         <div className="mt-2.5 space-y-1.5 text-xs font-bold text-secondary">
@@ -622,50 +686,63 @@ function MatchResultPanel({
   const loserTeam = redScore === blueScore ? null : redScore < blueScore ? 1 : 2;
   const redPlayers = lineup.filter((entry) => entry.teamNumber === 1);
   const bluePlayers = lineup.filter((entry) => entry.teamNumber === 2);
+  const matchTimeMs = new Date(match.date).getTime();
+  const statusBadge = getScheduleStatusBadge(match, matchTimeMs);
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-event-match-border bg-event-match-bg p-3 shadow-sm tactics-frame">
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <h3 className="flex items-center gap-1.5 text-[11px] font-black text-secondary">
-          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-event-match-icon-bg text-event-match-icon-text">
-            <Trophy size={14} aria-hidden="true" />
-          </span>
-          경기 결과
-        </h3>
-        <NaverMapLink location={match.location} accentClassName="bg-event-match-map-accent text-white" compact />
+    <div className="overflow-hidden rounded-3xl border border-event-match-border bg-event-match-bg p-5 shadow-sm">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-base font-black text-primary">{stripDatePrefix(match.title)}</h3>
+        </div>
+        <Badge label={statusBadge.label} variant={statusBadge.variant} />
       </div>
 
-      <SoccerPitch testId="match-result-field">
-        <div className="relative grid h-full grid-cols-2">
-          <ResultFieldSide
-            teamNumber={1}
-            players={redPlayers}
-            isLoser={loserTeam === 1}
-          />
-          <ResultFieldSide
-            teamNumber={2}
-            players={bluePlayers}
-            isLoser={loserTeam === 2}
-          />
-        </div>
-        <div className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5">
-          <div className="flex items-center gap-2 rounded-2xl border border-white/60 bg-surface-elevated/95 px-3 py-2 shadow-lg">
-            <span className="text-xl font-black text-red-team">{redScore}</span>
-            <span className="text-[10px] font-black text-tertiary">VS</span>
-            <span className="text-xl font-black text-blue-team">{blueScore}</span>
+      <div className="space-y-3">
+        <MatchSummaryCard
+          match={match}
+          attendeeCount={lineup.length}
+          showTitle={false}
+          nowMs={matchTimeMs}
+        />
+
+        <div data-testid="match-result-section" className="space-y-3">
+          <h4 className="mb-3 flex items-center gap-1.5 text-[11px] font-black text-secondary">
+            경기 결과
+          </h4>
+          <SoccerPitch testId="match-result-field">
+            <div className="relative grid h-full grid-cols-2">
+              <ResultFieldSide
+                teamNumber={1}
+                players={redPlayers}
+                isLoser={loserTeam === 1}
+              />
+              <ResultFieldSide
+                teamNumber={2}
+                players={bluePlayers}
+                isLoser={loserTeam === 2}
+              />
+            </div>
+            <div className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5">
+              <div className="flex items-center gap-2 rounded-2xl border border-white/60 bg-surface-elevated/95 px-3 py-2 shadow-lg">
+                <span className="text-xl font-black text-red-team">{redScore}</span>
+                <span className="text-[10px] font-black text-tertiary">VS</span>
+                <span className="text-xl font-black text-blue-team">{blueScore}</span>
+              </div>
+            </div>
+          </SoccerPitch>
+
+          <div className="mt-3">
+            <EventComments
+              clubId={clubId}
+              targetType="match"
+              targetId={match.id}
+              phaseAnchorAt={match.updatedAt}
+              themeType="match"
+              embedded
+            />
           </div>
         </div>
-      </SoccerPitch>
-
-      <div className="mt-3">
-        <EventComments
-          clubId={clubId}
-          targetType="match"
-          targetId={match.id}
-          phaseAnchorAt={match.updatedAt}
-          themeType="match"
-          embedded
-        />
       </div>
     </div>
   );
@@ -694,34 +771,23 @@ function ResultFieldSide({
           const player = getLineupInSlot(players, teamNumber, index);
           return (
             <div key={`${teamId}-result-${index}`} className="flex h-9 w-8 items-center justify-center rounded-full">
-              {player ? <LineupAvatar entry={player} teamId={teamId} /> : null}
+              {player ? (
+                <TacticsPlayerAvatar
+                  player={{
+                    name: player.playerName,
+                    photo: player.playerPhotoUrl || player.playerName,
+                    isLeader: player.isLeader,
+                  }}
+                  teamId={teamId}
+                  tabIndex={0}
+                  testId={`${teamId}-result-avatar-${index}`}
+                />
+              ) : null}
             </div>
           );
         })}
       </div>
     </div>
-  );
-}
-
-function LineupAvatar({ entry, teamId }: { entry: MatchLineupEntry; teamId: 'red' | 'blue' }) {
-  return (
-    <span className={`relative -m-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 bg-surface-card shadow-sm ${teamId === 'red' ? 'border-red-team' : 'border-blue-team'}`}>
-      <Image
-        src={entry.playerPhotoUrl || getFallbackAvatar(entry.playerName)}
-        alt={entry.playerName}
-        width={32}
-        height={32}
-        sizes="32px"
-        className="rounded-full bg-surface-hover"
-        style={{ width: 32, height: 32 }}
-        unoptimized
-      />
-      {entry.isLeader ? (
-        <span className={`absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] font-black text-white shadow-sm ${teamId === 'red' ? 'bg-red-team' : 'bg-blue-team'}`}>
-          C
-        </span>
-      ) : null}
-    </span>
   );
 }
 
@@ -738,6 +804,7 @@ function EventPanels({ events, clubId, nowMs }: { events: UpcomingMatch[]; clubI
 function EventPanel({ event, clubId, nowMs }: { event: UpcomingMatch; clubId: string; nowMs: number }) {
   const config = getScheduleEventTheme(event.type);
   const isFinished = event.status === 'finished' || new Date(event.date).getTime() < nowMs;
+  const statusBadge = getScheduleStatusBadge(event, nowMs);
   const [attendeeCount, setAttendeeCount] = useState(0);
 
   useEffect(() => {
@@ -770,9 +837,8 @@ function EventPanel({ event, clubId, nowMs }: { event: UpcomingMatch; clubId: st
             </div>
           </div>
           <Badge
-            label={config.badge}
-            variant={event.type === 'training' ? 'slate' : event.type === 'seminar' ? 'orange' : 'slate'}
-            className={config.badgeClassName}
+            label={statusBadge.label}
+            variant={statusBadge.variant}
           />
         </div>
 
@@ -835,6 +901,28 @@ function getLineupSlot(player: MatchLineupEntry, teamNumber: 1 | 2, fallbackInde
   return slots[fallbackIndex] ?? fallbackIndex;
 }
 
+type ScheduleStatusBadge = {
+  label: '예정' | '종료' | '취소';
+  variant: 'green' | 'slate' | 'gray';
+};
+
+function getScheduleStatusBadge(match: UpcomingMatch, nowMs: number): ScheduleStatusBadge {
+  if (match.status === 'cancelled') {
+    return { label: '취소', variant: 'gray' };
+  }
+
+  if (match.status === 'finished' || new Date(match.date).getTime() <= nowMs) {
+    return { label: '종료', variant: 'slate' };
+  }
+
+  return { label: '예정', variant: 'green' };
+}
+
+function hasBothTeamLineup(lineup: MatchLineupEntry[]) {
+  return lineup.some((entry) => entry.teamNumber === 1)
+    && lineup.some((entry) => entry.teamNumber === 2);
+}
+
 function toIsoDate(day: number, monthDate: Date) {
   const year = monthDate.getFullYear();
   const month = String(monthDate.getMonth() + 1).padStart(2, '0');
@@ -895,38 +983,6 @@ function formatMatchDateTimeWithWeekday(value: string) {
   const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
   const weekday = weekdays[date.getDay()] ?? '';
   return `${date.getMonth() + 1}월 ${date.getDate()}일 ${weekday} ${formatMatchTime(value)}`;
-}
-
-function formatMatchDisplayTitle(match: UpcomingMatch, allMatches: UpcomingMatch[] = []) {
-  const round = resolveDisplayRound(match, allMatches);
-  if (match.type === 'match' && round) {
-    return `정규리그 Round ${round}`;
-  }
-  return match.title;
-}
-
-function formatMatchPanelTitle(match: UpcomingMatch, allMatches: UpcomingMatch[] = []) {
-  const round = resolveDisplayRound(match, allMatches);
-  if (match.type === 'match' && round) {
-    return `Round ${round}`;
-  }
-  return formatMatchDisplayTitle(match, allMatches);
-}
-
-function resolveDisplayRound(match: UpcomingMatch, allMatches: UpcomingMatch[]) {
-  if (match.type !== 'match') return null;
-  if (typeof match.round === 'number' && isGenericMatchTitle(match.title)) return match.round;
-  if (!isGenericMatchTitle(match.title)) return null;
-
-  const orderedMatches = allMatches
-    .filter((candidate) => candidate.type === 'match' && candidate.status !== 'cancelled')
-    .sort((left, right) => left.date.localeCompare(right.date) || left.id.localeCompare(right.id));
-  const index = orderedMatches.findIndex((candidate) => candidate.id === match.id);
-  return index >= 0 ? index + 1 : null;
-}
-
-function isGenericMatchTitle(title: string) {
-  return title === '확정 경기' || title === '확정 경기 일정' || title === '정규리그 경기' || /^정규리그 Round \d+$/.test(title);
 }
 
 function mapAttendeeToPlayer(member: MatchAttendee): Player {

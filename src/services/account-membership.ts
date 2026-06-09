@@ -311,7 +311,7 @@ export function createAccountMembershipService(repositories: AccountMembershipRe
 
 function getExistingJoinMessage(status: MembershipStatus) {
   if (status === 'approved') {
-    return '이미 이 팀의 멤버입니다.';
+    return '이 팀에는 새 입단신청을 보낼 수 없습니다.';
   }
   if (status === 'pending') {
     return '이미 입단신청이 접수되어 운영진 승인을 기다리고 있습니다.';

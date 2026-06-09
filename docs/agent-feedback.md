@@ -5,6 +5,9 @@
 ## Principles
 
 - Runtime truth first without browser by default: 재현 가능한 문제는 사용자의 재확인에만 기대지 말고 로컬 서버, API, DB, 결정적 테스트로 확인합니다. 인앱 브라우저 또는 Browser tooling은 현재 턴에서 사용자가 명시적으로 브라우저 QA, 스크린샷, 직접 브라우저 조작을 요청한 경우에만 사용합니다.
+- Browser smoke for runtime entrypoints: Auth/session/API bootstrap, app entrypoint, package/runtime config를 바꿀 때는 `npm run dev`를 직접 띄우고 인앱 브라우저 첫 화면과 서버 콘솔을 evidence로 남깁니다.
+- Treat stale browser auth as runtime risk: Local Supabase reset 이후 브라우저에 남은 cookie/localStorage/sessionStorage 인증 상태는 별도 실패 경로로 검증합니다.
+- Name the gates honestly: "하네스 통과"라고 보고할 때 `harness:guard:verify`, `verify:db:local`, browser smoke 중 무엇이 포함되었고 빠졌는지 명시합니다.
 - Preserve existing entrypoints: 새 안전 경로나 래퍼를 추가해도 사용자가 이미 쓰는 기본 명령과 흐름을 깨지 않습니다.
 - Respect configured truth: 사용자 설정, `.env.local`, DB 상태, 실제 런타임 값을 기본값이나 추정보다 우선합니다.
 - Verify the real path: seed, mock, 타입 통과만 믿지 말고 실제 로그인/API/UI 성공 및 실패 경로 중 영향을 받은 경로를 확인합니다.

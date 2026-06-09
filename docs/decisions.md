@@ -14,9 +14,12 @@ This file starts clean for `prototype v0.1`.
 ### Quality Gate Policy
 
 - `harness:validate` is structure-only and must not be described as app quality or release readiness.
-- `harness:guard:verify` is the default completion gate: harness structure, design guard, diff guard, lint, typecheck, tests, and tracked Supabase SQL contract checks.
+- `harness:guard:verify` is the default completion gate: harness structure, design guard, diff guard, lint, typecheck, tests, and tracked Supabase SQL contract checks. It does not automatically include Local Supabase runtime tests or browser smoke evidence.
 - `verify` is the full local gate and includes Local Supabase reset/seed/API integration checks.
 - Runtime-affecting UI changes require matching SDD-based deterministic test evidence; API, auth, Supabase, and data access changes require matching API or Supabase evidence.
+- Auth/API/Data, app entrypoint, or package/runtime config changes require affected-runtime evidence: `verify:baseline`, `verify:db:local` when database/Auth/API behavior changes, and `npm run dev` plus in-app browser smoke for changed startup/session paths.
+- Dev server smoke is affected-runtime evidence, not a replacement for release readiness or database verification.
+- Completion requires a lightweight retrospective in project state. Harness improvements found during the retrospective stay as proposals until the user explicitly approves promotion into durable rules or guard changes.
 - Verifier approval with no blockers is required before Orchestrator marks work complete.
 - If required evidence cannot be collected, the work remains blocked or conditional.
 
@@ -39,6 +42,7 @@ This file starts clean for `prototype v0.1`.
 - Remote Supabase MCP/plugin evidence is reserved for hosted project diagnostics, production parity checks, or cases local CLI cannot reproduce.
 - `npm run verify:db:local` is the reproducible local DB gate: reset local Supabase, seed QA Auth users, then run local API integration tests.
 - `npm run verify` must include local Supabase verification so API/Auth/Data runtime behavior is not accepted on mock evidence alone, but routine completion checks use `npm run harness:guard:verify`.
+- Browser smoke minimum: start `npm run dev`, open `http://localhost:3000/` in the in-app browser, confirm the first screen renders, and confirm the server console has no app errors or avoidable startup warnings.
 - Mocks are allowed for pure UI rendering and pure unit tests, but not as completion evidence for API/Auth/Data behavior.
 - Rich demo data is local-only and must be seeded through localhost-guarded scripts, never through production reset or shared SQL seed paths.
 - Production reset must use `--no-seed`, write backups outside the repo, and clean Auth/Storage separately with explicit confirmation variables.

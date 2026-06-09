@@ -5,15 +5,28 @@ import Image from 'next/image';
 import { ArrowLeft, Camera, Clock, LoaderCircle, Send } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
 import { useToastStore } from '@/stores/useToastStore';
-import { buildJoinProfileRequest, submitJoinRequest, withdrawMembership, fetchMembershipSnapshot, type ApiMembership } from '@/stores/membershipClient';
+import { buildJoinProfileRequest, submitJoinRequest, withdrawMembership, fetchMembershipSnapshot, fetchClubMemberships, type ApiMembership } from '@/stores/membershipClient';
 import type { Position, UserStats } from '@/types';
 import Modal from '@/components/ui/Modal';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import PlayerAbilityPanel from '@/components/ui/PlayerAbilityPanel';
 import type { ProfileField } from '@/components/ui/PlayerAbilityPanel';
 import { DEFAULT_STATS } from '@/types';
+import type { MembershipStatus } from '@/types/domain';
 
-export default function JoinRequestForm({ showHeader = true }: { showHeader?: boolean }) {
+type JoinRequestFormProps = {
+  showHeader?: boolean;
+  mode?: 'primary' | 'secondary';
+  targetStatus?: Extract<MembershipStatus, 'pending'> | 'new';
+  onSecondaryClose?: () => void;
+};
+
+export default function JoinRequestForm({
+  showHeader = true,
+  mode = 'primary',
+  targetStatus,
+  onSecondaryClose,
+}: JoinRequestFormProps) {
   const ownedStatPoints = 40;
   const maxStatsSum = 360 + ownedStatPoints;
   const {
@@ -24,6 +37,7 @@ export default function JoinRequestForm({ showHeader = true }: { showHeader?: bo
     userStatus,
     setUserStatus,
     setShowJoinForm,
+    setAvailableClubs,
   } = useAppStore();
   const { showToast } = useToastStore();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -55,11 +69,12 @@ export default function JoinRequestForm({ showHeader = true }: { showHeader?: bo
   const [editingStatValue, setEditingStatValue] = useState<string>('');
   const [originalStats, setOriginalStats] = useState<UserStats | null>(null);
 
-  const isPending = userStatus === 'pending';
+  const isSecondary = mode === 'secondary';
+  const isPending = userStatus === 'pending' || targetStatus === 'pending';
 
   // 1) 승인 대기 중(pending)인 경우 기존 신청 정보 불러오기
   useEffect(() => {
-    if (isAuthenticated && userStatus === 'pending') {
+    if (isAuthenticated && isPending) {
       fetchMembershipSnapshot(selectedJoinClubId)
         .then((snapshot) => {
           if (snapshot.membership) {
@@ -87,7 +102,7 @@ export default function JoinRequestForm({ showHeader = true }: { showHeader?: bo
           console.error('[FC Moim] Failed to load pending membership:', err);
         });
     }
-  }, [isAuthenticated, userStatus, selectedJoinClubId]);
+  }, [isAuthenticated, isPending, selectedJoinClubId]);
 
   // 2) 이미지 업로드 & 크롭/변환
   const handleUploadClick = () => {
@@ -233,8 +248,16 @@ export default function JoinRequestForm({ showHeader = true }: { showHeader?: bo
       setIsSubmitting(true);
       const result = await submitJoinRequest(profile, selectedJoinClubId);
       setMembershipData(result);
-      clearJoinIntent();
-      setUserStatus('pending');
+      const memberships = await fetchClubMemberships().catch(() => null);
+      if (memberships) {
+        setAvailableClubs(memberships);
+      }
+      if (isSecondary) {
+        onSecondaryClose?.();
+      } else {
+        clearJoinIntent();
+        setUserStatus('pending');
+      }
       showToast('입단신청이 접수되었어요. 운영진 승인을 기다려주세요.');
     } catch (error) {
       console.error('[FC Moim] Join request failed:', error);
@@ -263,9 +286,17 @@ export default function JoinRequestForm({ showHeader = true }: { showHeader?: bo
         membershipId,
       });
       setMembershipData(null);
-      clearJoinIntent();
-      setUserStatus('guest');
-      setShowJoinForm(true); // 입력 폼을 활성화 상태로 유지
+      const memberships = await fetchClubMemberships().catch(() => null);
+      if (memberships) {
+        setAvailableClubs(memberships);
+      }
+      if (isSecondary) {
+        onSecondaryClose?.();
+      } else {
+        clearJoinIntent();
+        setUserStatus('guest');
+        setShowJoinForm(true); // 입력 폼을 활성화 상태로 유지
+      }
       showToast('입단신청이 취소되었습니다.');
     } catch (error) {
       console.error('[FC Moim] Cancel join request failed:', error);
@@ -314,6 +345,10 @@ export default function JoinRequestForm({ showHeader = true }: { showHeader?: bo
           <button
             type="button"
             onClick={() => {
+              if (isSecondary) {
+                onSecondaryClose?.();
+                return;
+              }
               setShowJoinForm(false);
               if (isPending) {
                 setUserStatus('guest');
@@ -479,7 +514,11 @@ export default function JoinRequestForm({ showHeader = true }: { showHeader?: bo
         <div className="text-center pt-2">
           <button
             type="button"
-            onClick={() => {
+          onClick={() => {
+              if (isSecondary) {
+                onSecondaryClose?.();
+                return;
+              }
               setShowJoinForm(false);
               setUserStatus('guest');
             }}

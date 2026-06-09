@@ -113,6 +113,17 @@ export type PublicClubDetail = PublicClubSummary & {
   upcomingMatches: PublicMatchSummary[];
 };
 
+export type ClubCreateRequest = {
+  name: string;
+  slug: string;
+  description: string;
+};
+
+export type ClubCreateResponse = {
+  success: true;
+  clubId: string;
+};
+
 export type PendingMembershipReview = {
   id: string;
   accountId: string;
@@ -213,6 +224,49 @@ export async function fetchPublicClubDetail(clubId: string): Promise<PublicClubD
   return response.json() as Promise<PublicClubDetail>;
 }
 
+export async function checkClubSlug(slug: string) {
+  const response = await fetch(`/api/clubs/check-slug?slug=${encodeURIComponent(slug)}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw new Error(await getApiErrorMessage(response, '팀 주소를 확인하지 못했습니다.'));
+  }
+
+  return response.json() as Promise<{ exists: boolean }>;
+}
+
+export async function fetchClubCreationEligibility() {
+  const response = await fetch('/api/clubs', {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw new Error(await getApiErrorMessage(response, '팀 생성 가능 여부를 확인하지 못했습니다.'));
+  }
+
+  return response.json() as Promise<{ ownedClubCount: number; canCreate: boolean }>;
+}
+
+export async function createClub(input: ClubCreateRequest) {
+  const response = await fetch('/api/clubs', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getApiErrorMessage(response, '팀을 생성하지 못했습니다.'));
+  }
+
+  return response.json() as Promise<ClubCreateResponse>;
+}
+
 export async function fetchMembershipSnapshot(clubId = appConfig.defaultClubId): Promise<MembershipSnapshot> {
   const response = await fetch(`/api/membership?clubId=${encodeURIComponent(clubId)}`, {
     method: 'GET',
@@ -276,8 +330,12 @@ export async function fetchClubMemberships(): Promise<ClubOption[]> {
       clubId: membership.clubId,
       clubName: membership.clubName,
       role: membership.role,
+      status: membership.status,
     }))
     .sort((left, right) => {
+      const leftIsApproved = left.status === 'approved';
+      const rightIsApproved = right.status === 'approved';
+      if (leftIsApproved !== rightIsApproved) return leftIsApproved ? -1 : 1;
       if (left.clubId === appConfig.defaultClubId) return -1;
       if (right.clubId === appConfig.defaultClubId) return 1;
       return left.clubName.localeCompare(right.clubName, 'ko');

@@ -3,9 +3,12 @@
 import { create } from 'zustand';
 import {
   createAnnouncement,
+  deleteAnnouncement,
   fetchAnnouncements,
+  updateAnnouncement,
   type Announcement,
   type CreateAnnouncementRequest,
+  type UpdateAnnouncementRequest,
 } from './announcementClient';
 
 type AnnouncementsStatus = 'idle' | 'loading' | 'ready' | 'error';
@@ -16,6 +19,8 @@ interface AnnouncementState {
   announcementsError: string | null;
   loadAnnouncements: (clubId?: string) => Promise<void>;
   createAnnouncement: (input: CreateAnnouncementRequest) => Promise<Announcement>;
+  updateAnnouncement: (input: UpdateAnnouncementRequest) => Promise<Announcement>;
+  deleteAnnouncement: (announcementId: string) => Promise<void>;
 }
 
 export const useAnnouncementStore = create<AnnouncementState>((set) => ({
@@ -43,5 +48,24 @@ export const useAnnouncementStore = create<AnnouncementState>((set) => ({
       announcementsError: null,
     }));
     return announcement;
+  },
+  updateAnnouncement: async (input) => {
+    const announcement = await updateAnnouncement(input);
+    set((state) => ({
+      announcements: state.announcements
+        .map((candidate) => candidate.id === announcement.id ? announcement : candidate)
+        .sort((left, right) => Number(right.isPinned) - Number(left.isPinned) || right.createdAt.localeCompare(left.createdAt)),
+      announcementsStatus: 'ready',
+      announcementsError: null,
+    }));
+    return announcement;
+  },
+  deleteAnnouncement: async (announcementId) => {
+    await deleteAnnouncement(announcementId);
+    set((state) => ({
+      announcements: state.announcements.filter((announcement) => announcement.id !== announcementId),
+      announcementsStatus: 'ready',
+      announcementsError: null,
+    }));
   },
 }));

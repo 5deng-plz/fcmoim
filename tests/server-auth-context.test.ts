@@ -4,10 +4,10 @@ import {
   isE2ETestAuthBypassEnabled,
 } from '../src/lib/supabase-server';
 
-function createSupabaseWithClaims(result: unknown) {
+function createSupabaseWithUser(result: unknown) {
   return {
     auth: {
-      getClaims: vi.fn(async () => result),
+      getUser: vi.fn(async () => result),
     },
   } as never;
 }
@@ -17,11 +17,11 @@ describe('v1.0 server auth context', () => {
     vi.unstubAllEnvs();
   });
 
-  it('uses Supabase claims when a server session is available', async () => {
-    const auth = await getRequiredServerAuthContext(createSupabaseWithClaims({
+  it('uses Supabase user data when a server session is valid', async () => {
+    const auth = await getRequiredServerAuthContext(createSupabaseWithUser({
       data: {
-        claims: {
-          sub: 'real-auth-user',
+        user: {
+          id: 'real-auth-user',
           email: 'real@example.com',
         },
       },
@@ -36,13 +36,26 @@ describe('v1.0 server auth context', () => {
     });
   });
 
-  it('rejects missing Supabase claims when the E2E bypass is disabled', async () => {
+  it('rejects missing Supabase user data when the E2E bypass is disabled', async () => {
     vi.stubEnv('ENABLE_E2E_TEST_AUTH_BYPASS', 'false');
 
     await expect(
-      getRequiredServerAuthContext(createSupabaseWithClaims({
-        data: { claims: null },
+      getRequiredServerAuthContext(createSupabaseWithUser({
+        data: { user: null },
         error: null,
+      })),
+    ).rejects.toMatchObject({
+      code: 'unauthorized',
+    });
+  });
+
+  it('rejects stale claim-only sessions that no longer resolve to an auth user', async () => {
+    vi.stubEnv('ENABLE_E2E_TEST_AUTH_BYPASS', 'false');
+
+    await expect(
+      getRequiredServerAuthContext(createSupabaseWithUser({
+        data: { user: null },
+        error: new Error('User from sub claim does not exist.'),
       })),
     ).rejects.toMatchObject({
       code: 'unauthorized',
@@ -57,8 +70,8 @@ describe('v1.0 server auth context', () => {
     vi.stubEnv('E2E_TEST_AUTH_EMAIL', 'e2e-operator@fcmoim.test');
 
     await expect(
-      getRequiredServerAuthContext(createSupabaseWithClaims({
-        data: { claims: null },
+      getRequiredServerAuthContext(createSupabaseWithUser({
+        data: { user: null },
         error: null,
       })),
     ).resolves.toEqual({
@@ -75,8 +88,8 @@ describe('v1.0 server auth context', () => {
     vi.stubEnv('ENABLE_E2E_TEST_AUTH_BYPASS', '');
 
     await expect(
-      getRequiredServerAuthContext(createSupabaseWithClaims({
-        data: { claims: null },
+      getRequiredServerAuthContext(createSupabaseWithUser({
+        data: { user: null },
         error: null,
       })),
     ).rejects.toMatchObject({
@@ -93,8 +106,8 @@ describe('v1.0 server auth context', () => {
     vi.stubEnv('APP_PROFILE', env.APP_PROFILE);
 
     await expect(
-      getRequiredServerAuthContext(createSupabaseWithClaims({
-        data: { claims: null },
+      getRequiredServerAuthContext(createSupabaseWithUser({
+        data: { user: null },
         error: null,
       })),
     ).rejects.toMatchObject({

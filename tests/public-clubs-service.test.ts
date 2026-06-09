@@ -28,7 +28,7 @@ function createRepositories(overrides: Partial<PublicClubRepositories['clubs']> 
     upcomingMatches: [
       {
         id: 'match-1',
-        title: '정기전',
+        title: 'Round 1',
         date: '2026-05-09T10:00:00.000Z',
         location: 'Seoul',
         type: 'match',
@@ -73,7 +73,7 @@ describe('public club service', () => {
 
     await expect(service.getClub({ clubId: ' club-1 ' })).resolves.toMatchObject({
       id: 'club-1',
-      upcomingMatches: [{ title: '정기전', attendeeCount: 0, attendeeTotal: 12 }],
+      upcomingMatches: [{ title: 'Round 1', attendeeCount: 0, attendeeTotal: 12 }],
     });
     expect(repositories.clubs.findPublicDetail).toHaveBeenCalledWith('club-1');
   });

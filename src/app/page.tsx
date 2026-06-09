@@ -66,10 +66,52 @@ function MembershipBlockedScreen({ type }: { type: 'rejected' | 'suspended' }) {
 
 // ─── 메인 앱 쉘 (인증 완료 사용자) ───
 function AppShell() {
-  const { activeTab, showMyPage, showJoinForm } = useAppStore();
+  const {
+    activeTab,
+    showMyPage,
+    showJoinForm,
+    showTeamBrowse,
+    teamBrowseJoinStatus,
+    setActiveTab,
+    setJoinIntent,
+    setSelectedJoinClubId,
+    setShowJoinForm,
+    setShowTeamBrowse,
+    setTeamBrowseJoinStatus,
+  } = useAppStore();
+  const { switchClub } = useAuthStore();
   const mainRef = useRef<HTMLElement | null>(null);
 
   const renderContent = () => {
+    if (showTeamBrowse && showJoinForm) {
+      return (
+        <JoinRequestForm
+          mode="secondary"
+          targetStatus={teamBrowseJoinStatus ?? 'new'}
+          onSecondaryClose={() => {
+            setShowJoinForm(false);
+            setTeamBrowseJoinStatus(null);
+          }}
+        />
+      );
+    }
+    if (showTeamBrowse) {
+      return (
+        <GuestDashboard
+          onOpenJoinRequest={({ clubId, status }) => {
+            setSelectedJoinClubId(clubId);
+            setJoinIntent({ clubId });
+            setTeamBrowseJoinStatus(status);
+            setShowJoinForm(true);
+          }}
+          onCreatedClub={async (clubId) => {
+            await switchClub(clubId);
+            setShowTeamBrowse(false);
+            setActiveTab('home');
+          }}
+        />
+      );
+    }
     if (showJoinForm) return <JoinRequestForm />;
     if (showMyPage) return <MyPage />;
     switch (activeTab) {
@@ -193,6 +235,7 @@ export default function Home() {
     return (
       <PhoneFrame>
         <LoginScreen />
+        <Toast />
       </PhoneFrame>
     );
   }

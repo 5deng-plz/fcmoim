@@ -54,6 +54,135 @@
         { "path": "forbidden/change.txt", "content": "change" }
       ],
       "expectedExit": 1
+    },
+    {
+      "id": "evidence-guard-browser-smoke-missing",
+      "description": "guard-evidence rejects ready work when browser smoke is required but missing",
+      "command": "node .agents/scripts/guard-evidence.mjs",
+      "rulesPatch": {
+        "evidencePolicy": {
+          "browserSmoke": {
+            "requiredEvidence": [{ "type": "runtime", "maxAgeMinutes": 1440 }],
+            "providers": ["Runtime Browser"],
+            "requiredWhenChanged": ["app/runtime/**"]
+          }
+        },
+        "retrospectivePolicy": {
+          "requiredAtCompletion": true,
+          "requiredFields": ["issuesObserved", "missedEvidence", "harnessImprovementProposal", "promotionRecommendation", "reason"],
+          "promotionRecommendations": ["none", "propose", "defer"]
+        }
+      },
+      "statePatch": {
+        "activeWork": {
+          "status": "complete",
+          "changedFiles": ["app/runtime/session.ts"],
+          "changedSurfaces": ["interface"],
+          "allowedPaths": ["app/runtime/**"],
+          "evidence": {},
+          "reviewStatus": "ready",
+          "retrospective": {
+            "issuesObserved": [],
+            "missedEvidence": ["browserRuntime"],
+            "harnessImprovementProposal": [],
+            "promotionRecommendation": "none",
+            "reason": "Fixture retrospective present."
+          }
+        }
+      },
+      "mutations": [
+        { "path": "app/runtime/session.ts", "content": "export const value = true;\n" }
+      ],
+      "expectedExit": 1
+    },
+    {
+      "id": "evidence-guard-browser-smoke-present",
+      "description": "guard-evidence accepts ready work when required browser smoke passed",
+      "command": "node .agents/scripts/guard-evidence.mjs",
+      "rulesPatch": {
+        "evidencePolicy": {
+          "browserSmoke": {
+            "requiredEvidence": [{ "type": "runtime", "maxAgeMinutes": 1440 }],
+            "providers": ["Runtime Browser"],
+            "requiredWhenChanged": ["app/runtime/**"]
+          }
+        },
+        "retrospectivePolicy": {
+          "requiredAtCompletion": true,
+          "requiredFields": ["issuesObserved", "missedEvidence", "harnessImprovementProposal", "promotionRecommendation", "reason"],
+          "promotionRecommendations": ["none", "propose", "defer"]
+        }
+      },
+      "statePatch": {
+        "activeWork": {
+          "status": "complete",
+          "changedFiles": ["app/runtime/session.ts"],
+          "changedSurfaces": ["interface"],
+          "allowedPaths": ["app/runtime/**"],
+          "evidence": {
+            "browserRuntime": {
+              "status": "passed",
+              "provider": "Runtime Browser",
+              "summary": "First screen rendered and server output stayed clean."
+            }
+          },
+          "reviewStatus": "ready",
+          "retrospective": {
+            "issuesObserved": [],
+            "missedEvidence": [],
+            "harnessImprovementProposal": [],
+            "promotionRecommendation": "none",
+            "reason": "Fixture retrospective present."
+          }
+        }
+      },
+      "mutations": [
+        { "path": "app/runtime/session.ts", "content": "export const value = true;\n" }
+      ],
+      "expectedExit": 0
+    },
+    {
+      "id": "evidence-guard-browser-smoke-blocked",
+      "description": "guard-evidence accepts non-ready blocked work with an explicit missing evidence blocker",
+      "command": "node .agents/scripts/guard-evidence.mjs",
+      "rulesPatch": {
+        "evidencePolicy": {
+          "browserSmoke": {
+            "requiredEvidence": [{ "type": "runtime", "maxAgeMinutes": 1440 }],
+            "providers": ["Runtime Browser"],
+            "requiredWhenChanged": ["app/runtime/**"]
+          }
+        },
+        "retrospectivePolicy": {
+          "requiredAtCompletion": true,
+          "requiredFields": ["issuesObserved", "missedEvidence", "harnessImprovementProposal", "promotionRecommendation", "reason"],
+          "promotionRecommendations": ["none", "propose", "defer"]
+        }
+      },
+      "statePatch": {
+        "activeWork": {
+          "status": "blocked",
+          "changedFiles": ["app/runtime/session.ts"],
+          "changedSurfaces": ["interface"],
+          "allowedPaths": ["app/runtime/**"],
+          "evidence": {},
+          "reviewStatus": "blocked",
+          "retrospective": {
+            "issuesObserved": ["Required browser evidence could not be collected."],
+            "missedEvidence": ["browserRuntime"],
+            "harnessImprovementProposal": [],
+            "promotionRecommendation": "defer",
+            "reason": "Fixture records unavailable evidence as a blocker."
+          }
+        },
+        "blockers": [
+          { "id": "missing-browserRuntime", "reason": "Required browserRuntime evidence tool unavailable." }
+        ]
+      },
+      "mutations": [
+        { "path": "app/runtime/session.ts", "content": "export const value = true;\n" }
+      ],
+      "expectedExit": 0
     }
   ]
 }

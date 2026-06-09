@@ -2,6 +2,7 @@
   "name": "fcmoim",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "node scripts/with-local-supabase-env.mjs next dev",
     "dev:local": "node scripts/with-local-supabase-env.mjs next dev",

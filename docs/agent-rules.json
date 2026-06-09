@@ -48,7 +48,7 @@
   },
   "guardProfiles": {
     "preCommit": { "steps": ["validateHarness", "guardDesignStaged", "projectPreCommit"] },
-    "verify": { "steps": ["validateHarness", "guardDesign", "guardDiff", "projectVerify"] }
+    "verify": { "steps": ["validateHarness", "guardDesign", "guardDiff", "projectVerify", "guardEvidence"] }
   },
   "statePolicy": {
     "writer": "orchestrator"
@@ -58,6 +58,13 @@
     "commitMessageLanguage": "ko",
     "splitLargeWorkByConcern": true,
     "summaryRequired": true
+  },
+  "retrospectivePolicy": {
+    "requiredAtCompletion": true,
+    "requiredFields": ["issuesObserved", "missedEvidence", "harnessImprovementProposal", "promotionRecommendation", "reason"],
+    "promotionRecommendations": ["none", "propose", "defer"],
+    "proposalOnlyByDefault": true,
+    "promotionRequiresUserApproval": true
   },
   "documentationPolicy": {
     "maxLines": 200,
@@ -79,6 +86,28 @@
       "requiredEvidence": [{ "type": "database", "maxAgeMinutes": 1440 }],
       "providers": ["Local Supabase CLI", "tracked SQL"],
       "mockEvidenceAccepted": false
+    },
+    "browserSmoke": {
+      "requiredEvidence": [{ "type": "runtime", "maxAgeMinutes": 1440 }],
+      "providers": ["npm run dev", "in-app browser", "server terminal log"],
+      "requiredWhenChanged": [
+        "src/app/page.tsx",
+        "src/app/layout.tsx",
+        "src/lib/**",
+        "src/services/**",
+        "src/stores/useAuthStore.ts",
+        "src/stores/membershipClient.ts",
+        "src/app/api/**",
+        "supabase/**",
+        "package.json",
+        "next.config.ts",
+        "scripts/with-local-supabase-env.mjs"
+      ],
+      "packageReasonRequired": true,
+      "packageReasonPaths": ["package.json"],
+      "packageReasonTerms": ["runtime", "dependency", "dev-server", "startup", "module", "script", "package"],
+      "minimum": "Start npm run dev, open http://localhost:3000/ in the in-app browser, confirm first-screen render, and confirm no app errors or avoidable startup warnings in the server terminal.",
+      "notRequiredFor": ["copy-only UI changes", "documentation-only changes", "pure unit-test changes"]
     }
   },
   "reviewPolicy": {

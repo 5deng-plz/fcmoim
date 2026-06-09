@@ -327,7 +327,7 @@ export function createSupabaseAccountMembershipRepositories(
           .from('team_memberships')
           .select('id, club_id, role, status, clubs(name)')
           .eq('account_id', accountId)
-          .eq('status', 'approved')
+          .in('status', ['approved', 'pending'])
           .returns<ClubMembershipDbRow[]>();
 
         if (error) {
@@ -574,6 +574,44 @@ export function createSupabaseMatchResultRepositories(
         }
 
         return data;
+      },
+      async findStatsByIds(membershipIds) {
+        if (membershipIds.length === 0) return [];
+
+        const { data, error } = await supabase
+          .from('team_memberships')
+          .select('id, stats')
+          .in('id', membershipIds)
+          .returns<Array<{ id: string; stats: unknown }>>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch match result membership stats.', { cause: error });
+        }
+
+        return (data ?? []).map((row) => ({
+          id: row.id,
+          stats: normalizeStats(row.stats),
+        }));
+      },
+    },
+    matches: {
+      async findById(matchId) {
+        const { data, error } = await supabase
+          .from('matches')
+          .select(MATCH_SELECT)
+          .eq('id', matchId)
+          .maybeSingle<MatchDbRow>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch match.', { cause: error });
+        }
+
+        return data ? mapMatch(data) : null;
+      },
+    },
+    lineups: {
+      async listForMatch(matchId) {
+        return fetchMatchLineupByMatchId(supabase, matchId);
       },
     },
     async transaction(callback) {
@@ -946,6 +984,20 @@ export function createSupabaseAnnouncementRepositories(
         return (data ?? []).map(mapAnnouncement);
       },
 
+      async findById(announcementId) {
+        const { data, error } = await supabase
+          .from('announcements')
+          .select(ANNOUNCEMENT_SELECT)
+          .eq('id', announcementId)
+          .maybeSingle<AnnouncementDbRow>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch announcement.', { cause: error });
+        }
+
+        return data ? mapAnnouncement(data) : null;
+      },
+
       async create(input) {
         const { data, error } = await supabase
           .from('announcements')
@@ -965,6 +1017,36 @@ export function createSupabaseAnnouncementRepositories(
         }
 
         return mapAnnouncement(data);
+      },
+
+      async update(input) {
+        const { data, error } = await supabase
+          .from('announcements')
+          .update({
+            title: input.title,
+            content: input.content,
+            is_pinned: input.isPinned,
+          })
+          .eq('id', input.announcementId)
+          .select(ANNOUNCEMENT_SELECT)
+          .single<AnnouncementDbRow>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to update announcement.', { cause: error });
+        }
+
+        return mapAnnouncement(data);
+      },
+
+      async delete(announcementId) {
+        const { error } = await supabase
+          .from('announcements')
+          .delete()
+          .eq('id', announcementId);
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to delete announcement.', { cause: error });
+        }
       },
     },
   };

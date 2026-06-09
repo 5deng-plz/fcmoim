@@ -42,6 +42,8 @@ export interface Player {
   slotIndex?: number;
 }
 
+export type TacticsAvatarTeam = 'red' | 'blue' | 'bench';
+
 const initialPlayers: Player[] = [];
 const TACTICS_SLOT_COUNT = 18;
 const TACTICS_COLUMNS = 6;
@@ -74,6 +76,61 @@ interface TacticsDragBuilderProps {
   onPlayersUpdated?: (nextPlayers: Player[]) => void;
   match?: UpcomingMatch;
   onMatchUpdated?: (nextMatch: UpcomingMatch) => void;
+}
+
+export function TacticsPlayerAvatar({
+  player,
+  teamId,
+  className = '',
+  tabIndex,
+  testId,
+}: {
+  player: Pick<Player, 'name' | 'photo' | 'isLeader'>;
+  teamId: TacticsAvatarTeam;
+  className?: string;
+  tabIndex?: number;
+  testId?: string;
+}) {
+  return (
+    <span
+      tabIndex={tabIndex}
+      data-testid={testId}
+      className={`group relative -m-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 bg-white shadow-sm transition-[box-shadow,transform,opacity] ${getAvatarBorderClass(teamId)} ${className}`}
+    >
+      <TacticsPlayerAvatarContent player={player} teamId={teamId} />
+    </span>
+  );
+}
+
+function TacticsPlayerAvatarContent({
+  player,
+  teamId,
+}: {
+  player: Pick<Player, 'name' | 'photo' | 'isLeader'>;
+  teamId: TacticsAvatarTeam;
+}) {
+  return (
+    <>
+      <Image
+        src={getPlayerPhotoSrc(player)}
+        alt={player.name}
+        width={32}
+        height={32}
+        sizes="32px"
+        className="rounded-full bg-gray-100"
+        style={{ width: 32, height: 32 }}
+        unoptimized
+      />
+      {player.isLeader ? (
+        <span className={`absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] font-black text-white shadow-sm ${getAvatarLeaderBadgeClass(teamId)}`}>
+          C
+        </span>
+      ) : null}
+      <span className="pointer-events-none absolute -top-7 left-1/2 z-40 min-w-max -translate-x-1/2 rounded-lg bg-slate-900 px-2 py-1 text-[10px] font-black leading-none text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+        {player.name}
+      </span>
+    </>
+  );
 }
 
 function DraggablePlayerAvatar({
@@ -109,12 +166,6 @@ function DraggablePlayerAvatar({
     zIndex: isDragging ? 30 : stackIndex,
   };
 
-  const badgeClassName = zone === 'red'
-    ? 'bg-red-team'
-    : zone === 'blue'
-      ? 'bg-blue-team'
-      : 'bg-award-mvp';
-
   return (
     <button
       type="button"
@@ -135,24 +186,7 @@ function DraggablePlayerAvatar({
         isDragging || isSelected ? 'shadow-xl ring-2 ring-fcgreen-500' : 'hover:shadow-md'
       }`}
     >
-      <Image
-        src={getPlayerPhotoSrc(player)}
-        alt={player.name}
-        width={32}
-        height={32}
-        sizes="32px"
-        className="rounded-full bg-gray-100"
-        style={{ width: 32, height: 32 }}
-        unoptimized
-      />
-      {player.isLeader ? (
-        <span className={`absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] font-black text-white shadow-sm ${badgeClassName}`}>
-          C
-        </span>
-      ) : null}
-      <span className="pointer-events-none absolute -top-7 left-1/2 z-40 min-w-max -translate-x-1/2 rounded-lg bg-slate-900 px-2 py-1 text-[10px] font-black leading-none text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-        {player.name}
-      </span>
+      <TacticsPlayerAvatarContent player={player} teamId={zone as TacticsAvatarTeam} />
     </button>
   );
 }
@@ -1089,6 +1123,12 @@ function getAvatarBorderClass(zone: string) {
   return 'border-gray-200';
 }
 
+function getAvatarLeaderBadgeClass(zone: string) {
+  if (zone === 'red') return 'bg-red-team';
+  if (zone === 'blue') return 'bg-blue-team';
+  return 'bg-award-mvp';
+}
+
 const slotFirstCollisionDetection: CollisionDetection = (args) => {
   const pointerCollisions = pointerWithin(args);
   const pointerSlot = pointerCollisions.find((collision) => String(collision.id).startsWith('slot-'));
@@ -1413,7 +1453,7 @@ function mapPlayerToLineupStub(player: Player): MatchLineupEntry {
   };
 }
 
-function getPlayerPhotoSrc(player: Player) {
+function getPlayerPhotoSrc(player: Pick<Player, 'photo'>) {
   return player.photo.startsWith('/') || player.photo.startsWith('http')
     ? player.photo
     : getFallbackAvatar(player.photo);

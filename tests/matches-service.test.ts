@@ -190,7 +190,7 @@ describe('manual match creation service', () => {
       id: 'match-created',
       seasonId: 'season-active',
       round: 13,
-      title: '정규리그 Round 13',
+      title: 'Round 13',
       date: '2026-03-21T18:00:00+09:00',
       location: '서울 용산 풋살장',
       type: 'match',
@@ -201,7 +201,7 @@ describe('manual match creation service', () => {
       clubId: 'club-1',
       seasonId: 'season-active',
       round: 13,
-      title: '정규리그 Round 13',
+      title: 'Round 13',
       date: '2026-03-21T18:00:00+09:00',
       location: '서울 용산 풋살장',
       type: 'match',
@@ -222,7 +222,7 @@ describe('manual match creation service', () => {
       clubId: 'club-1',
       seasonId: 'season-active',
       round: 7,
-      title: '정규리그 Round 7',
+      title: 'Round 7',
       date: '2026-05-20T18:00:00+09:00',
       location: '상암 풋살장',
       type: 'match',
@@ -250,7 +250,7 @@ describe('manual match creation service', () => {
         },
         clubId: 'club-1',
         type: 'match',
-        title: '정규리그 Round 8',
+        title: 'Round 8',
         date: '2026-05-20',
         time: '21:00',
         location: '잠실 풋살파크',
@@ -260,6 +260,33 @@ describe('manual match creation service', () => {
       message: '이미 같은 날짜에 등록된 경기가 있어요.',
     });
     expect(repositories.matches.create).not.toHaveBeenCalled();
+  });
+
+  it('preserves a provided custom match title', async () => {
+    const repositories = createRepositories();
+    const service = await loadService(repositories);
+
+    await service.createMatch({
+      auth: {
+        user: {
+          id: 'operator-auth-user',
+          email: 'operator@example.com',
+        },
+      },
+      clubId: 'club-1',
+      type: 'match',
+      title: '  컵대회 결승전  ',
+      date: '2026-05-27',
+      time: '20:00',
+      location: '목동 풋살장',
+      memo: null,
+    });
+
+    expect(repositories.matches.create).toHaveBeenCalledWith(expect.objectContaining({
+      round: 13,
+      title: '컵대회 결승전',
+      type: 'match',
+    }));
   });
 
   it('allows non-match event types on dates that already have matches', async () => {
@@ -385,7 +412,7 @@ describe('calendar match service', () => {
         clubId: 'club-1',
         seasonId: 'season-1',
         round: null,
-        title: '정규리그 Round 6',
+        title: 'Round 6',
         date: '2026-05-15T18:00:00+09:00',
         location: '서울 영등포 SKY풋살파크',
         type: 'match',

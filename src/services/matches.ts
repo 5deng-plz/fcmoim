@@ -470,7 +470,7 @@ function normalizeTeamNumber(value: MatchLineupTeamNumber): MatchLineupTeamNumbe
 
 function normalizeMatchTitle(value: string | null | undefined, type: MatchEventType, round: number | null = null) {
   if (type === 'match') {
-    return normalizeOptionalText(value) ?? `정규리그 Round ${round ?? 1}`;
+    return normalizeOptionalText(value) ?? `Round ${round ?? 1}`;
   }
 
   return normalizeRequiredText(value, 'Schedule title is required.');

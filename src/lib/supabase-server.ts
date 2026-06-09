@@ -39,9 +39,9 @@ export async function createSupabaseServerClient(): Promise<SupabaseClient> {
 export async function getRequiredServerAuthContext(
   supabase: SupabaseClient,
 ): Promise<AuthContext> {
-  const { data, error } = await supabase.auth.getClaims();
+  const { data, error } = await supabase.auth.getUser();
 
-  if (error || !data?.claims?.sub) {
+  if (error || !data?.user) {
     const bearerAuth = await getBearerAuthContext(supabase);
     if (bearerAuth) {
       return bearerAuth;
@@ -60,8 +60,8 @@ export async function getRequiredServerAuthContext(
 
   return {
     user: {
-      id: data.claims.sub,
-      email: typeof data.claims.email === 'string' ? data.claims.email : null,
+      id: data.user.id,
+      email: data.user.email ?? null,
     },
   };
 }

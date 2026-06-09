@@ -95,6 +95,27 @@ if (rules) {
     if (typeof rules.commands?.[cmd] !== 'string') errors.push(`commands.${cmd} must be configured`);
   }
 
+  // Guard profiles
+  const knownGuardSteps = new Set([
+    'validateHarness',
+    'guardDiff',
+    'guardDiffStaged',
+    'guardDesign',
+    'guardDesignStaged',
+    'guardEvidence',
+    'projectPreCommit',
+    'projectVerify'
+  ]);
+  for (const [profile, value] of Object.entries(rules.guardProfiles || {})) {
+    if (!Array.isArray(value.steps)) {
+      errors.push(`guardProfiles.${profile}.steps must be an array`);
+      continue;
+    }
+    for (const step of value.steps) {
+      if (!knownGuardSteps.has(step)) errors.push(`guardProfiles.${profile}.steps contains unknown step: ${step}`);
+    }
+  }
+
   // State policy
   if (rules.statePolicy && typeof rules.statePolicy.writer !== 'string') {
     errors.push('statePolicy.writer must be a string');
@@ -121,6 +142,20 @@ if (rules) {
         if (!slot.id) errors.push('designPolicy.semanticSlots[].id must be non-empty');
         if (!Array.isArray(slot.paths)) errors.push(`designPolicy.semanticSlots.${slot.id || '?'}.paths must be an array`);
       }
+    }
+  }
+
+  // Retrospective policy structure
+  const retrospectivePolicy = rules.retrospectivePolicy;
+  if (retrospectivePolicy) {
+    if (typeof retrospectivePolicy.requiredAtCompletion !== 'boolean') {
+      errors.push('retrospectivePolicy.requiredAtCompletion must be a boolean');
+    }
+    if (!Array.isArray(retrospectivePolicy.requiredFields) || retrospectivePolicy.requiredFields.length === 0) {
+      errors.push('retrospectivePolicy.requiredFields must be a non-empty array');
+    }
+    if (!Array.isArray(retrospectivePolicy.promotionRecommendations) || retrospectivePolicy.promotionRecommendations.length === 0) {
+      errors.push('retrospectivePolicy.promotionRecommendations must be a non-empty array');
     }
   }
 

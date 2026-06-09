@@ -3,12 +3,14 @@
 import { create } from 'zustand';
 import { appConfig } from '@/config/app.config';
 import type { UserRole, UserStatus, Tab, AttendanceStatus } from '@/types';
+import type { MembershipStatus } from '@/types/domain';
 
 export interface ClubOption {
   membershipId: string;
   clubId: string;
   clubName: string;
   role: UserRole;
+  status?: MembershipStatus;
 }
 
 export type SettlementNotification = {
@@ -22,6 +24,8 @@ const JOIN_INTENT_KEY = 'fcmoim.joinIntent';
 export type JoinIntent = {
   clubId: string;
 };
+
+export type TeamBrowseJoinStatus = 'new' | 'pending';
 
 interface AppState {
   // ─── 탭 네비게이션 ───
@@ -41,6 +45,10 @@ interface AppState {
   setSettlementNotification: (notification: SettlementNotification | null) => void;
   showJoinForm: boolean;
   setShowJoinForm: (show: boolean) => void;
+  showTeamBrowse: boolean;
+  setShowTeamBrowse: (show: boolean) => void;
+  teamBrowseJoinStatus: TeamBrowseJoinStatus | null;
+  setTeamBrowseJoinStatus: (status: TeamBrowseJoinStatus | null) => void;
   joinIntent: JoinIntent | null;
   setJoinIntent: (intent: JoinIntent | null) => void;
   clearJoinIntent: () => void;
@@ -75,21 +83,38 @@ interface AppState {
 export const useAppStore = create<AppState>((set) => ({
   // ─── 탭 네비게이션 ───
   activeTab: 'home',
-  setActiveTab: (tab) => set({ activeTab: tab, showMyPage: false, showCommunity: false, showJoinForm: false }),
+  setActiveTab: (tab) => set({
+    activeTab: tab,
+    showMyPage: false,
+    showCommunity: false,
+    showJoinForm: false,
+    showTeamBrowse: false,
+    teamBrowseJoinStatus: null,
+  }),
   recordsSubTab: 'season',
   setRecordsSubTab: (subTab) => set({ recordsSubTab: subTab }),
 
   // ─── 서브페이지 ───
   showMyPage: false,
-  setShowMyPage: (show) => set({ showMyPage: show, showCommunity: false, showJoinForm: false }),
+  setShowMyPage: (show) => set({ showMyPage: show, showCommunity: false, showJoinForm: false, showTeamBrowse: false }),
   showCommunity: false,
-  setShowCommunity: (show) => set({ showCommunity: show, showMyPage: false, showJoinForm: false }),
+  setShowCommunity: (show) => set({ showCommunity: show, showMyPage: false, showJoinForm: false, showTeamBrowse: false }),
   showNotifications: false,
   setShowNotifications: (show) => set({ showNotifications: show }),
   settlementNotification: null,
   setSettlementNotification: (notification) => set({ settlementNotification: notification }),
   showJoinForm: false,
   setShowJoinForm: (show) => set({ showJoinForm: show, showMyPage: false, showCommunity: false }),
+  showTeamBrowse: false,
+  setShowTeamBrowse: (show) => set({
+    showTeamBrowse: show,
+    showMyPage: false,
+    showCommunity: false,
+    showJoinForm: false,
+    teamBrowseJoinStatus: null,
+  }),
+  teamBrowseJoinStatus: null,
+  setTeamBrowseJoinStatus: (status) => set({ teamBrowseJoinStatus: status }),
   joinIntent: readJoinIntent(),
   setJoinIntent: (intent) => {
     persistJoinIntent(intent);

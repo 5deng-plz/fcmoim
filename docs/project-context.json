@@ -1,67 +1,80 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 42,
-  "updatedAt": "2026-06-03T14:28:00.000+09:00",
+  "updateVersion": 61,
+  "updatedAt": "2026-06-10T09:01:06.000+09:00",
   "updatedBy": "orchestrator",
-  "currentPhase": "google-login-ui-polish",
+  "currentPhase": "match-result-consistency-confirmation",
   "activeWork": {
-    "taskId": "google-login-ui-polish",
+    "taskId": "match-result-consistency-confirmation",
     "status": "complete",
-    "baselineCommit": "6ed66b62779f2d1d1caf6cdaf62003d25a79d03f",
+    "baselineCommit": "912b931f62d2fc8221a0458c52fc5e5d77d22f36",
     "changedFiles": [
-      "public/brand/google-g.svg",
-      "src/components/features/LoginScreen.tsx",
-      "src/components/layout/Header.tsx",
+      "src/components/features/MatchResultInputModal.tsx",
+      "src/components/tabs/ScheduleTab.tsx",
+      "src/services/match-results.ts",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
+      "tests/match-result-transaction.test.ts",
       "docs/project-context.json"
     ],
-    "changedSurfaces": ["ui", "tests", "docs"],
+    "changedSurfaces": ["ui", "service", "tests", "docs"],
     "allowedPaths": [
-      "src/**",
-      "tests/**",
-      "public/brand/**",
-      "docs/project-context.json",
-      ".env.local.example",
-      "apphosting.yaml"
+      "src/components/features/MatchResultInputModal.tsx",
+      "src/components/tabs/ScheduleTab.tsx",
+      "src/services/match-results.ts",
+      "tests/frontend-auth-and-schedule-ui.test.tsx",
+      "tests/match-result-transaction.test.ts",
+      "docs/project-context.json"
     ],
     "evidence": {
-      "prodBuild": {
+      "typecheck": {
         "status": "passed",
-        "command": "APP_PROFILE=prod NEXT_PUBLIC_APP_PROFILE=prod ... npm run build",
-        "summary": "App Hosting-style production build completed after replacing the Google button mark asset and adding guest logo navigation."
+        "command": "npm run typecheck",
+        "summary": "TypeScript completed without errors after adding match result score/stat consistency checks and final confirmation UI."
       },
-      "harnessGuardVerifyUtc": {
+      "lint": {
         "status": "passed",
-        "command": "npm run harness:guard:precommit && node .agents/scripts/guard-diff.mjs --staged && TZ=UTC npm run verify:harness",
-        "summary": "Staged Harness guards passed while unrelated AGENT.md remained dirty; lint, typecheck, full Vitest, and db:check passed under UTC: 197 tests passed, 7 local-Supabase-gated tests skipped."
+        "command": "npm run lint",
+        "summary": "ESLint passed without warnings for the updated result modal, match result service, and regression tests."
       },
-      "targetedTests": {
+      "targetedResultTests": {
         "status": "passed",
-        "command": "TZ=UTC npm test -- tests/frontend-auth-and-schedule-ui.test.tsx",
-        "summary": "Auth/header UI suite passed: Google login uses the Google G asset button, and unauthenticated guest browsing users return to the login screen by clicking the FC moim logo."
+        "command": "npm run test -- tests/match-result-transaction.test.ts tests/frontend-auth-and-schedule-ui.test.tsx --run",
+        "summary": "Focused result tests passed: 68 tests passed, covering backend rejection before transactions, frontend inconsistent stat blocking, and final confirmation before save."
       },
-      "designChangePolicy": {
+      "localSupabaseApi": {
+        "type": "database",
         "status": "passed",
-        "summary": "No broad redesign introduced; Google button was aligned to the standard white bordered Google sign-in style and guest logo navigation was added."
+        "command": "npm run verify:db:local",
+        "summary": "Local Supabase reset, QA auth seed, demo seed, and real API tests passed: 15 tests passed, covering the match result API path after service validation changes."
       },
-      "remoteRuntime": {
-        "status": "pending",
-        "command": "Playwright mobile smoke against https://guppy--fcmoim.asia-east1.hosted.app/",
-        "summary": "Run after App Hosting deploys the UI polish commit."
-      },
-      "localRuntime": {
+      "browserRuntime": {
+        "type": "runtime",
         "status": "passed",
-        "command": "next start -p 3101 + Playwright mobile smoke",
-        "summary": "Google button rendered as a 280x40 white bordered sign-in button with google-g.svg, and team browse logo returned unauthenticated guests to the login screen without page errors."
+        "provider": "in-app browser",
+        "command": "Retried Browser against existing http://localhost:3000/ tab after local Supabase reset",
+        "summary": "Logged in with the local QA admin account, opened Schedule, confirmed the result action is visible for the ready past match, verified inconsistent Red goals show the score/stat toast without opening confirmation, then verified valid score opens the final confirmation warning without submitting."
       },
-      "googleProviderConfig": {
+      "baseline": {
         "status": "passed",
-        "command": "Supabase Auth settings check",
-        "summary": "Supabase Auth external provider settings report google true, kakao true, and email true."
+        "command": "npm run verify:baseline",
+        "summary": "Harness validation, lint, typecheck, and full Vitest suite passed: 19 test files passed, 1 skipped; 219 tests passed, 15 skipped."
       }
     },
     "reviewStatus": "ready",
+    "retrospective": {
+      "issuesObserved": [
+        "Match result payloads could submit player goal or assist totals higher than the corresponding team score.",
+        "The result modal sent the save request immediately without a final single-shot confirmation.",
+        "The MOM API proposal was intentionally deferred because it needs separate policy decisions for is_mom records, point ledger idempotency, and records aggregation."
+      ],
+      "missedEvidence": [],
+      "harnessImprovementProposal": [
+        "No harness promotion proposed; the new risks are covered by service and UI regression tests."
+      ],
+      "promotionRecommendation": "none",
+      "reason": "This is product validation and confirmation behavior rather than a reusable harness rule."
+    },
     "loopCounters": {
       "reviewRounds": 0,
       "guardRetries": 0

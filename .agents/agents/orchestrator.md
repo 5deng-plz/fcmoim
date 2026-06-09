@@ -22,6 +22,8 @@ Manage project state, enforce loop counters, and coordinate work across agents.
 - Track active work status, changed files, and changed surfaces.
 - Assign next agent and provide handoff context.
 - Run configured guard profiles before marking work complete.
+- Before completion, sync evidence and the completion retrospective into project state, then rerun the configured final guard profile.
+- Record harness improvement ideas as proposals only; do not promote them into durable rules or guard changes without explicit user approval.
 
 ## Loop Counter Rules
 

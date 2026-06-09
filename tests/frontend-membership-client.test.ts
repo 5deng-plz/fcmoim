@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   buildJoinProfileRequest,
+  fetchClubMemberships,
   mapMembershipSnapshotToUser,
   membershipStateToUserStatus,
   patchMembershipPhoto,
@@ -312,5 +313,50 @@ describe('frontend join request payload', () => {
       preferredFoot: '왼발',
       residence: '서울 마포구',
     });
+  });
+
+  it('keeps pending clubs out of active club switching', async () => {
+    vi.stubGlobal('fetch', vi.fn());
+    useAuthStore.setState({
+      authUser: {
+        id: 'auth-user-1',
+        email: 'player@example.com',
+        user_metadata: {},
+      } as AuthUser,
+      memberProfile: null,
+      isLoading: false,
+    });
+    useAppStore.setState({
+      activeClubId: 'club-home',
+      teamName: '홈 FC',
+      availableClubs: [
+        { membershipId: 'membership-home', clubId: 'club-home', clubName: '홈 FC', role: 'member', status: 'approved' },
+        { membershipId: 'membership-pending', clubId: 'club-pending', clubName: '대기 FC', role: 'member', status: 'pending' },
+      ],
+      userRole: 'member',
+      userStatus: 'approved',
+      showJoinForm: false,
+    });
+
+    await expect(useAuthStore.getState().switchClub('club-pending')).rejects.toThrow('승인된 팀만');
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(useAppStore.getState()).toMatchObject({
+      activeClubId: 'club-home',
+      teamName: '홈 FC',
+      userStatus: 'approved',
+    });
+  });
+
+  it('preserves membership status and sorts approved clubs before pending clubs', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify([
+      { membershipId: 'membership-pending', clubId: 'club-pending', clubName: '대기 FC', role: 'member', status: 'pending' },
+      { membershipId: 'membership-approved', clubId: 'club-approved', clubName: '승인 FC', role: 'operator', status: 'approved' },
+    ]), { status: 200 })));
+
+    await expect(fetchClubMemberships()).resolves.toEqual([
+      expect.objectContaining({ clubId: 'club-approved', status: 'approved' }),
+      expect.objectContaining({ clubId: 'club-pending', status: 'pending' }),
+    ]);
   });
 });
