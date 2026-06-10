@@ -34,7 +34,7 @@
 - `npm run harness:guard:verify` — default completion gate: harness validation, design guard, diff guard, lint, typecheck, tests, and tracked SQL contract checks.
 - Evidence guard — included in `harness:guard:verify`; blocks ready/complete state when required evidence or completion retrospective is missing.
 - `npm run verify:db:local` — DB runtime gate for API/Auth/Data/Supabase changes when Local Supabase is available.
-- Runtime smoke — for Auth/session/API bootstrap, app entrypoint, or package/runtime config changes, run `npm run dev`, open the first screen, and check the server log; after local resets, treat stale browser auth state as a separate runtime risk to verify.
+- Runtime smoke — browser tooling is otherwise optional, but for Auth/session/API bootstrap, app entrypoint, or package/runtime config changes, run `npm run dev`, open the first screen, and check the server log; after local resets, treat stale browser auth state as a separate runtime risk to verify.
 - `npm run verify` — full verification, including the DB runtime gate, for release readiness or explicit full checks.
 - Guard failures beyond `maxGuardRetries` → stop and report to user.
 - Review rounds beyond `maxReviewRounds` → stop and report to user.

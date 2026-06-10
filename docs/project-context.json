@@ -1,96 +1,59 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 63,
-  "updatedAt": "2026-06-10T20:16:00.000+09:00",
+  "updateVersion": 65,
+  "updatedAt": "2026-06-11T08:23:16.000+09:00",
   "updatedBy": "orchestrator",
-  "currentPhase": "schedule-poll-production-stabilization",
+  "currentPhase": "harness-instruction-runtime-smoke-sync",
   "activeWork": {
-    "taskId": "schedule-poll-production-stabilization",
+    "taskId": "harness-instruction-runtime-smoke-sync",
     "status": "complete",
-    "baselineCommit": "f28ffdcf921e3a15ba51b8ff917c0e07a5ea2cc9",
+    "baselineCommit": "201ac10c52ecbd5be8c05b39c6b26ebfbdb59935",
     "changedFiles": [
-      "src/components/features/MatchCreateModal.tsx",
-      "src/components/features/RecentNotice.tsx",
-      "src/components/tabs/ScheduleTab.tsx",
-      "src/services/supabase-repositories.ts",
-      "src/stores/schedulePollClient.ts",
-      "src/types/domain.ts",
-      "supabase/migrations/20260610200852_align_comments_target_schema.sql",
-      "tests/frontend-auth-and-schedule-ui.test.tsx",
-      "tests/frontend-schedule-poll-client.test.ts",
-      "tests/local-supabase-api.test.ts",
+      "AGENT.md",
+      "docs/user/design-harness-workflow.md",
       "docs/project-context.json"
     ],
-    "changedSurfaces": ["ui", "api", "data", "tests", "docs"],
+    "changedSurfaces": ["docs", "harness"],
     "allowedPaths": [
-      "src/components/features/MatchCreateModal.tsx",
-      "src/components/features/RecentNotice.tsx",
-      "src/components/tabs/ScheduleTab.tsx",
-      "src/services/supabase-repositories.ts",
-      "src/stores/schedulePollClient.ts",
-      "src/types/domain.ts",
-      "supabase/migrations/20260610200852_align_comments_target_schema.sql",
-      "tests/frontend-auth-and-schedule-ui.test.tsx",
-      "tests/frontend-schedule-poll-client.test.ts",
-      "tests/local-supabase-api.test.ts",
+      "AGENT.md",
+      "docs/user/design-harness-workflow.md",
       "docs/project-context.json"
     ],
     "evidence": {
-      "typecheck": {
+      "harnessValidate": {
         "status": "passed",
-        "command": "npm run typecheck",
-        "summary": "TypeScript completed without errors after adding schedule poll eligible voter counts and match title placeholder guidance."
-      },
-      "lint": {
-        "status": "passed",
-        "command": "npm run lint",
-        "summary": "ESLint passed for the updated schedule UI, repository mapping, migration, and tests."
-      },
-      "targetedTests": {
-        "status": "passed",
-        "command": "npm run test -- tests/frontend-auth-and-schedule-ui.test.tsx tests/frontend-schedule-poll-client.test.ts --run",
-        "summary": "Focused tests passed: 72 tests passed, covering 0/1 poll attendance display and Round N title placeholder."
-      },
-      "localSupabaseApi": {
-        "type": "database",
-        "status": "passed",
-        "command": "npm run verify:db:local",
-        "summary": "Local Supabase reset, QA auth seed, demo seed, and real API tests passed: 15 tests passed, including poll eligibleVoterCount and schedule_poll_option comments."
-      },
-      "productionSupabase": {
-        "type": "database",
-        "status": "passed",
-        "provider": "Supabase MCP",
-        "command": "apply migration align_comments_target_schema; list migrations",
-        "summary": "Production migration succeeded and migration list includes align_comments_target_schema, adding target_type/target_id based comments compatibility for schedule poll option comments."
-      },
-      "browserRuntime": {
-        "type": "runtime",
-        "status": "passed",
-        "provider": "in-app browser",
-        "command": "Reloaded http://localhost:3000/ against the existing local Next dev server",
-        "summary": "First screen rendered with FC moim and 팀 둘러보기 text, and browser console error logs were empty."
+        "command": "npm run harness:validate",
+        "summary": "Harness validation passed after aligning AGENT.md and the design harness workflow on the runtime-smoke browser exception."
       },
       "baseline": {
         "status": "passed",
         "command": "npm run verify:baseline",
-        "summary": "Harness validation, lint, typecheck, and full Vitest suite passed on rerun: 19 test files passed, 1 skipped; 223 tests passed, 15 skipped. An earlier unrelated locker-room validation test failed once and passed on targeted rerun."
+        "summary": "Baseline verification passed on the final rerun: 19 test files passed, 1 skipped; 223 tests passed, 15 skipped."
+      },
+      "dbCheck": {
+        "type": "database",
+        "status": "passed",
+        "command": "npm run db:check",
+        "summary": "Supabase contract check passed for 18 SQL files during the final guard run."
+      },
+      "guardVerify": {
+        "status": "passed",
+        "command": "npm run harness:guard:verify",
+        "summary": "Final verify guard passed after syncing the active work to this harness-doc update; design guard passed with no guarded UI files changed, diff guard passed for 3 changed files, and evidence guard passed."
       }
     },
     "reviewStatus": "ready",
     "retrospective": {
       "issuesObserved": [
-        "Schedule poll option attendance used a hardcoded minimum denominator of 2 instead of approved club member count.",
-        "Production comments table still used the legacy match_id shape, while current code queries target_type and target_id.",
-        "Match creation title placeholder did not show the Round N default that the server creates for blank match titles."
+        "The design harness workflow still implied that in-app browser checks only happen on explicit request, even though current harness policy requires browserRuntime evidence for runtime entrypoint changes."
       ],
       "missedEvidence": [],
       "harnessImprovementProposal": [
-        "No harness promotion proposed; the issue was fixed with targeted UI/API tests, local Supabase verification, and a tracked production schema migration."
+        "Keep browser usage optional by default, but document the runtime-entrypoint exception consistently in AGENT.md and the design harness workflow."
       ],
-      "promotionRecommendation": "none",
-      "reason": "The issue was a product/schema stabilization change, not a reusable harness rule."
+      "promotionRecommendation": "propose",
+      "reason": "This was a repeatable operator-guidance mismatch in the durable harness docs, so the fix belongs in the docs rather than in one-off session notes."
     },
     "loopCounters": {
       "reviewRounds": 0,
