@@ -31,6 +31,18 @@ function createRepositories(role: 'admin' | 'operator' | 'member' = 'operator'):
         recentMatchCount: 0,
         upcomingMatchCount: 0,
       })),
+      updateLogo: vi.fn(async (input) => ({
+        id: input.clubId,
+        name: 'FC Guppy',
+        slug: 'fc-guppy',
+        description: '현재 소개',
+        logoUrl: input.logoUrl,
+        isPublic: true,
+        memberCount: 0,
+        activeSeason: null,
+        recentMatchCount: 0,
+        upcomingMatchCount: 0,
+      })),
     },
   };
 }
@@ -70,5 +82,24 @@ describe('club admin service', () => {
     })).rejects.toMatchObject({ code: 'forbidden' });
 
     expect(repositories.clubs.updateSettings).not.toHaveBeenCalled();
+  });
+
+  it.each(['admin', 'operator'] as const)('allows approved %s to update club logo', async (role) => {
+    const repositories = createRepositories(role);
+    const service = createClubAdminService(repositories);
+
+    await expect(service.updateClubLogo({
+      auth: { user: { id: 'manager-account', email: 'manager@example.com' } },
+      clubId: ' club-1 ',
+      logoUrl: ' https://cdn.example.com/logo.png ',
+    })).resolves.toMatchObject({
+      id: 'club-1',
+      logoUrl: 'https://cdn.example.com/logo.png',
+    });
+
+    expect(repositories.clubs.updateLogo).toHaveBeenCalledWith({
+      clubId: 'club-1',
+      logoUrl: 'https://cdn.example.com/logo.png',
+    });
   });
 });

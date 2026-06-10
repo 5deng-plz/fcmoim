@@ -1,17 +1,33 @@
+import Image from 'next/image';
 import type { SVGProps } from 'react';
 import FcmoimLogo from './FcmoimLogo';
 
 interface TeamEmblemProps extends SVGProps<SVGSVGElement> {
   teamName: string;
+  logoUrl?: string | null;
   size?: number | string;
 }
 
-export default function TeamEmblem({ teamName, size = 40, ...props }: TeamEmblemProps) {
-  if (teamName.toLowerCase().includes('guppy')) {
-    return <GuppyEmblem size={size} {...props} />;
+export default function TeamEmblem({ teamName, logoUrl, size = 40, className, ...props }: TeamEmblemProps) {
+  const numericSize = typeof size === 'number' ? size : Number.parseInt(size, 10) || 40;
+  if (logoUrl) {
+    return (
+      <Image
+        src={logoUrl}
+        alt={`${teamName} emblem`}
+        width={numericSize}
+        height={numericSize}
+        className={className}
+        unoptimized
+      />
+    );
   }
 
-  return <FcmoimLogo size={size} {...props} />;
+  if (teamName.toLowerCase().includes('guppy')) {
+    return <GuppyEmblem size={size} className={className} {...props} />;
+  }
+
+  return <FcmoimLogo size={size} className={className} {...props} />;
 }
 
 function GuppyEmblem({ size, ...props }: Omit<TeamEmblemProps, 'teamName'>) {

@@ -24,6 +24,7 @@ export default function Header() {
     showNotifications,
     setShowNotifications,
     teamName,
+    teamLogoUrl,
     setActiveTab,
     setAuthView,
   } = useAppStore();
@@ -135,7 +136,7 @@ export default function Header() {
         </div>
       ) : showCommunity ? (
         <>
-          <LogoHomeButton teamName={displayedTeamName} onClick={handleLogoHome} isGuestMode={isGuestMode} />
+          <LogoHomeButton teamName={displayedTeamName} logoUrl={teamLogoUrl} onClick={handleLogoHome} isGuestMode={isGuestMode} />
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -158,7 +159,7 @@ export default function Header() {
         </>
       ) : (
         <>
-          <LogoHomeButton teamName={displayedTeamName} onClick={handleLogoHome} isGuestMode={isGuestMode} />
+          <LogoHomeButton teamName={displayedTeamName} logoUrl={teamLogoUrl} onClick={handleLogoHome} isGuestMode={isGuestMode} />
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -247,7 +248,17 @@ function getAuthAvatarUrl(authUser: ReturnType<typeof useAuthStore.getState>['au
   return typeof avatarUrl === 'string' && avatarUrl.trim() ? avatarUrl : null;
 }
 
-function LogoHomeButton({ teamName, onClick, isGuestMode }: { teamName: string; onClick: () => void; isGuestMode: boolean }) {
+function LogoHomeButton({
+  teamName,
+  logoUrl,
+  onClick,
+  isGuestMode,
+}: {
+  teamName: string;
+  logoUrl: string | null;
+  onClick: () => void;
+  isGuestMode: boolean;
+}) {
   return (
     <div className="flex min-w-0 items-center gap-1.5 text-xl font-black tracking-tight text-primary">
       <button
@@ -256,7 +267,7 @@ function LogoHomeButton({ teamName, onClick, isGuestMode }: { teamName: string; 
         onClick={onClick}
         className="group flex h-[36px] w-[36px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-card ring-1 ring-border-subtle transition-all duration-200 hover:-translate-y-0.5 hover:scale-105 hover:bg-surface-hover hover:shadow-md hover:ring-green-200 active:translate-y-0 active:scale-95"
       >
-        <TeamEmblem teamName={teamName} size={44} className="shrink-0 scale-[1.08] transition-transform duration-200 group-hover:rotate-[-3deg]" />
+        <TeamEmblem teamName={teamName} logoUrl={isGuestMode ? null : logoUrl} size={44} className="shrink-0 scale-[1.08] transition-transform duration-200 group-hover:rotate-[-3deg]" />
       </button>
       <span className="truncate">{teamName}</span>
     </div>

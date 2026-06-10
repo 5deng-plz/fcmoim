@@ -45,6 +45,7 @@ export type ClubMembershipSummary = {
   membershipId: string;
   clubId: string;
   clubName: string;
+  logoUrl?: string | null;
   role: UserRole;
   status: MembershipStatus;
 };
@@ -329,6 +330,7 @@ export async function fetchClubMemberships(): Promise<ClubOption[]> {
       membershipId: membership.membershipId,
       clubId: membership.clubId,
       clubName: membership.clubName,
+      logoUrl: membership.logoUrl ?? null,
       role: membership.role,
       status: membership.status,
     }))
@@ -375,6 +377,24 @@ export async function patchClubSettings(input: { clubId: string; description: st
 
   if (!response.ok) {
     throw new Error(await getApiErrorMessage(response, '팀 설정을 저장하지 못했습니다.'));
+  }
+
+  return response.json() as Promise<PublicClubSummary>;
+}
+
+export async function uploadClubLogo(input: { clubId: string; file: File }) {
+  const formData = new FormData();
+  formData.append('clubId', input.clubId);
+  formData.append('file', input.file);
+
+  const response = await fetch('/api/clubs/logo', {
+    method: 'POST',
+    headers: { Accept: 'application/json' },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(await getApiErrorMessage(response, '팀 로고를 업로드하지 못했습니다.'));
   }
 
   return response.json() as Promise<PublicClubSummary>;

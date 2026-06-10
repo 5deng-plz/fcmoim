@@ -75,6 +75,7 @@ type ClubMembershipDbRow = {
   status: TeamMembershipRow['status'];
   clubs: {
     name: string;
+    logo_url: string | null;
   } | null;
 };
 
@@ -325,7 +326,7 @@ export function createSupabaseAccountMembershipRepositories(
       async listClubMemberships(accountId) {
         const { data, error } = await supabase
           .from('team_memberships')
-          .select('id, club_id, role, status, clubs(name)')
+          .select('id, club_id, role, status, clubs(name, logo_url)')
           .eq('account_id', accountId)
           .in('status', ['approved', 'pending'])
           .returns<ClubMembershipDbRow[]>();
@@ -338,6 +339,7 @@ export function createSupabaseAccountMembershipRepositories(
           membershipId: row.id,
           clubId: row.club_id,
           clubName: row.clubs?.name || '이름 없는 팀',
+          logoUrl: row.clubs?.logo_url ?? null,
           role: row.role,
           status: row.status,
         }) satisfies ClubMembershipSummaryRow);
@@ -542,6 +544,27 @@ export function createSupabaseClubAdminRepositories(
 
         if (error) {
           throw new AppError('internal_error', 'Failed to update club settings.', { cause: error });
+        }
+
+        return mapPublicClubSummary(data, {
+          memberCounts: new Map(),
+          activeSeasons: new Map(),
+          recentMatchCounts: new Map(),
+          upcomingMatchCounts: new Map(),
+        });
+      },
+      async updateLogo(input) {
+        const { data, error } = await supabase
+          .from('clubs')
+          .update({
+            logo_url: input.logoUrl,
+          })
+          .eq('id', input.clubId)
+          .select('id, name, slug, description, logo_url, is_public')
+          .single<PublicClubDbRow>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to update club logo.', { cause: error });
         }
 
         return mapPublicClubSummary(data, {

@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ShieldCheck, UserCheck, UserCog, UserX, Users, Medal } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Camera, ChevronDown, LoaderCircle, ShieldCheck, UserCheck, UserCog, UserX, Users, Medal } from 'lucide-react';
 import Image from 'next/image';
+import TeamEmblem from '@/components/brand/TeamEmblem';
 import Modal from '@/components/ui/Modal';
 
 import ConditionIcon from '@/components/ui/ConditionIcon';
@@ -16,6 +17,7 @@ import {
   patchClubSettings,
   reviewMembership,
   updateMembershipRole,
+  uploadClubLogo,
   withdrawMembership,
   type ApprovedMembership,
   type PendingMembershipReview,
@@ -26,8 +28,9 @@ import { useToastStore } from '@/stores/useToastStore';
 
 export default function LockerRoomTab() {
   const memberProfile = useAuthStore((state) => state.memberProfile);
-  const { activeClubId, userRole } = useAppStore();
+  const { activeClubId, availableClubs, teamLogoUrl, teamName, userRole } = useAppStore();
   const { showToast } = useToastStore();
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
   const [pendingMembers, setPendingMembers] = useState<PendingMembershipReview[]>([]);
   const [squadMembers, setSquadMembers] = useState<ApprovedMembership[]>([]);
   const [isLoadingSquad, setIsLoadingSquad] = useState(false);
@@ -36,8 +39,10 @@ export default function LockerRoomTab() {
   const [changingRoleId, setChangingRoleId] = useState<string | null>(null);
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
   const [clubDescription, setClubDescription] = useState('');
+  const [clubLogoUrl, setClubLogoUrl] = useState<string | null>(null);
   const [isClubPublic, setIsClubPublic] = useState(true);
   const [isSavingClubSettings, setIsSavingClubSettings] = useState(false);
+  const [isUploadingClubLogo, setIsUploadingClubLogo] = useState(false);
   const squadCount = squadMembers.length;
   const canReview = userRole === 'admin' || userRole === 'operator';
   const canAssignOperator = userRole === 'admin';
@@ -107,6 +112,7 @@ export default function LockerRoomTab() {
       .then((club) => {
         if (!isActive) return;
         setClubDescription(club.description ?? '');
+        setClubLogoUrl(club.logoUrl);
         setIsClubPublic(club.isPublic);
       })
       .catch((error) => {
@@ -118,6 +124,10 @@ export default function LockerRoomTab() {
       isActive = false;
     };
   }, [activeClubId, canReview, showToast]);
+
+  useEffect(() => {
+    setClubLogoUrl(teamLogoUrl);
+  }, [teamLogoUrl]);
 
   const handleReview = async (membershipId: string, decision: 'approved' | 'rejected') => {
     try {
@@ -165,6 +175,30 @@ export default function LockerRoomTab() {
       showToast(error instanceof Error ? error.message : '팀 설정을 저장하지 못했습니다.');
     } finally {
       setIsSavingClubSettings(false);
+    }
+  };
+
+  const handleClubLogoChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = '';
+    if (!file) return;
+
+    try {
+      setIsUploadingClubLogo(true);
+      const club = await uploadClubLogo({ clubId: activeClubId, file });
+      setClubLogoUrl(club.logoUrl);
+      useAppStore.setState({
+        teamLogoUrl: club.logoUrl,
+        availableClubs: availableClubs.map((item) => (
+          item.clubId === activeClubId ? { ...item, logoUrl: club.logoUrl } : item
+        )),
+      });
+      showToast('팀 로고를 업로드했어요.');
+    } catch (error) {
+      console.error('[FC Moim] Club logo upload failed:', error);
+      showToast(error instanceof Error ? error.message : '팀 로고를 업로드하지 못했습니다.');
+    } finally {
+      setIsUploadingClubLogo(false);
     }
   };
 
@@ -318,6 +352,36 @@ export default function LockerRoomTab() {
           </div>
 
           <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3 rounded-xl bg-surface-bg px-3 py-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-surface-card">
+                  <TeamEmblem teamName={teamName} logoUrl={clubLogoUrl} size={56} className="h-full w-full object-cover" />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-primary">팀 로고</p>
+                  <p className="mt-0.5 text-xs font-medium text-tertiary">PNG, JPG, WEBP · 2MB 이하</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={isUploadingClubLogo}
+                onClick={() => logoInputRef.current?.click()}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-primary text-white transition-all hover:bg-brand-primary-hover active:scale-95 disabled:opacity-50"
+                aria-label="팀 로고 업로드"
+                title="팀 로고 업로드"
+              >
+                {isUploadingClubLogo ? <LoaderCircle size={18} className="animate-spin" /> : <Camera size={18} />}
+              </button>
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="sr-only"
+                onChange={handleClubLogoChange}
+                disabled={isUploadingClubLogo}
+              />
+            </div>
+
             <label className="block">
               <span className="mb-1.5 block text-xs font-bold text-secondary">팀 소개</span>
               <textarea

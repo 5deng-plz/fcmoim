@@ -122,8 +122,7 @@ export const useScheduleStore = create<ScheduleState>((set) => ({
         upcomingMatchesError: null,
       });
     } catch (error) {
-      const message = getSchedulePollErrorMessage(error, '확정 일정을 불러오지 못했어요.');
-      set({ upcomingMatchesStatus: 'error', upcomingMatchesError: message });
+      set({ upcomingMatchesStatus: 'error', upcomingMatchesError: '확정 일정을 불러오지 못했어요.' });
       throw error;
     }
   },

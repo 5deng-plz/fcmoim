@@ -36,6 +36,7 @@ export type ClubMembershipSummaryRow = {
   membershipId: string;
   clubId: string;
   clubName: string;
+  logoUrl: string | null;
   role: MembershipRole;
   status: MembershipStatus;
 };

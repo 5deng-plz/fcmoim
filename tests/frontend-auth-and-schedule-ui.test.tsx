@@ -1133,6 +1133,19 @@ describe('v1.0 schedule and poll UX', () => {
     expect(screen.getByRole('button', { name: '아쉽지만 불참' })).toHaveClass('hover:shadow-sm');
   });
 
+  it('keeps internal upcoming match errors out of the home card', () => {
+    useScheduleStore.setState({
+      upcomingMatches: [],
+      upcomingMatchesStatus: 'error',
+      upcomingMatchesError: '확정 일정을 불러오지 못했어요.',
+    });
+
+    render(<HomeTab />);
+
+    expect(screen.getByRole('alert')).toHaveTextContent('확정 일정을 불러오지 못했어요.');
+    expect(screen.queryByText('Failed to fetch upcoming matches.')).not.toBeInTheDocument();
+  });
+
   it('shows weather and fine dust forecast on the upcoming match card', () => {
     useScheduleStore.setState({
       upcomingMatches: [
@@ -2717,6 +2730,11 @@ describe('locker room team management UI', () => {
   beforeEach(() => {
     useAppStore.setState({
       activeClubId: 'club-test',
+      teamName: 'FC Guppy',
+      teamLogoUrl: null,
+      availableClubs: [
+        { membershipId: 'membership-admin', clubId: 'club-test', clubName: 'FC Guppy', logoUrl: null, role: 'admin', status: 'approved' },
+      ],
       userRole: 'admin',
       userStatus: 'approved',
       showMyPage: false,
@@ -2786,6 +2804,20 @@ describe('locker room team management UI', () => {
           upcomingMatchCount: 0,
         }), { status: 200 });
       }
+      if (url === '/api/clubs/logo') {
+        return new Response(JSON.stringify({
+          id: 'club-test',
+          name: 'FC Guppy',
+          slug: 'fc-guppy',
+          description: '팀 소개',
+          logoUrl: 'https://cdn.example.com/club-logo.png',
+          isPublic: true,
+          memberCount: 3,
+          activeSeason: null,
+          recentMatchCount: 0,
+          upcomingMatchCount: 0,
+        }), { status: 200 });
+      }
       if (url === '/api/membership/role') {
         return new Response(JSON.stringify({
           ...approvedMembers[1],
@@ -2810,6 +2842,17 @@ describe('locker room team management UI', () => {
     expect(screen.getByText('입단 대기')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: '권한 관리' })).not.toBeInTheDocument();
     expect(screen.queryByText('탈퇴처리할 수 있는 회원이 없어요')).not.toBeInTheDocument();
+    expect(screen.getByText('팀 로고')).toBeInTheDocument();
+
+    const logoInput = container.querySelector('input[type="file"][accept="image/png,image/jpeg,image/webp"]');
+    expect(logoInput).toBeInTheDocument();
+    await user.upload(logoInput as HTMLInputElement, new File(['logo'], 'logo.png', { type: 'image/png' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/clubs/logo', expect.objectContaining({
+      method: 'POST',
+      body: expect.any(FormData),
+    })));
+    expect(useAppStore.getState().teamLogoUrl).toBe('https://cdn.example.com/club-logo.png');
 
     await user.click(await screen.findByRole('button', { name: '김멤버 상세 정보' }));
 

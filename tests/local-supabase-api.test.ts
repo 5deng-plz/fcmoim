@@ -372,6 +372,11 @@ describeLocal('local Supabase API integration', () => {
         .eq('account_id', accountId)
         .eq('club_id', body.clubId)
         .single();
+      const { data: seasons } = await admin
+        .from('seasons')
+        .select('club_id, name, is_active')
+        .eq('club_id', body.clubId)
+        .eq('is_active', true);
 
       expect(club).toEqual(expect.objectContaining({
         id: body.clubId,
@@ -384,6 +389,13 @@ describeLocal('local Supabase API integration', () => {
         role: 'admin',
         status: 'approved',
       }));
+      expect(seasons).toEqual([
+        expect.objectContaining({
+          club_id: body.clubId,
+          name: `${new Date().getFullYear()} 시즌`,
+          is_active: true,
+        }),
+      ]);
     } finally {
       await deleteClubsBySlugs([slug]);
     }

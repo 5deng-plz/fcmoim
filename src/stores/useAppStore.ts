@@ -9,6 +9,7 @@ export interface ClubOption {
   membershipId: string;
   clubId: string;
   clubName: string;
+  logoUrl?: string | null;
   role: UserRole;
   status?: MembershipStatus;
 }
@@ -76,6 +77,8 @@ interface AppState {
   setSelectedJoinClubId: (clubId: string) => void;
   teamName: string;
   setTeamName: (name: string) => void;
+  teamLogoUrl: string | null;
+  setTeamLogoUrl: (logoUrl: string | null) => void;
   availableClubs: ClubOption[];
   setAvailableClubs: (clubs: ClubOption[]) => void;
 }
@@ -149,6 +152,8 @@ export const useAppStore = create<AppState>((set) => ({
   },
   teamName: 'FC moim',
   setTeamName: (name) => set({ teamName: name }),
+  teamLogoUrl: null,
+  setTeamLogoUrl: (logoUrl) => set({ teamLogoUrl: logoUrl }),
   availableClubs: [],
   setAvailableClubs: (clubs) => set({ availableClubs: clubs }),
 }));
