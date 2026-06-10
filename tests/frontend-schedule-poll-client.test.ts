@@ -21,6 +21,7 @@ const apiPoll: SchedulePoll = {
   closesAt: null,
   createdByMembershipId: 'membership-operator',
   promotedMatchId: null,
+  eligibleVoterCount: 1,
   options: [
     { id: 'option-1', pollId: 'poll-1', optionDate: '2026-03-21', sortOrder: 0 },
     { id: 'option-2', pollId: 'poll-1', optionDate: '2026-03-22', sortOrder: 1 },

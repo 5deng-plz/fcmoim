@@ -67,6 +67,9 @@ export default function MatchCreateModal() {
   const [memo, setMemo] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const matchTitlePlaceholder = type === 'match'
+    ? `Round ${getNextMatchRound(scheduleMatches)}`
+    : '예: 3월 회식';
 
   const isValid = Boolean((type === 'match' || title.trim()) && dateNum && time && location.trim());
 
@@ -176,7 +179,7 @@ export default function MatchCreateModal() {
             type="text"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            placeholder="예: 3월 회식"
+            placeholder={matchTitlePlaceholder}
             className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm transition-colors focus:border-green-500 focus:outline-none"
           />
         </div>
@@ -254,4 +257,18 @@ function toIsoDate(monthDate: Date, day: number) {
   const month = `${monthDate.getMonth() + 1}`.padStart(2, '0');
   const date = `${day}`.padStart(2, '0');
   return `${year}-${month}-${date}`;
+}
+
+function getNextMatchRound(matches: UpcomingMatch[]) {
+  const rounds = matches
+    .filter((match) => match.type === 'match')
+    .map((match) => match.round ?? parseRoundTitle(match.title))
+    .filter((round): round is number => typeof round === 'number' && Number.isFinite(round));
+
+  return (rounds.length > 0 ? Math.max(...rounds) : 0) + 1;
+}
+
+function parseRoundTitle(title: string) {
+  const match = title.trim().match(/^Round\s+(\d+)$/i);
+  return match ? Number(match[1]) : null;
 }

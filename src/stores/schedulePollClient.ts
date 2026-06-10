@@ -35,6 +35,7 @@ export type SchedulePoll = {
   cancellationReason?: string | null;
   cancelledAt?: string | null;
   promotedMatchId: string | null;
+  eligibleVoterCount?: number;
   options: SchedulePollOption[];
   votes: SchedulePollVote[];
 };

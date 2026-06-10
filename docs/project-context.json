@@ -1,50 +1,38 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 62,
-  "updatedAt": "2026-06-10T12:22:00.000+09:00",
+  "updateVersion": 63,
+  "updatedAt": "2026-06-10T20:16:00.000+09:00",
   "updatedBy": "orchestrator",
-  "currentPhase": "new-club-production-stabilization",
+  "currentPhase": "schedule-poll-production-stabilization",
   "activeWork": {
-    "taskId": "new-club-production-stabilization",
+    "taskId": "schedule-poll-production-stabilization",
     "status": "complete",
-    "baselineCommit": "73427af65a9831b672db7b9b1b26a468bf3333cb",
+    "baselineCommit": "f28ffdcf921e3a15ba51b8ff917c0e07a5ea2cc9",
     "changedFiles": [
-      "AGENT.md",
-      "src/app/api/clubs/logo/route.ts",
-      "src/components/brand/TeamEmblem.tsx",
-      "src/components/layout/Header.tsx",
-      "src/components/tabs/LockerRoomTab.tsx",
-      "src/services/club-admin.ts",
+      "src/components/features/MatchCreateModal.tsx",
+      "src/components/features/RecentNotice.tsx",
+      "src/components/tabs/ScheduleTab.tsx",
       "src/services/supabase-repositories.ts",
-      "src/stores/membershipClient.ts",
-      "src/stores/useAppStore.ts",
-      "src/stores/useAuthStore.ts",
-      "src/stores/useScheduleStore.ts",
+      "src/stores/schedulePollClient.ts",
       "src/types/domain.ts",
-      "supabase/migrations/20260610030000_new_club_season_and_logo_upload.sql",
-      "tests/club-admin-service.test.ts",
+      "supabase/migrations/20260610200852_align_comments_target_schema.sql",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
+      "tests/frontend-schedule-poll-client.test.ts",
       "tests/local-supabase-api.test.ts",
       "docs/project-context.json"
     ],
-    "changedSurfaces": ["ui", "api", "data", "tests", "docs", "infra"],
+    "changedSurfaces": ["ui", "api", "data", "tests", "docs"],
     "allowedPaths": [
-      "AGENT.md",
-      "src/app/api/clubs/logo/route.ts",
-      "src/components/brand/TeamEmblem.tsx",
-      "src/components/layout/Header.tsx",
-      "src/components/tabs/LockerRoomTab.tsx",
-      "src/services/club-admin.ts",
+      "src/components/features/MatchCreateModal.tsx",
+      "src/components/features/RecentNotice.tsx",
+      "src/components/tabs/ScheduleTab.tsx",
       "src/services/supabase-repositories.ts",
-      "src/stores/membershipClient.ts",
-      "src/stores/useAppStore.ts",
-      "src/stores/useAuthStore.ts",
-      "src/stores/useScheduleStore.ts",
+      "src/stores/schedulePollClient.ts",
       "src/types/domain.ts",
-      "supabase/migrations/20260610030000_new_club_season_and_logo_upload.sql",
-      "tests/club-admin-service.test.ts",
+      "supabase/migrations/20260610200852_align_comments_target_schema.sql",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
+      "tests/frontend-schedule-poll-client.test.ts",
       "tests/local-supabase-api.test.ts",
       "docs/project-context.json"
     ],
@@ -52,54 +40,54 @@
       "typecheck": {
         "status": "passed",
         "command": "npm run typecheck",
-        "summary": "TypeScript completed without errors after adding club logo state/API wiring, new club season migration, and upcoming-match error fallback."
+        "summary": "TypeScript completed without errors after adding schedule poll eligible voter counts and match title placeholder guidance."
       },
       "lint": {
         "status": "passed",
         "command": "npm run lint",
-        "summary": "ESLint passed for the updated team emblem/header/locker room UI, club admin service, API route, stores, and tests."
+        "summary": "ESLint passed for the updated schedule UI, repository mapping, migration, and tests."
       },
       "targetedTests": {
         "status": "passed",
-        "command": "npm run test -- tests/club-admin-service.test.ts tests/frontend-auth-and-schedule-ui.test.tsx --run",
-        "summary": "Focused tests passed: 69 tests passed, covering club logo service authorization, team management upload UI, app logo state updates, and upcoming-match user-facing error fallback."
+        "command": "npm run test -- tests/frontend-auth-and-schedule-ui.test.tsx tests/frontend-schedule-poll-client.test.ts --run",
+        "summary": "Focused tests passed: 72 tests passed, covering 0/1 poll attendance display and Round N title placeholder."
       },
       "localSupabaseApi": {
         "type": "database",
         "status": "passed",
         "command": "npm run verify:db:local",
-        "summary": "Local Supabase reset, QA auth seed, demo seed, and real API tests passed: 15 tests passed, including new club creation with default active season."
+        "summary": "Local Supabase reset, QA auth seed, demo seed, and real API tests passed: 15 tests passed, including poll eligibleVoterCount and schedule_poll_option comments."
       },
       "productionSupabase": {
         "type": "database",
         "status": "passed",
         "provider": "Supabase MCP",
-        "command": "apply migration new_club_season_and_logo_upload, then read-only SQL verification",
-        "summary": "Production now has matches red/blue leader confirmation columns, club-logos public bucket with 2MB image MIME limits, and the newly created 오뎅바 club has one active season; upcoming matches select returned an empty result instead of a schema error."
+        "command": "apply migration align_comments_target_schema; list migrations",
+        "summary": "Production migration succeeded and migration list includes align_comments_target_schema, adding target_type/target_id based comments compatibility for schedule poll option comments."
       },
       "browserRuntime": {
         "type": "runtime",
         "status": "passed",
         "provider": "in-app browser",
-        "command": "Opened http://localhost:3000/ against the existing local Next dev server after local Supabase reset",
-        "summary": "First screen rendered with the local QA login view, no visible fatal error, no browser console errors after reload, and server log showed no new app error after the logo URL fix."
+        "command": "Reloaded http://localhost:3000/ against the existing local Next dev server",
+        "summary": "First screen rendered with FC moim and 팀 둘러보기 text, and browser console error logs were empty."
       },
       "baseline": {
         "status": "passed",
         "command": "npm run verify:baseline",
-        "summary": "Harness validation, lint, typecheck, and full Vitest suite passed: 19 test files passed, 1 skipped; 222 tests passed, 15 skipped."
+        "summary": "Harness validation, lint, typecheck, and full Vitest suite passed on rerun: 19 test files passed, 1 skipped; 223 tests passed, 15 skipped. An earlier unrelated locker-room validation test failed once and passed on targeted rerun."
       }
     },
     "reviewStatus": "ready",
     "retrospective": {
       "issuesObserved": [
-        "Production was missing the match lineup confirmation columns that current code selects.",
-        "Newly created clubs had no active season, which would block subsequent schedule creation.",
-        "The data model already had clubs.logo_url but no upload endpoint, storage bucket, or app state path to render it."
+        "Schedule poll option attendance used a hardcoded minimum denominator of 2 instead of approved club member count.",
+        "Production comments table still used the legacy match_id shape, while current code queries target_type and target_id.",
+        "Match creation title placeholder did not show the Round N default that the server creates for blank match titles."
       ],
       "missedEvidence": [],
       "harnessImprovementProposal": [
-        "No harness promotion proposed; production drift was corrected with a tracked migration and production read-only verification evidence."
+        "No harness promotion proposed; the issue was fixed with targeted UI/API tests, local Supabase verification, and a tracked production schema migration."
       ],
       "promotionRecommendation": "none",
       "reason": "The issue was a product/schema stabilization change, not a reusable harness rule."

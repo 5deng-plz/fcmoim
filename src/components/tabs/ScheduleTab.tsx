@@ -1010,7 +1010,7 @@ function getOptionVoteCount(poll: SchedulePoll, option: SchedulePollOption) {
 
 function getOptionVoteTotal(poll: SchedulePoll, option: SchedulePollOption) {
   const uniqueVoters = new Set(poll.votes.map((vote) => vote.membershipId));
-  return Math.max(uniqueVoters.size, getOptionVoteCount(poll, option), 2);
+  return Math.max(poll.eligibleVoterCount ?? uniqueVoters.size, getOptionVoteCount(poll, option));
 }
 
 function getPollOptionKey(poll: SchedulePoll, option: SchedulePollOption) {

@@ -164,6 +164,20 @@ async function deleteSchedulePollsByOptionDates(clubId: string, optionDates: str
   }
 }
 
+async function deleteCommentsByTargetIds(targetIds: string[]) {
+  if (targetIds.length === 0) return;
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from('comments')
+    .delete()
+    .in('target_id', targetIds);
+
+  if (error) {
+    throw new Error(`Failed to clean comments by target ids: ${error.message}`);
+  }
+}
+
 async function deleteAnnouncementsByTitles(clubId: string, titles: string[]) {
   const admin = createAdminClient();
   const { error } = await admin
@@ -642,6 +656,7 @@ describeLocal('local Supabase API integration', () => {
   it('creates and lists a schedule poll through API routes backed by local Supabase', async () => {
     await signIn('qa-operator@fcmoim.test');
     const route = await import('../src/app/api/schedule-polls/route');
+    const commentsRoute = await import('../src/app/api/comments/route');
     const title = schedulePollTitle;
     await deleteSchedulePollsByOptionDates(clubIds.guppy, schedulePollOptionDates);
 
@@ -660,14 +675,43 @@ describeLocal('local Supabase API integration', () => {
     const created = await createResponse.json();
 
     expect(createResponse.status).toBe(201);
+    const firstOptionId = created.options[0]?.id;
     expect(created).toEqual(expect.objectContaining({
       clubId: clubIds.guppy,
       title,
       status: 'open',
+      eligibleVoterCount: expect.any(Number),
       options: expect.arrayContaining([
         expect.objectContaining({ optionDate: schedulePollOptionDates[0] }),
         expect.objectContaining({ optionDate: schedulePollOptionDates[1] }),
       ]),
+    }));
+
+    expect(typeof firstOptionId).toBe('string');
+    const emptyCommentsResponse = await commentsRoute.GET(
+      new Request(`http://localhost/api/comments?clubId=${clubIds.guppy}&targetType=schedule_poll_option&targetId=${firstOptionId}`),
+    );
+    const emptyComments = await emptyCommentsResponse.json();
+
+    expect(emptyCommentsResponse.status).toBe(200);
+    expect(emptyComments).toEqual([]);
+
+    const createCommentResponse = await commentsRoute.POST(new Request('http://localhost/api/comments', {
+      method: 'POST',
+      body: JSON.stringify({
+        clubId: clubIds.guppy,
+        targetType: 'schedule_poll_option',
+        targetId: firstOptionId,
+        content: 'poll option comment smoke',
+      }),
+    }));
+    const createdComment = await createCommentResponse.json();
+
+    expect(createCommentResponse.status).toBe(201);
+    expect(createdComment).toEqual(expect.objectContaining({
+      targetType: 'schedule_poll_option',
+      targetId: firstOptionId,
+      content: 'poll option comment smoke',
     }));
 
     const listResponse = await route.GET(
@@ -681,10 +725,12 @@ describeLocal('local Supabase API integration', () => {
         expect.objectContaining({
           id: created.id,
           title,
+          eligibleVoterCount: expect.any(Number),
         }),
       ]),
     );
 
+    await deleteCommentsByTargetIds([firstOptionId]);
     await deleteSchedulePollsByOptionDates(clubIds.guppy, schedulePollOptionDates);
   });
 

@@ -13,7 +13,6 @@ import AttendeeList from '@/components/features/AttendeeList';
 import Modal from '@/components/ui/Modal';
 
 const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-const MIN_MATCH_ATTENDEES = 2;
 
 export default function RecentNotice() {
   const { userRole, userStatus, activeClubId } = useAppStore();
@@ -618,5 +617,5 @@ function getOptionVoteCount(poll: SchedulePoll, option: SchedulePollOption) {
 
 function getOptionVoteTotal(poll: SchedulePoll, option: SchedulePollOption) {
   const uniqueVoters = new Set(poll.votes.map((vote) => vote.membershipId));
-  return Math.max(uniqueVoters.size, getOptionVoteCount(poll, option), MIN_MATCH_ATTENDEES);
+  return Math.max(poll.eligibleVoterCount ?? uniqueVoters.size, getOptionVoteCount(poll, option));
 }

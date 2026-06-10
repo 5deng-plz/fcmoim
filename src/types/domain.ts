@@ -139,6 +139,7 @@ export type SchedulePollRow = {
   cancellationReason: string | null;
   cancelledAt: string | null;
   promotedMatchId: string | null;
+  eligibleVoterCount: number;
   options: SchedulePollOptionRow[];
   votes: SchedulePollVoteRow[];
 };

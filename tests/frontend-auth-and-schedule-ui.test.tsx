@@ -42,6 +42,7 @@ const activePoll: SchedulePoll = {
   closesAt: null,
   createdByMembershipId: 'membership-operator',
   promotedMatchId: null,
+  eligibleVoterCount: 12,
   options: [
     { id: 'option-1', pollId: 'poll-march-friendly', optionDate: '2026-03-21', sortOrder: 0 },
     { id: 'option-2', pollId: 'poll-march-friendly', optionDate: '2026-03-22', sortOrder: 1, displayTime: '10:00' },
@@ -1131,6 +1132,25 @@ describe('v1.0 schedule and poll UX', () => {
     await user.click(screen.getByText(/3월 21일 토 19:00/));
     expect(screen.getByRole('button', { name: '투표 제출하기' })).toHaveClass('bg-feedback-warning');
     expect(screen.getByRole('button', { name: '아쉽지만 불참' })).toHaveClass('hover:shadow-sm');
+  });
+
+  it('uses approved team member count for a fresh schedule poll attendance denominator', async () => {
+    const user = userEvent.setup();
+    useScheduleStore.setState({
+      activePolls: [{
+        ...activePoll,
+        eligibleVoterCount: 1,
+        options: [{ id: 'solo-option', pollId: activePoll.id, optionDate: '2026-03-21', sortOrder: 0 }],
+        votes: [],
+      }],
+    });
+
+    render(<HomeTab />);
+
+    await user.click(screen.getByRole('button', { name: /3월 친선 경기 일정 투표/ }));
+
+    expect(screen.getByText('0/1명 참석')).toBeInTheDocument();
+    expect(screen.queryByText('0/2명 참석')).not.toBeInTheDocument();
   });
 
   it('keeps internal upcoming match errors out of the home card', () => {
@@ -3431,6 +3451,7 @@ describe('records and header polish UI', () => {
       expect(screen.getByRole('button', { name: '5월 22일, 1개 일정' })).toBeInTheDocument();
       const titleInput = screen.getByLabelText('타이틀');
       expect(titleInput).toHaveValue('');
+      expect(titleInput).toHaveAttribute('placeholder', 'Round 6');
       expect(screen.getByText('날짜 선택').compareDocumentPosition(titleInput)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
       expect(titleInput.compareDocumentPosition(screen.getByLabelText('시간'))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
       expect(screen.getByRole('button', { name: '일정 생성하기' })).toBeEnabled();

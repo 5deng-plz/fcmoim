@@ -162,6 +162,10 @@ type SchedulePollDbRow = {
   schedule_poll_votes?: SchedulePollVoteDbRow[] | null;
 };
 
+type SchedulePollApprovedMembershipDbRow = {
+  id: string;
+};
+
 type SchedulePollDateConflictDbRow = {
   option_date: string;
 };
@@ -746,19 +750,22 @@ export function createSupabaseSchedulePollRepositories(
       },
 
       async listActive(clubId) {
-        const { data, error } = await supabase
-          .from('schedule_polls')
-          .select(SCHEDULE_POLL_SELECT)
-          .eq('club_id', clubId)
-          .eq('status', 'open')
-          .order('created_at', { ascending: false })
-          .returns<SchedulePollDbRow[]>();
+        const [{ data, error }, eligibleVoterCount] = await Promise.all([
+          supabase
+            .from('schedule_polls')
+            .select(SCHEDULE_POLL_SELECT)
+            .eq('club_id', clubId)
+            .eq('status', 'open')
+            .order('created_at', { ascending: false })
+            .returns<SchedulePollDbRow[]>(),
+          countApprovedMembershipsByClub(supabase, clubId),
+        ]);
 
         if (error) {
           throw new AppError('internal_error', 'Failed to fetch active schedule polls.', { cause: error });
         }
 
-        return (data ?? []).map(mapSchedulePoll);
+        return (data ?? []).map((poll) => mapSchedulePoll(poll, eligibleVoterCount));
       },
 
       async findById(pollId) {
@@ -772,7 +779,7 @@ export function createSupabaseSchedulePollRepositories(
           throw new AppError('internal_error', 'Failed to fetch schedule poll.', { cause: error });
         }
 
-        return data ? mapSchedulePoll(data) : null;
+        return data ? mapSchedulePoll(data, await countApprovedMembershipsByClub(supabase, data.club_id)) : null;
       },
 
       async findActiveDateConflicts(input) {
@@ -1968,10 +1975,25 @@ async function fetchSchedulePollById(supabase: SupabaseClient, pollId: string) {
     throw new AppError('internal_error', 'Failed to fetch schedule poll.', { cause: error });
   }
 
-  return mapSchedulePoll(data);
+  return mapSchedulePoll(data, await countApprovedMembershipsByClub(supabase, data.club_id));
 }
 
-function mapSchedulePoll(row: SchedulePollDbRow): SchedulePollRow {
+async function countApprovedMembershipsByClub(supabase: SupabaseClient, clubId: string) {
+  const { count, error } = await supabase
+    .from('team_memberships')
+    .select('id', { count: 'exact', head: true })
+    .eq('club_id', clubId)
+    .eq('status', 'approved')
+    .returns<SchedulePollApprovedMembershipDbRow[]>();
+
+  if (error) {
+    throw new AppError('internal_error', 'Failed to count approved schedule poll voters.', { cause: error });
+  }
+
+  return count ?? 0;
+}
+
+function mapSchedulePoll(row: SchedulePollDbRow, eligibleVoterCount: number): SchedulePollRow {
   return {
     id: row.id,
     clubId: row.club_id,
@@ -1986,6 +2008,7 @@ function mapSchedulePoll(row: SchedulePollDbRow): SchedulePollRow {
     cancellationReason: row.cancellation_reason ?? null,
     cancelledAt: row.cancelled_at ?? null,
     promotedMatchId: row.promoted_match_id,
+    eligibleVoterCount,
     options: mapSchedulePollOptions(row.schedule_poll_options ?? []),
     votes: mapSchedulePollVotes(row.schedule_poll_votes ?? []),
   };
