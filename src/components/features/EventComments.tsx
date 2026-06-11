@@ -162,7 +162,7 @@ export default function EventComments({
           type="text"
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
-          placeholder="할 말 있나?"
+          placeholder="할 말?"
           className="flex-1 bg-transparent px-3 py-1 text-xs font-bold text-primary placeholder:text-tertiary focus:outline-none"
         />
         <button

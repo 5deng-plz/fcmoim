@@ -1,26 +1,28 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 66,
-  "updatedAt": "2026-06-12T07:17:20.000+09:00",
+  "updateVersion": 67,
+  "updatedAt": "2026-06-12T07:27:35.000+09:00",
   "updatedBy": "orchestrator",
-  "currentPhase": "schedule-cancel-calendar-panel",
+  "currentPhase": "schedule-poll-cancel-and-copy-polish",
   "activeWork": {
-    "taskId": "schedule-cancel-calendar-panel",
+    "taskId": "schedule-poll-cancel-and-copy-polish",
     "status": "complete",
-    "baselineCommit": "79e655d51d618614d05684b7fdee6ff511181505",
+    "baselineCommit": "37330ec9769e788271d47a1e47be2e162da16833",
     "changedFiles": [
+      "src/components/features/EventComments.tsx",
+      "src/components/features/RecentNotice.tsx",
       "src/components/features/UpcomingMatch.tsx",
       "src/components/tabs/ScheduleTab.tsx",
-      "src/stores/useScheduleStore.ts",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
     "changedSurfaces": ["ui", "tests", "docs"],
     "allowedPaths": [
+      "src/components/features/EventComments.tsx",
+      "src/components/features/RecentNotice.tsx",
       "src/components/features/UpcomingMatch.tsx",
       "src/components/tabs/ScheduleTab.tsx",
-      "src/stores/useScheduleStore.ts",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
@@ -28,15 +30,22 @@
       "baseline": {
         "status": "passed",
         "command": "npm run verify:baseline",
-        "summary": "Harness validation, lint, typecheck, and full Vitest suite passed: 19 test files passed, 1 skipped; 225 tests passed, 15 skipped."
+        "summary": "Harness validation, lint, typecheck, and full Vitest suite passed: 19 test files passed, 1 skipped; 226 tests passed, 15 skipped."
       },
-      "scheduleCancellationUi": {
+      "schedulePollCancellationUi": {
         "type": "deterministic",
         "status": "passed",
         "provider": "Vitest, Testing Library",
         "target": "tests/frontend-auth-and-schedule-ui.test.tsx",
         "command": "npm run test -- tests/frontend-auth-and-schedule-ui.test.tsx --run",
-        "summary": "Calendar selected match and event panels expose manager-only cancellation, validate missing reasons, call the cancel API, refresh schedule data, and render cancellation reasons."
+        "summary": "Calendar poll option panel exposes manager-only cancellation, validates missing reasons, calls the schedule poll cancel API, and removes the cancelled poll from active state."
+      },
+      "browserSmoke": {
+        "type": "runtime",
+        "status": "passed",
+        "provider": "in-app browser",
+        "target": "http://localhost:3000/",
+        "summary": "Reloaded the existing localhost tab and confirmed the Home next schedule time/location text uses text-secondary classes. The schedule tab in the current browser state did not expose a selected poll option panel, so poll cancellation was covered by deterministic Testing Library evidence."
       },
       "dbCheck": {
         "type": "database",
@@ -47,7 +56,7 @@
       "guardVerify": {
         "status": "passed",
         "command": "npm run harness:guard:verify",
-        "summary": "Final verify guard passed after syncing this workstream: design guard passed for 2 guarded files, diff guard passed for 5 changed files, baseline passed, DB contract check passed, and evidence guard passed."
+        "summary": "Final verify guard passed after syncing this workstream: design guard passed for 4 guarded files, diff guard passed for 6 changed files, baseline passed, DB contract check passed, and evidence guard passed."
       },
       "runtimeSmoke": {
         "status": "not_required",
@@ -57,11 +66,11 @@
     "reviewStatus": "ready",
     "retrospective": {
       "issuesObserved": [
-        "Calendar state previously filtered cancelled matches, which would have prevented selected calendar panels from showing the cancellation reason after refresh."
+        "The existing browser state did not have a selected poll option panel available for manual exercise, so the poll cancel interaction needed deterministic component coverage."
       ],
       "missedEvidence": [],
       "harnessImprovementProposal": [
-        "No harness change proposed; the existing deterministic UI evidence policy covered this UI/store behavior change."
+        "No harness change proposed; the existing deterministic UI evidence policy covered this UI behavior change."
       ],
       "promotionRecommendation": "none",
       "reason": "The work followed existing UI evidence and diff ownership rules without exposing a repeatable harness gap."

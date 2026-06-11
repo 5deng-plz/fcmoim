@@ -36,6 +36,7 @@ export default function ScheduleTab() {
     loadCalendarMatches,
     promotePoll,
     cancelUpcomingMatch,
+    cancelPoll,
     selectedDate,
     setSelectedDate,
   } = useScheduleStore();
@@ -56,6 +57,14 @@ export default function ScheduleTab() {
   const [cancellationReason, setCancellationReason] = useState('');
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelTargetPoll, setCancelTargetPoll] = useState<{
+    poll: SchedulePoll;
+    option: SchedulePollOption;
+    label: string;
+  } | null>(null);
+  const [pollCancellationReason, setPollCancellationReason] = useState('');
+  const [pollCancelError, setPollCancelError] = useState<string | null>(null);
+  const [cancellingPollId, setCancellingPollId] = useState<string | null>(null);
   const canManageSchedule = userRole === 'admin' || userRole === 'operator';
   const currentMembershipId = availableClubs.find((club) => club.clubId === activeClubId)?.membershipId ?? null;
   const scheduleMatches = calendarMatches.length > 0 ? calendarMatches : upcomingMatches;
@@ -122,6 +131,49 @@ export default function ScheduleTab() {
       showToast(message);
     } finally {
       setIsCancelling(false);
+    }
+  };
+  const openPollCancelModal = (poll: SchedulePoll, option: SchedulePollOption, label: string) => {
+    setCancelTargetPoll({ poll, option, label });
+    setPollCancellationReason('');
+    setPollCancelError(null);
+  };
+  const closePollCancelModal = () => {
+    if (cancellingPollId) return;
+    setCancelTargetPoll(null);
+    setPollCancellationReason('');
+    setPollCancelError(null);
+  };
+  const handleCancelPoll = async () => {
+    if (!cancelTargetPoll) return;
+
+    const normalizedReason = pollCancellationReason.trim();
+    if (!normalizedReason) {
+      const message = '취소 사유를 입력해주세요.';
+      setPollCancelError(message);
+      showToast(message);
+      return;
+    }
+
+    setCancellingPollId(cancelTargetPoll.poll.id);
+    setPollCancelError(null);
+
+    try {
+      await cancelPoll({
+        clubId: cancelTargetPoll.poll.clubId,
+        pollId: cancelTargetPoll.poll.id,
+        cancellationReason: normalizedReason,
+      });
+      await refreshSchedule();
+      showToast('일정 투표가 취소되었어요.');
+      setCancelTargetPoll(null);
+      setPollCancellationReason('');
+    } catch (error) {
+      const message = getSchedulePollErrorMessage(error, '일정 투표를 취소하지 못했어요.');
+      setPollCancelError(message);
+      showToast(message);
+    } finally {
+      setCancellingPollId(null);
     }
   };
   const selectedIsoDate = toIsoDate(selectedDate, visibleMonth);
@@ -329,6 +381,7 @@ export default function ScheduleTab() {
                 const weekdaysList = ['일', '월', '화', '수', '목', '금', '토'];
                 const weekdayStr = weekdaysList[optionDateObj.getDay()] ?? '';
                 const formattedDateTime = `${optionDateObj.getMonth() + 1}월 ${optionDateObj.getDate()}일 ${weekdayStr} ${option.displayTime || poll.commonTime}`;
+                const optionLocation = option.displayLocation || poll.location;
 
                 return (
                   <div key={`${poll.id}-${option.id}`} className="rounded-2xl border border-feedback-warning-border bg-surface-card/85 px-4 py-3 shadow-sm shadow-gray-900/40">
@@ -343,22 +396,34 @@ export default function ScheduleTab() {
                           </span>
                           <span className="flex min-w-0 items-center gap-1.5">
                             <MapPin size={14} className="text-blue-team shrink-0" aria-hidden="true" />
-                            <span className="truncate">{option.displayLocation || poll.location}</span>
+                            <span className="truncate">{optionLocation}</span>
                           </span>
                         </div>
                       </div>
                       {canManageSchedule ? (
-                        <PollPromoteAction
-                          poll={poll}
-                          option={option}
-                          formattedDateTime={formattedDateTime}
-                          isConfirming={confirmPromoteKey === getPollOptionKey(poll, option)}
-                          isPromoting={promotingOptionKey === getPollOptionKey(poll, option)}
-                          disabled={promotingOptionKey !== null}
-                          onAskConfirm={() => setConfirmPromoteKey(getPollOptionKey(poll, option))}
-                          onCancel={() => setConfirmPromoteKey(null)}
-                          onConfirm={() => void handlePromotePollOption(poll, option)}
-                        />
+                        <div className="flex shrink-0 items-center gap-1">
+                          <button
+                            type="button"
+                            disabled={cancellingPollId !== null}
+                            onClick={() => openPollCancelModal(poll, option, `${formattedDateTime} ${optionLocation}`)}
+                            title="일정 취소"
+                            aria-label={`${formattedDateTime} ${optionLocation} 일정 투표 취소`}
+                            className="flex h-8 w-8 items-center justify-center rounded-xl border border-feedback-error-border bg-feedback-error-bg text-feedback-error shadow-sm shadow-feedback-error/20 transition-all hover:bg-feedback-error-bg/80 hover:brightness-95 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <Ban size={16} aria-hidden="true" />
+                          </button>
+                          <PollPromoteAction
+                            poll={poll}
+                            option={option}
+                            formattedDateTime={formattedDateTime}
+                            isConfirming={confirmPromoteKey === getPollOptionKey(poll, option)}
+                            isPromoting={promotingOptionKey === getPollOptionKey(poll, option)}
+                            disabled={promotingOptionKey !== null || cancellingPollId !== null}
+                            onAskConfirm={() => setConfirmPromoteKey(getPollOptionKey(poll, option))}
+                            onCancel={() => setConfirmPromoteKey(null)}
+                            onConfirm={() => void handlePromotePollOption(poll, option)}
+                          />
+                        </div>
                       ) : null}
                     </div>
                     <AttendeeList count={getOptionVoteCount(poll, option)} total={getOptionVoteTotal(poll, option)} />
@@ -448,7 +513,7 @@ export default function ScheduleTab() {
 
       </div>
       <Modal
-        title="확정 일정 취소"
+        title="일정 취소"
         isOpen={cancelTargetMatch !== null}
         onClose={closeCancelModal}
       >
@@ -475,6 +540,42 @@ export default function ScheduleTab() {
             className="w-full rounded-xl bg-feedback-error px-4 py-3.5 text-sm font-semibold text-white transition-all hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-tertiary"
           >
             {isCancelling ? '취소 중...' : '일정 취소하기'}
+          </button>
+        </div>
+      </Modal>
+      <Modal
+        title="일정 취소"
+        isOpen={cancelTargetPoll !== null}
+        onClose={closePollCancelModal}
+      >
+        <div className="space-y-4">
+          {cancelTargetPoll ? (
+            <p className="rounded-xl border border-feedback-warning-border bg-feedback-warning-bg px-3 py-2 text-xs font-bold text-feedback-warning">
+              {cancelTargetPoll.label}
+            </p>
+          ) : null}
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-secondary">취소 사유</label>
+            <textarea
+              value={pollCancellationReason}
+              onChange={(event) => setPollCancellationReason(event.target.value)}
+              placeholder="예: 강설로 인한 취소"
+              rows={3}
+              className="w-full resize-none rounded-xl border border-border bg-surface-bg px-3 py-2.5 text-sm text-primary transition-colors focus:border-feedback-error focus:outline-none"
+            />
+          </div>
+          {pollCancelError ? (
+            <p role="alert" className="rounded-lg border border-feedback-error-border bg-feedback-error-bg px-3 py-2 text-xs font-bold text-feedback-error">
+              {pollCancelError}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            disabled={cancellingPollId !== null}
+            onClick={() => void handleCancelPoll()}
+            className="w-full rounded-xl bg-feedback-error px-4 py-3.5 text-sm font-semibold text-white transition-all hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-tertiary"
+          >
+            {cancellingPollId ? '취소 중...' : '취소 처리하기'}
           </button>
         </div>
       </Modal>

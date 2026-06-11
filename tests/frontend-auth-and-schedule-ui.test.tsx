@@ -1197,10 +1197,10 @@ describe('v1.0 schedule and poll UX', () => {
     const scheduleIcon = container.querySelector('img[src*="svgrepo-football.svg"]');
     expect(scheduleIcon).toBeInTheDocument();
     expect(scheduleIcon).toHaveClass('animate-counter-spin');
-    expect(screen.getByText('6월 13일 토 20:00')).toHaveClass('text-blue-team');
-    expect(screen.getByText('잠실 풋살파크')).toHaveClass('text-blue-team');
-    expect(container.querySelector('.lucide-clock-3')).toHaveClass('text-blue-team');
-    expect(container.querySelector('.lucide-map-pin')).toHaveClass('text-blue-team');
+    expect(screen.getByText('6월 13일 토 20:00')).toHaveClass('text-secondary');
+    expect(screen.getByText('잠실 풋살파크')).toHaveClass('text-secondary');
+    expect(container.querySelector('.lucide-clock-3')).toHaveClass('text-secondary');
+    expect(container.querySelector('.lucide-map-pin')).toHaveClass('text-secondary');
     const forecastLink = screen.getByRole('link', { name: /경기일 예보/ });
     expect(forecastLink).toHaveAttribute('href', expect.stringContaining('search.naver.com'));
     expect(decodeURIComponent(forecastLink.getAttribute('href') ?? '')).toContain('잠실 풋살파크 날씨');
@@ -2124,6 +2124,78 @@ describe('v1.0 schedule and poll UX', () => {
     }
   });
 
+  it('lets operators cancel a selected poll option from the calendar detail panel', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date(2026, 2, 1));
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const originalShowToast = useToastStore.getState().showToast;
+    const showToast = vi.fn((message: string) => {
+      useToastStore.setState({ message });
+    });
+
+    try {
+      useToastStore.setState({ message: null, showToast });
+      useAppStore.setState({ userRole: 'operator', userStatus: 'approved' });
+      useScheduleStore.setState({
+        selectedDate: 21,
+        activePolls: [activePoll],
+        activePollsStatus: 'ready',
+        activePollsError: null,
+        upcomingMatches: [],
+        upcomingMatchesStatus: 'ready',
+        upcomingMatchesError: null,
+        calendarMatches: [],
+        calendarMatchesStatus: 'ready',
+        calendarMatchesError: null,
+      });
+
+      const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url === '/api/schedule-polls/cancel') {
+          expect(init?.method).toBe('POST');
+          expect(JSON.parse(String(init?.body))).toMatchObject({
+            clubId: 'club-test',
+            pollId: activePoll.id,
+            cancellationReason: '우천 취소',
+          });
+          return new Response(JSON.stringify({
+            ...activePoll,
+            status: 'cancelled',
+            cancellationReason: '우천 취소',
+            cancelledAt: '2026-03-01T10:00:00.000+09:00',
+          }), { status: 200 });
+        }
+        if (url.startsWith('/api/schedule-polls?') || url.startsWith('/api/matches?')) {
+          return new Response(JSON.stringify([]), { status: 200 });
+        }
+        if (url.startsWith('/api/comments')) {
+          return new Response(JSON.stringify([]), { status: 200 });
+        }
+        return new Response(JSON.stringify([]), { status: 200 });
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      render(<ScheduleTab />);
+
+      await user.click(screen.getByRole('button', { name: /3월 21일 토 19:00.*일정 투표 취소$/ }));
+      expect(screen.getByRole('dialog', { name: '일정 취소' })).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: '취소 처리하기' }));
+      expect(screen.getByRole('alert')).toHaveTextContent('취소 사유를 입력해주세요.');
+
+      await user.type(screen.getByPlaceholderText('예: 강설로 인한 취소'), '우천 취소');
+      await user.click(screen.getByRole('button', { name: '취소 처리하기' }));
+
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/schedule-polls/cancel', expect.objectContaining({
+        method: 'POST',
+      })));
+      await waitFor(() => expect(showToast).toHaveBeenCalledWith('일정 투표가 취소되었어요.'));
+      expect(useScheduleStore.getState().activePolls).toEqual([]);
+    } finally {
+      useToastStore.setState({ message: null, showToast: originalShowToast });
+      vi.useRealTimers();
+    }
+  });
+
   it('does not show poll option promote controls to regular members', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date(2026, 2, 1));
@@ -2187,7 +2259,7 @@ describe('v1.0 schedule and poll UX', () => {
       expect(screen.queryByText('장소')).not.toBeInTheDocument();
       expect(screen.queryByText('카카오지도')).not.toBeInTheDocument();
       expect(screen.queryByText('네이버지도')).not.toBeInTheDocument();
-      expect(screen.getByPlaceholderText('할 말 있나?')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('할 말?')).toBeInTheDocument();
       expect(screen.queryByText('전술 설정')).not.toBeInTheDocument();
       expect(fetchMock).not.toHaveBeenCalledWith(
         expect.stringMatching(/^\/api\/matches\/lineup/),
@@ -2386,7 +2458,7 @@ describe('v1.0 schedule and poll UX', () => {
       expect(screen.queryByText(':')).not.toBeInTheDocument();
       expect(container.querySelector('div.border-t.border-border\\/40')).toBeInTheDocument();
       expect(container.querySelector('img[src="/icons/svgrepo-soccer-player.svg"]')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('할 말 있나?')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('할 말?')).toBeInTheDocument();
     } finally {
       vi.useRealTimers();
     }

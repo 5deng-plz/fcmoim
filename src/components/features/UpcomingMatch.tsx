@@ -106,14 +106,14 @@ export default function UpcomingMatch() {
                   <Badge label="예정" variant="green" />
                 )}
               </div>
-              <div className="mt-2 space-y-1.5 text-xs font-bold text-blue-team">
+              <div className="mt-2 space-y-1.5 text-xs font-bold text-secondary">
                 <span className="flex min-w-0 items-center gap-1.5">
-                  <Clock3 size={14} className="shrink-0 text-blue-team" aria-hidden="true" />
-                  <span className="truncate text-sm font-extrabold leading-tight text-blue-team">{formatMatchDate(nextMatch.date)}</span>
+                  <Clock3 size={14} className="shrink-0 text-secondary" aria-hidden="true" />
+                  <span className="truncate text-sm font-extrabold leading-tight text-secondary">{formatMatchDate(nextMatch.date)}</span>
                 </span>
                 <span className="flex min-w-0 items-center gap-1.5">
-                  <MapPin size={14} className="shrink-0 text-blue-team" aria-hidden="true" />
-                  <span className="truncate text-blue-team">{nextMatch.location}</span>
+                  <MapPin size={14} className="shrink-0 text-secondary" aria-hidden="true" />
+                  <span className="truncate text-secondary">{nextMatch.location}</span>
                 </span>
               </div>
             </div>

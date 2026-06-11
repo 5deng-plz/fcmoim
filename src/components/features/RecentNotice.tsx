@@ -508,7 +508,7 @@ export default function RecentNotice() {
       </div>
 
       <Modal
-        title="일정 투표 취소"
+        title="일정 취소"
         isOpen={cancelTargetPoll !== null}
         onClose={() => {
           if (cancellingPollId) return;
