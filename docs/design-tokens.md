@@ -54,6 +54,7 @@
 - `highlight-*` — 강조/데코레이션용 뱃지 및 액센트 (purple, amber, rose)
 - `metric-*` — 데이터 시각화 및 시즌 통계용 (purple, orange, cyan, gray)
 - `social-*` — 커뮤니티 및 유저 피드백 상호작용 (like, reply, mention)
+- `glass-*` — 제안 A 미니멀 글래스 카드용 토큰 (bg, bg-hover, border, border-hover, shadow)
 
 ### 공통 피드백
 

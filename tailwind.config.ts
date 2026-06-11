@@ -254,6 +254,13 @@ const config: Config = {
           reply: 'var(--social-reply)',
           mention: 'var(--social-mention)',
         },
+        glass: {
+          bg: 'var(--glass-bg)',
+          'bg-hover': 'var(--glass-bg-hover)',
+          border: 'var(--glass-border)',
+          'border-hover': 'var(--glass-border-hover)',
+          shadow: 'var(--glass-shadow)',
+        },
       },
       keyframes: {
         fadeIn: {
