@@ -1,26 +1,26 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 68,
-  "updatedAt": "2026-06-12T07:35:05.000+09:00",
+  "updateVersion": 70,
+  "updatedAt": "2026-06-12T07:40:06.000+09:00",
   "updatedBy": "orchestrator",
-  "currentPhase": "default-normal-condition-and-home-shimmer",
+  "currentPhase": "tactics-icon-local-asset",
   "activeWork": {
-    "taskId": "default-normal-condition-and-home-shimmer",
+    "taskId": "tactics-icon-local-asset",
     "status": "complete",
-    "baselineCommit": "f4ac3ef7312cc137e77c94189ccef7f66c048c51",
+    "baselineCommit": "79e655d00fdbf52af073333f9c8654bf52a33efa",
     "changedFiles": [
-      "src/app/globals.css",
-      "src/components/features/UpcomingMatch.tsx",
-      "src/components/tabs/LockerRoomTab.tsx",
+      "public/icons/tactics.svg",
+      "public/icons/asset-sources.json",
+      "src/components/features/TacticsDragBuilder.tsx",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
     "changedSurfaces": ["ui", "tests", "docs"],
     "allowedPaths": [
-      "src/app/globals.css",
-      "src/components/features/UpcomingMatch.tsx",
-      "src/components/tabs/LockerRoomTab.tsx",
+      "public/icons/tactics.svg",
+      "public/icons/asset-sources.json",
+      "src/components/features/TacticsDragBuilder.tsx",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
@@ -30,20 +30,20 @@
         "command": "npm run verify:baseline",
         "summary": "Harness validation, lint, typecheck, and full Vitest suite passed: 19 test files passed, 1 skipped; 226 tests passed, 15 skipped."
       },
-      "conditionAndHomeShimmerUi": {
+      "tacticsIconUi": {
         "type": "deterministic",
         "status": "passed",
         "provider": "Vitest, Testing Library",
         "target": "tests/frontend-auth-and-schedule-ui.test.tsx",
         "command": "npm run test -- tests/frontend-auth-and-schedule-ui.test.tsx --run",
-        "summary": "Locker room squad renders every condition as normal regardless of match points, and the Home next schedule icon uses the event-specific shimmer class instead of the old blue shimmer."
+        "summary": "Schedule tactics UI renders the tactics icon from the local /icons/tactics.svg asset instead of the external SVGRepo URL."
       },
-      "browserSmoke": {
+      "assetHttp": {
         "type": "runtime",
         "status": "passed",
-        "provider": "in-app browser",
-        "target": "http://localhost:3000/",
-        "summary": "Reloaded the existing localhost tab, confirmed the visible Home next schedule icon wrapper uses an event-specific shimmer class, and confirmed the locker room shows 6 normal conditions with zero non-normal condition icons."
+        "provider": "npm run dev",
+        "target": "http://localhost:3000/icons/tactics.svg",
+        "summary": "Existing Next dev server returned 200 OK with Content-Type image/svg+xml for the local tactics SVG asset."
       },
       "dbCheck": {
         "type": "database",
@@ -54,24 +54,25 @@
       "guardVerify": {
         "status": "passed",
         "command": "npm run harness:guard:verify",
-        "summary": "Final verify guard passed after syncing this workstream: design guard passed for 2 guarded files, diff guard passed for 5 changed files, baseline passed, DB contract check passed, and evidence guard passed."
+        "summary": "Final verify guard passed after syncing this workstream: design guard passed for 1 guarded file, diff guard passed for 5 changed files, baseline passed, DB contract check passed, and evidence guard passed."
       },
       "runtimeSmoke": {
         "status": "not_required",
-        "summary": "No app entrypoint, Auth/session/API bootstrap, package/runtime config, Supabase schema, or API route files changed."
+        "summary": "No app entrypoint, Auth/session/API bootstrap, package/runtime config, Supabase schema, or API route files changed. In-app browser visual check was attempted twice but blocked by Browser webview attach timeout."
       }
     },
     "reviewStatus": "ready",
     "retrospective": {
       "issuesObserved": [
-        "Condition had been derived from match points, so high and low point players could display non-normal arrows even though the requested default is normal."
+        "The original SVGRepo tactics and lock icon URLs were runtime dependencies; the tactics download endpoint returned a Vercel/Cloudflare challenge, so the UI could render broken external images in production.",
+        "The in-app browser validation path failed twice at webview attach timeout, so rendered browser evidence was limited to local HTTP asset verification and deterministic UI tests."
       ],
       "missedEvidence": [],
       "harnessImprovementProposal": [
-        "No harness change proposed; the existing deterministic UI evidence and browser smoke paths covered this visual behavior change."
+        "No harness change proposed; the existing asset provenance policy correctly forced reuse of a preserved local SVGRepo asset instead of recreating a blocked external asset."
       ],
       "promotionRecommendation": "none",
-      "reason": "The work followed existing UI evidence and diff ownership rules without exposing a repeatable harness gap."
+      "reason": "The work removed external icon runtime dependency with a local asset and preserved existing UI behavior without exposing a repeatable harness gap."
     },
     "loopCounters": {
       "reviewRounds": 0,

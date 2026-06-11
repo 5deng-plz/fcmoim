@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Check, Plus, Send } from 'lucide-react';
+import { Check, Lock, Plus, Send } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
 import { addMatchAttendee, saveMatchLineup, confirmMatchLineup, publishMatchLineup, type MatchAttendee, type MatchLineupEntry, type UpcomingMatch } from '@/stores/matchClient';
 import { fetchApprovedMemberships, type ApprovedMembership } from '@/stores/membershipClient';
@@ -47,9 +47,8 @@ export type TacticsAvatarTeam = 'red' | 'blue' | 'bench';
 const initialPlayers: Player[] = [];
 const TACTICS_SLOT_COUNT = 18;
 const TACTICS_COLUMNS = 6;
-const SVG_REPO_ICONS = {
-  lock: 'https://www.svgrepo.com/show/43277/lock.svg',
-  tactics: 'https://www.svgrepo.com/show/146798/tactics.svg',
+const LOCAL_ICONS = {
+  tactics: '/icons/tactics.svg',
 } as const;
 type TeamState = { id: 'red' | 'blue'; name: string; color: 'red' | 'blue'; players: Player[] };
 export type MatchAnticipationStage = 'waitingRoster' | 'drafting' | 'redReady' | 'blueReady' | 'finalizing';
@@ -284,7 +283,7 @@ function MatchAnticipationPanel({
       <div className="mb-3 flex items-center justify-between gap-3">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-card shadow-xs">
           <Image
-            src={SVG_REPO_ICONS.tactics}
+            src={LOCAL_ICONS.tactics}
             alt=""
             width={22}
             height={22}
@@ -308,14 +307,7 @@ function MatchAnticipationPanel({
         </div>
         <div className="pointer-events-none absolute inset-2 flex items-center justify-center rounded-2xl border border-white/30 bg-white/15 shadow-inner backdrop-blur-sm">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/35 bg-surface-elevated/85 shadow-lg">
-            <Image
-              src={SVG_REPO_ICONS.lock}
-              alt=""
-              width={30}
-              height={30}
-              className="h-[30px] w-[30px] object-contain"
-              unoptimized
-            />
+            <Lock size={30} aria-hidden="true" className="text-gray-500" strokeWidth={2} />
             <span className="sr-only">라인업 잠금</span>
           </div>
         </div>
@@ -989,7 +981,7 @@ export default function TacticsDragBuilder({
         <h3 className="flex items-center gap-1.5 text-[11px] font-black text-gray-500">
           <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white">
             <Image
-              src={SVG_REPO_ICONS.tactics}
+              src={LOCAL_ICONS.tactics}
               alt=""
               width={16}
               height={16}

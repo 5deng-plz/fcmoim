@@ -2827,7 +2827,7 @@ describe('v1.0 schedule and poll UX', () => {
       await screen.findByTestId('tactics-field');
       expect(screen.queryByTestId('tactics-kick-arena')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('대기 선수 없음')).not.toBeInTheDocument();
-      expect(adminView.container.querySelector('img[src="https://www.svgrepo.com/show/146798/tactics.svg"]')).toBeInTheDocument();
+      expect(adminView.container.querySelector('img[src="/icons/tactics.svg"]')).toBeInTheDocument();
       const redConfirmButton = screen.getByRole('button', { name: 'Red 전술 확정' });
       const blueConfirmButton = screen.getByRole('button', { name: 'Blue 전술 확정' });
       expect(redConfirmButton).toBeInTheDocument();

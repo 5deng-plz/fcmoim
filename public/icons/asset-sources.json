@@ -10,5 +10,9 @@
   "svgrepo-soccer-field.svg": {
     "sourceUrl": "https://www.svgrepo.com/show/137442/soccer-field.svg",
     "sha256": "e0dfbfe82eb5ecdd8f11347c9550abe17c76525527381e0131425b2e9791f4e4"
+  },
+  "tactics.svg": {
+    "sourceUrl": "https://www.svgrepo.com/show/137442/soccer-field.svg",
+    "sha256": "c7eee894948cd4fc93901b34c8729f020965d6d29e0a4310ab6e7dd21491c961"
   }
 }
