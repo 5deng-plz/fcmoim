@@ -2181,6 +2181,7 @@ describe('v1.0 schedule and poll UX', () => {
 
       await user.click(screen.getByRole('button', { name: /3월 21일 토 19:00.*일정 투표 취소$/ }));
       expect(screen.getByRole('dialog', { name: '일정 취소' })).toBeInTheDocument();
+      expect(screen.getByText('선택한 일자만 삭제되지 않고, 이 투표의 모든 후보 일자가 함께 취소됩니다.')).toBeInTheDocument();
       await user.click(screen.getByRole('button', { name: '취소 처리하기' }));
       expect(screen.getByRole('alert')).toHaveTextContent('취소 사유를 입력해주세요.');
 

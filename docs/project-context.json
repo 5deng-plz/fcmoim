@@ -1,26 +1,22 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 70,
-  "updatedAt": "2026-06-12T07:40:06.000+09:00",
+  "updateVersion": 71,
+  "updatedAt": "2026-06-12T07:52:00.000+09:00",
   "updatedBy": "orchestrator",
-  "currentPhase": "tactics-icon-local-asset",
+  "currentPhase": "poll-cancel-scope-warning-copy",
   "activeWork": {
-    "taskId": "tactics-icon-local-asset",
+    "taskId": "poll-cancel-scope-warning-copy",
     "status": "complete",
-    "baselineCommit": "79e655d00fdbf52af073333f9c8654bf52a33efa",
+    "baselineCommit": "4eec8db92a69c9e61dc7114536b332b23115fa5d",
     "changedFiles": [
-      "public/icons/tactics.svg",
-      "public/icons/asset-sources.json",
-      "src/components/features/TacticsDragBuilder.tsx",
+      "src/components/tabs/ScheduleTab.tsx",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
     "changedSurfaces": ["ui", "tests", "docs"],
     "allowedPaths": [
-      "public/icons/tactics.svg",
-      "public/icons/asset-sources.json",
-      "src/components/features/TacticsDragBuilder.tsx",
+      "src/components/tabs/ScheduleTab.tsx",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
@@ -30,20 +26,13 @@
         "command": "npm run verify:baseline",
         "summary": "Harness validation, lint, typecheck, and full Vitest suite passed: 19 test files passed, 1 skipped; 226 tests passed, 15 skipped."
       },
-      "tacticsIconUi": {
+      "pollCancelScopeCopy": {
         "type": "deterministic",
         "status": "passed",
         "provider": "Vitest, Testing Library",
         "target": "tests/frontend-auth-and-schedule-ui.test.tsx",
         "command": "npm run test -- tests/frontend-auth-and-schedule-ui.test.tsx --run",
-        "summary": "Schedule tactics UI renders the tactics icon from the local /icons/tactics.svg asset instead of the external SVGRepo URL."
-      },
-      "assetHttp": {
-        "type": "runtime",
-        "status": "passed",
-        "provider": "npm run dev",
-        "target": "http://localhost:3000/icons/tactics.svg",
-        "summary": "Existing Next dev server returned 200 OK with Content-Type image/svg+xml for the local tactics SVG asset."
+        "summary": "Calendar poll cancellation modal now explains that cancelling from one selected date cancels the full poll and all candidate dates, not only that date."
       },
       "dbCheck": {
         "type": "database",
@@ -54,7 +43,7 @@
       "guardVerify": {
         "status": "passed",
         "command": "npm run harness:guard:verify",
-        "summary": "Final verify guard passed after syncing this workstream: design guard passed for 1 guarded file, diff guard passed for 5 changed files, baseline passed, DB contract check passed, and evidence guard passed."
+        "summary": "Final verify guard passed after syncing this workstream: design guard passed for 1 guarded file, diff guard passed for 3 changed files, baseline passed, DB contract check passed, and evidence guard passed."
       },
       "runtimeSmoke": {
         "status": "not_required",
@@ -64,15 +53,14 @@
     "reviewStatus": "ready",
     "retrospective": {
       "issuesObserved": [
-        "The original SVGRepo tactics and lock icon URLs were runtime dependencies; the tactics download endpoint returned a Vercel/Cloudflare challenge, so the UI could render broken external images in production.",
-        "The in-app browser validation path failed twice at webview attach timeout, so rendered browser evidence was limited to local HTTP asset verification and deterministic UI tests."
+        "The poll option cancel button could be misread as cancelling only the selected date, even though the current API cancels the entire poll."
       ],
       "missedEvidence": [],
       "harnessImprovementProposal": [
-        "No harness change proposed; the existing asset provenance policy correctly forced reuse of a preserved local SVGRepo asset instead of recreating a blocked external asset."
+        "No harness change proposed; this was product copy clarification covered by deterministic UI tests."
       ],
       "promotionRecommendation": "none",
-      "reason": "The work removed external icon runtime dependency with a local asset and preserved existing UI behavior without exposing a repeatable harness gap."
+      "reason": "The work clarifies existing behavior without changing API, data, or runtime contracts."
     },
     "loopCounters": {
       "reviewRounds": 0,

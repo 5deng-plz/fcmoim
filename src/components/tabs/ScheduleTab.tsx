@@ -550,9 +550,12 @@ export default function ScheduleTab() {
       >
         <div className="space-y-4">
           {cancelTargetPoll ? (
-            <p className="rounded-xl border border-feedback-warning-border bg-feedback-warning-bg px-3 py-2 text-xs font-bold text-feedback-warning">
-              {cancelTargetPoll.label}
-            </p>
+            <div className="space-y-2 rounded-xl border border-feedback-warning-border bg-feedback-warning-bg px-3 py-2 text-xs font-bold text-feedback-warning">
+              <p>{cancelTargetPoll.label}</p>
+              <p>
+                선택한 일자만 삭제되지 않고, 이 투표의 모든 후보 일자가 함께 취소됩니다.
+              </p>
+            </div>
           ) : null}
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-secondary">취소 사유</label>
