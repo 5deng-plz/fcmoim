@@ -2198,6 +2198,143 @@ describe('v1.0 schedule and poll UX', () => {
     }
   });
 
+  it('moves confirmed match cancellation into the selected calendar match panel', async () => {
+    const user = userEvent.setup();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date(2026, 4, 1));
+
+    try {
+      const match = createCalendarMatch('may-match-to-cancel', '5월 친선 경기', '2026-05-21T20:00:00.000+09:00', 'match');
+      const cancelledMatch = {
+        ...match,
+        status: 'cancelled' as const,
+        cancellationReason: '강설로 인한 취소',
+        cancelledAt: '2026-05-01T10:00:00.000+09:00',
+      };
+      useAppStore.setState({ userRole: 'admin', userStatus: 'approved' });
+      useScheduleStore.setState({
+        selectedDate: 21,
+        activePolls: [],
+        activePollsStatus: 'ready',
+        activePollsError: null,
+        upcomingMatches: [match],
+        upcomingMatchesStatus: 'ready',
+        upcomingMatchesError: null,
+        calendarMatches: [match],
+        calendarMatchesStatus: 'ready',
+        calendarMatchesError: null,
+      });
+      const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url === '/api/matches/cancel') {
+          expect(JSON.parse(String(init?.body))).toMatchObject({
+            clubId: 'club-test',
+            matchId: 'may-match-to-cancel',
+            cancellationReason: '강설로 인한 취소',
+          });
+          return new Response(JSON.stringify(cancelledMatch), { status: 200 });
+        }
+        if (url.startsWith('/api/matches?')) {
+          return new Response(JSON.stringify([cancelledMatch]), { status: 200 });
+        }
+        if (url.startsWith('/api/schedule-polls?') || url.startsWith('/api/matches/attendees') || url.startsWith('/api/matches/lineup') || url.startsWith('/api/comments')) {
+          return new Response(JSON.stringify([]), { status: 200 });
+        }
+        return new Response(JSON.stringify({}), { status: 200 });
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      render(<ScheduleTab />);
+      vi.useRealTimers();
+
+      await user.click(screen.getByRole('button', { name: '일정 취소' }));
+      await user.click(screen.getByRole('button', { name: '일정 취소하기' }));
+      expect(screen.getByRole('alert')).toHaveTextContent('취소 사유를 입력해주세요.');
+
+      await user.type(screen.getByPlaceholderText('예: 강설로 인한 취소'), '강설로 인한 취소');
+      await user.click(screen.getByRole('button', { name: '일정 취소하기' }));
+
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/matches/cancel', expect.objectContaining({
+        method: 'POST',
+      })));
+      await waitFor(() => expect(screen.getByText('❌ 취소 사유: 강설로 인한 취소')).toBeInTheDocument());
+      expect(screen.queryByRole('button', { name: '일정 취소하기' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: '일정 취소' })).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('shows confirmed event cancellation only to managers on future calendar event panels', async () => {
+    const user = userEvent.setup();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date(2026, 4, 1));
+
+    try {
+      const event = createCalendarMatch('may-training-to-cancel', '피지컬 전지훈련', '2026-05-21T20:00:00.000+09:00', 'training');
+      const cancelledEvent = {
+        ...event,
+        status: 'cancelled' as const,
+        cancellationReason: '구장 사정으로 취소',
+        cancelledAt: '2026-05-01T10:00:00.000+09:00',
+      };
+      useAppStore.setState({ userRole: 'member', userStatus: 'approved' });
+      useScheduleStore.setState({
+        selectedDate: 21,
+        activePolls: [],
+        activePollsStatus: 'ready',
+        activePollsError: null,
+        upcomingMatches: [event],
+        upcomingMatchesStatus: 'ready',
+        upcomingMatchesError: null,
+        calendarMatches: [event],
+        calendarMatchesStatus: 'ready',
+        calendarMatchesError: null,
+      });
+      const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === '/api/matches/cancel') {
+          return new Response(JSON.stringify(cancelledEvent), { status: 200 });
+        }
+        if (url.startsWith('/api/matches?')) {
+          return new Response(JSON.stringify([cancelledEvent]), { status: 200 });
+        }
+        return new Response(JSON.stringify([]), { status: 200 });
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      render(<ScheduleTab />);
+      expect(screen.getByLabelText('전지훈련 일정 상세')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: '일정 취소' })).not.toBeInTheDocument();
+
+      cleanup();
+      useAppStore.setState({ userRole: 'operator', userStatus: 'approved' });
+      useScheduleStore.setState({
+        selectedDate: 21,
+        activePolls: [],
+        activePollsStatus: 'ready',
+        activePollsError: null,
+        upcomingMatches: [event],
+        upcomingMatchesStatus: 'ready',
+        upcomingMatchesError: null,
+        calendarMatches: [event],
+        calendarMatchesStatus: 'ready',
+        calendarMatchesError: null,
+      });
+      render(<ScheduleTab />);
+      vi.useRealTimers();
+
+      await user.click(screen.getByRole('button', { name: '일정 취소' }));
+      await user.type(screen.getByPlaceholderText('예: 강설로 인한 취소'), '구장 사정으로 취소');
+      await user.click(screen.getByRole('button', { name: '일정 취소하기' }));
+
+      await waitFor(() => expect(screen.getByText('❌ 취소 사유: 구장 사정으로 취소')).toBeInTheDocument());
+      expect(screen.queryByRole('button', { name: '일정 취소' })).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('renders match comments with the match-only tactics panel', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date(2026, 4, 1));
@@ -2255,7 +2392,7 @@ describe('v1.0 schedule and poll UX', () => {
     }
   });
 
-  it('removes cancelled confirmed matches from the schedule store immediately', async () => {
+  it('removes cancelled confirmed matches from the upcoming store but keeps them on the calendar', async () => {
     const match = {
       id: 'match-to-cancel',
       clubId: 'club-test',
@@ -2278,6 +2415,9 @@ describe('v1.0 schedule and poll UX', () => {
       upcomingMatches: [match],
       upcomingMatchesStatus: 'ready',
       upcomingMatchesError: null,
+      calendarMatches: [match],
+      calendarMatchesStatus: 'ready',
+      calendarMatchesError: null,
     });
     vi.stubGlobal('fetch', vi.fn(async () => (
       new Response(JSON.stringify({
@@ -2295,6 +2435,11 @@ describe('v1.0 schedule and poll UX', () => {
     });
 
     expect(useScheduleStore.getState().upcomingMatches).toEqual([]);
+    expect(useScheduleStore.getState().calendarMatches).toEqual([expect.objectContaining({
+      id: 'match-to-cancel',
+      status: 'cancelled',
+      cancellationReason: '강설로 인한 취소',
+    })]);
   });
 
   it('does not expose a successful poll vote action for non-approved memberships', async () => {

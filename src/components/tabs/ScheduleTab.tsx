@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import CalendarView from '@/components/features/CalendarView';
-import { CalendarCheck2, CalendarX2, Check, Clock3, MapPin, NotebookPen, Vote, X } from 'lucide-react';
+import { Ban, CalendarCheck2, CalendarX2, Check, Clock3, MapPin, NotebookPen, Vote, X } from 'lucide-react';
 import { buildMatchCalendarEvents, buildPollCalendarEvents } from '@/components/features/calendarEventUtils';
 import TacticsDragBuilder, { TacticsPlayerAvatar, type Player } from '@/components/features/TacticsDragBuilder';
 import EventComments from '@/components/features/EventComments';
@@ -20,7 +20,8 @@ import PullToRefresh from '@/components/ui/PullToRefresh';
 import AttendeeList from '@/components/features/AttendeeList';
 import Badge from '@/components/ui/Badge';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
-import type { SchedulePoll, SchedulePollOption } from '@/stores/schedulePollClient';
+import Modal from '@/components/ui/Modal';
+import { getSchedulePollErrorMessage, type SchedulePoll, type SchedulePollOption } from '@/stores/schedulePollClient';
 
 export default function ScheduleTab() {
   const {
@@ -34,6 +35,7 @@ export default function ScheduleTab() {
     loadUpcomingMatches,
     loadCalendarMatches,
     promotePoll,
+    cancelUpcomingMatch,
     selectedDate,
     setSelectedDate,
   } = useScheduleStore();
@@ -50,6 +52,10 @@ export default function ScheduleTab() {
   } | null>(null);
   const [confirmPromoteKey, setConfirmPromoteKey] = useState<string | null>(null);
   const [promotingOptionKey, setPromotingOptionKey] = useState<string | null>(null);
+  const [cancelTargetMatch, setCancelTargetMatch] = useState<UpcomingMatch | null>(null);
+  const [cancellationReason, setCancellationReason] = useState('');
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
   const canManageSchedule = userRole === 'admin' || userRole === 'operator';
   const currentMembershipId = availableClubs.find((club) => club.clubId === activeClubId)?.membershipId ?? null;
   const scheduleMatches = calendarMatches.length > 0 ? calendarMatches : upcomingMatches;
@@ -74,6 +80,49 @@ export default function ScheduleTab() {
       loadUpcomingMatches(activeClubId),
       loadCalendarMatches({ clubId: activeClubId, ...getMonthRange(visibleMonth) }),
     ]);
+  };
+  const openCancelModal = (match: UpcomingMatch) => {
+    setCancelTargetMatch(match);
+    setCancellationReason('');
+    setCancelError(null);
+  };
+  const closeCancelModal = () => {
+    if (isCancelling) return;
+    setCancelTargetMatch(null);
+    setCancellationReason('');
+    setCancelError(null);
+  };
+  const handleCancelMatch = async () => {
+    if (!cancelTargetMatch) return;
+
+    const normalizedReason = cancellationReason.trim();
+    if (!normalizedReason) {
+      const message = '취소 사유를 입력해주세요.';
+      setCancelError(message);
+      showToast(message);
+      return;
+    }
+
+    setIsCancelling(true);
+    setCancelError(null);
+
+    try {
+      await cancelUpcomingMatch({
+        clubId: cancelTargetMatch.clubId,
+        matchId: cancelTargetMatch.id,
+        cancellationReason: normalizedReason,
+      });
+      await refreshSchedule();
+      showToast('확정 일정이 취소되었어요.');
+      setCancelTargetMatch(null);
+      setCancellationReason('');
+    } catch (error) {
+      const message = getSchedulePollErrorMessage(error, '확정 일정을 취소하지 못했어요.');
+      setCancelError(message);
+      showToast(message);
+    } finally {
+      setIsCancelling(false);
+    }
   };
   const selectedIsoDate = toIsoDate(selectedDate, visibleMonth);
   const selectedPollOptions = useMemo(
@@ -348,10 +397,15 @@ export default function ScheduleTab() {
             }}
             onMatchUpdated={(nextMatch) => {
               useScheduleStore.setState((state) => ({
-                upcomingMatches: state.upcomingMatches.map((m) => m.id === nextMatch.id ? nextMatch : m),
-                calendarMatches: state.calendarMatches.map((m) => m.id === nextMatch.id ? nextMatch : m),
+                upcomingMatches: Array.isArray(state.upcomingMatches)
+                  ? state.upcomingMatches.map((m) => m.id === nextMatch.id ? nextMatch : m)
+                  : state.upcomingMatches,
+                calendarMatches: Array.isArray(state.calendarMatches)
+                  ? state.calendarMatches.map((m) => m.id === nextMatch.id ? nextMatch : m)
+                  : state.calendarMatches,
               }));
             }}
+            onCancelMatchRequest={openCancelModal}
             onResultSaved={async (matchId) => {
               await refreshSchedule();
               const [attendees, nextLineup] = await Promise.all([
@@ -369,7 +423,13 @@ export default function ScheduleTab() {
         ) : null}
 
         {selectedOtherEvents.length > 0 ? (
-          <EventPanels events={selectedOtherEvents} clubId={activeClubId} nowMs={nowMs} />
+          <EventPanels
+            events={selectedOtherEvents}
+            clubId={activeClubId}
+            canManageSchedule={canManageSchedule}
+            nowMs={nowMs}
+            onCancelEventRequest={openCancelModal}
+          />
         ) : null}
 
         {selectedEvents.length === 0 && selectedPollOptions.length === 0 ? (
@@ -387,6 +447,37 @@ export default function ScheduleTab() {
         ) : null}
 
       </div>
+      <Modal
+        title="확정 일정 취소"
+        isOpen={cancelTargetMatch !== null}
+        onClose={closeCancelModal}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-secondary">취소 사유</label>
+            <textarea
+              value={cancellationReason}
+              onChange={(event) => setCancellationReason(event.target.value)}
+              placeholder="예: 강설로 인한 취소"
+              rows={3}
+              className="w-full resize-none rounded-xl border border-border bg-surface-bg px-3 py-2.5 text-sm text-primary transition-colors focus:border-feedback-error focus:outline-none"
+            />
+          </div>
+          {cancelError ? (
+            <p role="alert" className="rounded-lg border border-feedback-error-border bg-feedback-error-bg px-3 py-2 text-xs font-bold text-feedback-error">
+              {cancelError}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            disabled={isCancelling}
+            onClick={() => void handleCancelMatch()}
+            className="w-full rounded-xl bg-feedback-error px-4 py-3.5 text-sm font-semibold text-white transition-all hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-tertiary"
+          >
+            {isCancelling ? '취소 중...' : '일정 취소하기'}
+          </button>
+        </div>
+      </Modal>
     </PullToRefresh>
   );
 }
@@ -403,6 +494,7 @@ function SelectedMatchPanel({
   onLineupUpdated,
   onPlayersUpdated,
   onMatchUpdated,
+  onCancelMatchRequest,
   onResultSaved,
 }: {
   match: UpcomingMatch | null;
@@ -416,6 +508,7 @@ function SelectedMatchPanel({
   onLineupUpdated?: (nextLineup: MatchLineupEntry[]) => void;
   onPlayersUpdated?: (nextPlayers: Player[]) => void;
   onMatchUpdated?: (nextMatch: UpcomingMatch) => void;
+  onCancelMatchRequest?: (match: UpcomingMatch) => void;
   onResultSaved?: (matchId: string) => Promise<void>;
 }) {
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
@@ -430,6 +523,10 @@ function SelectedMatchPanel({
     && new Date(match.date).getTime() <= nowMs
     && hasResultReadyLineup
     && detailStatus === 'ready';
+  const canShowCancelAction = canManageSchedule
+    && match.status !== 'cancelled'
+    && !isFinished
+    && new Date(match.date).getTime() > nowMs;
   const handleResultSaved = async (score: { home: number; away: number }) => {
     const nextMatch = {
       ...match,
@@ -461,6 +558,17 @@ function SelectedMatchPanel({
                   className="flex h-8 w-8 items-center justify-center rounded-xl border border-result-loss/30 bg-result-loss/10 text-result-loss shadow-sm shadow-result-loss/20 transition-all hover:bg-result-loss/15 hover:brightness-95 active:scale-95"
                 >
                   <NotebookPen size={16} className="animate-pulse" aria-hidden="true" />
+                </button>
+              ) : null}
+              {canShowCancelAction ? (
+                <button
+                  type="button"
+                  onClick={() => onCancelMatchRequest?.(match)}
+                  title="일정 취소"
+                  aria-label="일정 취소"
+                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-feedback-error-border bg-feedback-error-bg text-feedback-error shadow-sm shadow-feedback-error/20 transition-all hover:bg-feedback-error-bg/80 hover:brightness-95 active:scale-95"
+                >
+                  <Ban size={16} aria-hidden="true" />
                 </button>
               ) : null}
               <Badge label={statusBadge.label} variant={statusBadge.variant} />
@@ -522,6 +630,11 @@ function SelectedMatchPanel({
               );
             })}
           </div>
+          {match.status === 'cancelled' ? (
+            <div className="mt-3.5 rounded-xl border border-border bg-surface-bg/80 px-4 py-3 text-[11px] font-bold leading-normal text-secondary">
+              ❌ 취소 사유: {match.cancellationReason}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -791,20 +904,52 @@ function ResultFieldSide({
   );
 }
 
-function EventPanels({ events, clubId, nowMs }: { events: UpcomingMatch[]; clubId: string; nowMs: number }) {
+function EventPanels({
+  events,
+  clubId,
+  canManageSchedule,
+  nowMs,
+  onCancelEventRequest,
+}: {
+  events: UpcomingMatch[];
+  clubId: string;
+  canManageSchedule: boolean;
+  nowMs: number;
+  onCancelEventRequest?: (event: UpcomingMatch) => void;
+}) {
   return (
     <section className="space-y-3">
       {events.map((event) => (
-        <EventPanel key={event.id} event={event} clubId={clubId} nowMs={nowMs} />
+        <EventPanel
+          key={event.id}
+          event={event}
+          clubId={clubId}
+          canManageSchedule={canManageSchedule}
+          nowMs={nowMs}
+          onCancelEventRequest={onCancelEventRequest}
+        />
       ))}
     </section>
   );
 }
 
-function EventPanel({ event, clubId, nowMs }: { event: UpcomingMatch; clubId: string; nowMs: number }) {
+function EventPanel({
+  event,
+  clubId,
+  canManageSchedule,
+  nowMs,
+  onCancelEventRequest,
+}: {
+  event: UpcomingMatch;
+  clubId: string;
+  canManageSchedule: boolean;
+  nowMs: number;
+  onCancelEventRequest?: (event: UpcomingMatch) => void;
+}) {
   const config = getScheduleEventTheme(event.type);
   const isFinished = event.status === 'finished' || new Date(event.date).getTime() < nowMs;
   const statusBadge = getScheduleStatusBadge(event, nowMs);
+  const canShowCancelAction = canManageSchedule && event.status !== 'cancelled' && !isFinished;
   const [attendeeCount, setAttendeeCount] = useState(0);
 
   useEffect(() => {
@@ -836,10 +981,23 @@ function EventPanel({ event, clubId, nowMs }: { event: UpcomingMatch; clubId: st
               <p className="mt-1 truncate text-sm font-black text-primary">{stripDatePrefix(event.title)}</p>
             </div>
           </div>
-          <Badge
-            label={statusBadge.label}
-            variant={statusBadge.variant}
-          />
+          <div className="flex items-center gap-2">
+            {canShowCancelAction ? (
+              <button
+                type="button"
+                onClick={() => onCancelEventRequest?.(event)}
+                title="일정 취소"
+                aria-label="일정 취소"
+                className="flex h-8 w-8 items-center justify-center rounded-xl border border-feedback-error-border bg-feedback-error-bg text-feedback-error shadow-sm shadow-feedback-error/20 transition-all hover:bg-feedback-error-bg/80 hover:brightness-95 active:scale-95"
+              >
+                <Ban size={16} aria-hidden="true" />
+              </button>
+            ) : null}
+            <Badge
+              label={statusBadge.label}
+              variant={statusBadge.variant}
+            />
+          </div>
         </div>
 
         <div className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${config.detailClassName}`}>
@@ -859,6 +1017,11 @@ function EventPanel({ event, clubId, nowMs }: { event: UpcomingMatch; clubId: st
         <div className="mt-3">
           <AttendeeList count={attendeeCount} total={Math.max(attendeeCount, 1)} />
         </div>
+        {event.status === 'cancelled' ? (
+          <div className="mt-3 rounded-xl border border-border bg-surface-bg/80 px-4 py-3 text-[11px] font-bold leading-normal text-secondary">
+            ❌ 취소 사유: {event.cancellationReason}
+          </div>
+        ) : null}
         <div className="mt-3">
           <EventComments
             clubId={clubId}

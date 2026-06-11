@@ -1,35 +1,42 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 65,
-  "updatedAt": "2026-06-11T08:23:16.000+09:00",
+  "updateVersion": 66,
+  "updatedAt": "2026-06-12T07:17:20.000+09:00",
   "updatedBy": "orchestrator",
-  "currentPhase": "harness-instruction-runtime-smoke-sync",
+  "currentPhase": "schedule-cancel-calendar-panel",
   "activeWork": {
-    "taskId": "harness-instruction-runtime-smoke-sync",
+    "taskId": "schedule-cancel-calendar-panel",
     "status": "complete",
-    "baselineCommit": "201ac10c52ecbd5be8c05b39c6b26ebfbdb59935",
+    "baselineCommit": "79e655d51d618614d05684b7fdee6ff511181505",
     "changedFiles": [
-      "AGENT.md",
-      "docs/user/design-harness-workflow.md",
+      "src/components/features/UpcomingMatch.tsx",
+      "src/components/tabs/ScheduleTab.tsx",
+      "src/stores/useScheduleStore.ts",
+      "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
-    "changedSurfaces": ["docs", "harness"],
+    "changedSurfaces": ["ui", "tests", "docs"],
     "allowedPaths": [
-      "AGENT.md",
-      "docs/user/design-harness-workflow.md",
+      "src/components/features/UpcomingMatch.tsx",
+      "src/components/tabs/ScheduleTab.tsx",
+      "src/stores/useScheduleStore.ts",
+      "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
     "evidence": {
-      "harnessValidate": {
-        "status": "passed",
-        "command": "npm run harness:validate",
-        "summary": "Harness validation passed after aligning AGENT.md and the design harness workflow on the runtime-smoke browser exception."
-      },
       "baseline": {
         "status": "passed",
         "command": "npm run verify:baseline",
-        "summary": "Baseline verification passed on the final rerun: 19 test files passed, 1 skipped; 223 tests passed, 15 skipped."
+        "summary": "Harness validation, lint, typecheck, and full Vitest suite passed: 19 test files passed, 1 skipped; 225 tests passed, 15 skipped."
+      },
+      "scheduleCancellationUi": {
+        "type": "deterministic",
+        "status": "passed",
+        "provider": "Vitest, Testing Library",
+        "target": "tests/frontend-auth-and-schedule-ui.test.tsx",
+        "command": "npm run test -- tests/frontend-auth-and-schedule-ui.test.tsx --run",
+        "summary": "Calendar selected match and event panels expose manager-only cancellation, validate missing reasons, call the cancel API, refresh schedule data, and render cancellation reasons."
       },
       "dbCheck": {
         "type": "database",
@@ -40,20 +47,24 @@
       "guardVerify": {
         "status": "passed",
         "command": "npm run harness:guard:verify",
-        "summary": "Final verify guard passed after syncing the active work to this harness-doc update; design guard passed with no guarded UI files changed, diff guard passed for 3 changed files, and evidence guard passed."
+        "summary": "Final verify guard passed after syncing this workstream: design guard passed for 2 guarded files, diff guard passed for 5 changed files, baseline passed, DB contract check passed, and evidence guard passed."
+      },
+      "runtimeSmoke": {
+        "status": "not_required",
+        "summary": "No app entrypoint, Auth/session/API bootstrap, package/runtime config, Supabase schema, or API route files changed."
       }
     },
     "reviewStatus": "ready",
     "retrospective": {
       "issuesObserved": [
-        "The design harness workflow still implied that in-app browser checks only happen on explicit request, even though current harness policy requires browserRuntime evidence for runtime entrypoint changes."
+        "Calendar state previously filtered cancelled matches, which would have prevented selected calendar panels from showing the cancellation reason after refresh."
       ],
       "missedEvidence": [],
       "harnessImprovementProposal": [
-        "Keep browser usage optional by default, but document the runtime-entrypoint exception consistently in AGENT.md and the design harness workflow."
+        "No harness change proposed; the existing deterministic UI evidence policy covered this UI/store behavior change."
       ],
-      "promotionRecommendation": "propose",
-      "reason": "This was a repeatable operator-guidance mismatch in the durable harness docs, so the fix belongs in the docs rather than in one-off session notes."
+      "promotionRecommendation": "none",
+      "reason": "The work followed existing UI evidence and diff ownership rules without exposing a repeatable harness gap."
     },
     "loopCounters": {
       "reviewRounds": 0,

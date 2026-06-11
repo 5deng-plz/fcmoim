@@ -2,33 +2,26 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Ban, CalendarClock, Clock3, CloudSun, MapPin, Wind, Tent, Beer, Guitar } from 'lucide-react';
+import { CalendarClock, Clock3, CloudSun, MapPin, Wind, Tent, Beer, Guitar } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
 import { useScheduleStore } from '@/stores/useScheduleStore';
 import { getSchedulePollErrorMessage } from '@/stores/schedulePollClient';
-import type { UpcomingMatch as UpcomingMatchType } from '@/stores/matchClient';
 import { useToastStore } from '@/stores/useToastStore';
 import Badge from '@/components/ui/Badge';
-import Modal from '@/components/ui/Modal';
 
 export default function UpcomingMatch() {
-  const { activeClubId, userRole } = useAppStore();
+  const { activeClubId } = useAppStore();
   const { showToast } = useToastStore();
   const {
     upcomingMatches,
     upcomingMatchesStatus,
     upcomingMatchesError,
     loadUpcomingMatches,
-    cancelUpcomingMatch,
   } = useScheduleStore();
-  const canManageSchedule = userRole === 'admin' || userRole === 'operator';
+  const [nowMs] = useState(() => Date.now());
   const nextMatch = upcomingMatches.find((match) => (
-    match.status !== 'cancelled' && new Date(match.date).getTime() >= Date.now()
+    match.status !== 'cancelled' && new Date(match.date).getTime() >= nowMs
   )) ?? null;
-  const [cancelTargetMatch, setCancelTargetMatch] = useState<UpcomingMatchType | null>(null);
-  const [cancellationReason, setCancellationReason] = useState('');
-  const [cancelError, setCancelError] = useState<string | null>(null);
-  const [isCancelling, setIsCancelling] = useState(false);
 
   useEffect(() => {
     if (upcomingMatchesStatus !== 'idle') return;
@@ -37,38 +30,6 @@ export default function UpcomingMatch() {
       showToast(getSchedulePollErrorMessage(error, '확정 일정을 불러오지 못했어요.'));
     });
   }, [activeClubId, loadUpcomingMatches, showToast, upcomingMatchesStatus]);
-
-  const handleCancelMatch = async () => {
-    if (!cancelTargetMatch) return;
-
-    const normalizedReason = cancellationReason.trim();
-    if (!normalizedReason) {
-      const message = '취소 사유를 입력해주세요.';
-      setCancelError(message);
-      showToast(message);
-      return;
-    }
-
-    setIsCancelling(true);
-    setCancelError(null);
-
-    try {
-      await cancelUpcomingMatch({
-        clubId: cancelTargetMatch.clubId,
-        matchId: cancelTargetMatch.id,
-        cancellationReason: normalizedReason,
-      });
-      showToast('확정 일정이 취소되었어요.');
-      setCancelTargetMatch(null);
-      setCancellationReason('');
-    } catch (error) {
-      const message = getSchedulePollErrorMessage(error, '확정 일정을 취소하지 못했어요.');
-      setCancelError(message);
-      showToast(message);
-    } finally {
-      setIsCancelling(false);
-    }
-  };
 
   const dDayText = nextMatch ? getDDay(nextMatch.date) : '';
 
@@ -166,27 +127,10 @@ export default function UpcomingMatch() {
             </div>
           </div>
 
-          {/* Cancellation Info & Management Panel */}
+          {/* Cancellation Info */}
           {nextMatch.status === 'cancelled' ? (
             <div className="mt-3.5 rounded-xl border border-border bg-surface-bg/80 px-4 py-3 text-[11px] font-bold leading-normal text-secondary">
               ❌ 취소 사유: {nextMatch.cancellationReason}
-            </div>
-          ) : null}
-
-          {canManageSchedule && nextMatch.status !== 'cancelled' ? (
-            <div className="mt-3.5 border-t border-dashed border-border pt-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setCancelTargetMatch(nextMatch);
-                  setCancellationReason('');
-                  setCancelError(null);
-                }}
-                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-feedback-error-border bg-surface-card py-2.5 text-xs font-extrabold text-feedback-error transition-all hover:bg-feedback-error-bg active:scale-95"
-              >
-                <Ban size={13} />
-                일정 취소
-              </button>
             </div>
           ) : null}
         </div>
@@ -208,42 +152,6 @@ export default function UpcomingMatch() {
         </div>
       ) : null}
 
-      <Modal
-        title="확정 일정 취소"
-        isOpen={cancelTargetMatch !== null}
-        onClose={() => {
-          if (isCancelling) return;
-          setCancelTargetMatch(null);
-          setCancellationReason('');
-          setCancelError(null);
-        }}
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="mb-1.5 block text-xs font-semibold text-secondary">취소 사유</label>
-            <textarea
-              value={cancellationReason}
-              onChange={(event) => setCancellationReason(event.target.value)}
-              placeholder="예: 강설로 인한 취소"
-              rows={3}
-              className="w-full resize-none rounded-xl border border-border bg-surface-bg px-3 py-2.5 text-sm text-primary transition-colors focus:border-feedback-error focus:outline-none"
-            />
-          </div>
-          {cancelError ? (
-            <p role="alert" className="rounded-lg border border-feedback-error-border bg-feedback-error-bg px-3 py-2 text-xs font-bold text-feedback-error">
-              {cancelError}
-            </p>
-          ) : null}
-          <button
-            type="button"
-            disabled={isCancelling}
-            onClick={() => void handleCancelMatch()}
-            className="w-full rounded-xl bg-feedback-error px-4 py-3.5 text-sm font-semibold text-white transition-all hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-tertiary"
-          >
-            {isCancelling ? '취소 중...' : '일정 취소하기'}
-          </button>
-        </div>
-      </Modal>
     </section>
   );
 }

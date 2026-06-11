@@ -132,7 +132,7 @@ export const useScheduleStore = create<ScheduleState>((set) => ({
     try {
       const calendarMatches = await fetchCalendarMatches(input);
       set({
-        calendarMatches: calendarMatches.filter((match) => match.status !== 'cancelled'),
+        calendarMatches,
         calendarMatchesStatus: 'ready',
         calendarMatchesError: null,
       });
@@ -162,7 +162,9 @@ export const useScheduleStore = create<ScheduleState>((set) => ({
     const match = await cancelMatch(input);
     set((state) => ({
       upcomingMatches: state.upcomingMatches.filter((candidate) => candidate.id !== match.id),
-      calendarMatches: state.calendarMatches.filter((candidate) => candidate.id !== match.id),
+      calendarMatches: upsertMatch(state.calendarMatches, match).sort((left, right) => (
+        left.date.localeCompare(right.date) || left.id.localeCompare(right.id)
+      )),
       upcomingMatchesStatus: 'ready',
       calendarMatchesStatus: 'ready',
       upcomingMatchesError: null,
