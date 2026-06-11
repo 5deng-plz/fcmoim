@@ -1,28 +1,26 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 67,
-  "updatedAt": "2026-06-12T07:27:35.000+09:00",
+  "updateVersion": 68,
+  "updatedAt": "2026-06-12T07:35:05.000+09:00",
   "updatedBy": "orchestrator",
-  "currentPhase": "schedule-poll-cancel-and-copy-polish",
+  "currentPhase": "default-normal-condition-and-home-shimmer",
   "activeWork": {
-    "taskId": "schedule-poll-cancel-and-copy-polish",
+    "taskId": "default-normal-condition-and-home-shimmer",
     "status": "complete",
-    "baselineCommit": "37330ec9769e788271d47a1e47be2e162da16833",
+    "baselineCommit": "f4ac3ef7312cc137e77c94189ccef7f66c048c51",
     "changedFiles": [
-      "src/components/features/EventComments.tsx",
-      "src/components/features/RecentNotice.tsx",
+      "src/app/globals.css",
       "src/components/features/UpcomingMatch.tsx",
-      "src/components/tabs/ScheduleTab.tsx",
+      "src/components/tabs/LockerRoomTab.tsx",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
     "changedSurfaces": ["ui", "tests", "docs"],
     "allowedPaths": [
-      "src/components/features/EventComments.tsx",
-      "src/components/features/RecentNotice.tsx",
+      "src/app/globals.css",
       "src/components/features/UpcomingMatch.tsx",
-      "src/components/tabs/ScheduleTab.tsx",
+      "src/components/tabs/LockerRoomTab.tsx",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
@@ -32,20 +30,20 @@
         "command": "npm run verify:baseline",
         "summary": "Harness validation, lint, typecheck, and full Vitest suite passed: 19 test files passed, 1 skipped; 226 tests passed, 15 skipped."
       },
-      "schedulePollCancellationUi": {
+      "conditionAndHomeShimmerUi": {
         "type": "deterministic",
         "status": "passed",
         "provider": "Vitest, Testing Library",
         "target": "tests/frontend-auth-and-schedule-ui.test.tsx",
         "command": "npm run test -- tests/frontend-auth-and-schedule-ui.test.tsx --run",
-        "summary": "Calendar poll option panel exposes manager-only cancellation, validates missing reasons, calls the schedule poll cancel API, and removes the cancelled poll from active state."
+        "summary": "Locker room squad renders every condition as normal regardless of match points, and the Home next schedule icon uses the event-specific shimmer class instead of the old blue shimmer."
       },
       "browserSmoke": {
         "type": "runtime",
         "status": "passed",
         "provider": "in-app browser",
         "target": "http://localhost:3000/",
-        "summary": "Reloaded the existing localhost tab and confirmed the Home next schedule time/location text uses text-secondary classes. The schedule tab in the current browser state did not expose a selected poll option panel, so poll cancellation was covered by deterministic Testing Library evidence."
+        "summary": "Reloaded the existing localhost tab, confirmed the visible Home next schedule icon wrapper uses an event-specific shimmer class, and confirmed the locker room shows 6 normal conditions with zero non-normal condition icons."
       },
       "dbCheck": {
         "type": "database",
@@ -56,7 +54,7 @@
       "guardVerify": {
         "status": "passed",
         "command": "npm run harness:guard:verify",
-        "summary": "Final verify guard passed after syncing this workstream: design guard passed for 4 guarded files, diff guard passed for 6 changed files, baseline passed, DB contract check passed, and evidence guard passed."
+        "summary": "Final verify guard passed after syncing this workstream: design guard passed for 2 guarded files, diff guard passed for 5 changed files, baseline passed, DB contract check passed, and evidence guard passed."
       },
       "runtimeSmoke": {
         "status": "not_required",
@@ -66,11 +64,11 @@
     "reviewStatus": "ready",
     "retrospective": {
       "issuesObserved": [
-        "The existing browser state did not have a selected poll option panel available for manual exercise, so the poll cancel interaction needed deterministic component coverage."
+        "Condition had been derived from match points, so high and low point players could display non-normal arrows even though the requested default is normal."
       ],
       "missedEvidence": [],
       "harnessImprovementProposal": [
-        "No harness change proposed; the existing deterministic UI evidence policy covered this UI behavior change."
+        "No harness change proposed; the existing deterministic UI evidence and browser smoke paths covered this visual behavior change."
       ],
       "promotionRecommendation": "none",
       "reason": "The work followed existing UI evidence and diff ownership rules without exposing a repeatable harness gap."

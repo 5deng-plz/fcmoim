@@ -291,7 +291,7 @@ export default function LockerRoomTab() {
                       <p className="truncate text-sm font-bold text-primary">{member.nickname}</p>
                     </div>
                     <div className="flex w-10 justify-center">
-                      <ConditionIcon level={getDisplayCondition(member)} size={18} />
+                      <ConditionIcon level={getDisplayCondition()} size={18} />
                     </div>
                     <div className="w-[74px] text-right">
                       <span className="inline-flex items-center rounded-full bg-feedback-success-bg px-2 py-0.5 text-[11px] font-black text-feedback-success border border-feedback-success-border/30">
@@ -608,12 +608,8 @@ function sortSquadMembers(members: ApprovedMembership[], rankMap: Map<string, nu
   });
 }
 
-function getDisplayCondition(member: ApprovedMembership): ConditionLevel {
-  if (member.matchPoints >= 1800) return 'best';
-  if (member.matchPoints >= 1300) return 'good';
-  if (member.matchPoints >= 800) return 'normal';
-  if (member.matchPoints >= 400) return 'poor';
-  return 'worst';
+function getDisplayCondition(): ConditionLevel {
+  return 'normal';
 }
 
 function MemberProfileAccordion({

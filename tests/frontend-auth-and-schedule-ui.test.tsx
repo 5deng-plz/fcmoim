@@ -1197,6 +1197,8 @@ describe('v1.0 schedule and poll UX', () => {
     const scheduleIcon = container.querySelector('img[src*="svgrepo-football.svg"]');
     expect(scheduleIcon).toBeInTheDocument();
     expect(scheduleIcon).toHaveClass('animate-counter-spin');
+    expect(scheduleIcon?.closest('.event-match-shimmer-icon-bg')).toBeInTheDocument();
+    expect(scheduleIcon?.closest('.blue-shimmer-icon-bg')).not.toBeInTheDocument();
     expect(screen.getByText('6월 13일 토 20:00')).toHaveClass('text-secondary');
     expect(screen.getByText('잠실 풋살파크')).toHaveClass('text-secondary');
     expect(container.querySelector('.lucide-clock-3')).toHaveClass('text-secondary');
@@ -3100,6 +3102,11 @@ describe('locker room team management UI', () => {
     expect(screen.getAllByTestId('player-badge-slot')).toHaveLength(4);
     expect(screen.getByText('경기 Point')).toBeInTheDocument();
     expect(screen.getByText('2,000').closest('span')).toHaveClass('rounded-full');
+    expect(screen.getAllByLabelText('컨디션 보통').length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByLabelText('컨디션 최상')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('컨디션 좋음')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('컨디션 나쁨')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('컨디션 최하')).not.toBeInTheDocument();
 
     const callsBeforeConfirm = fetchMock.mock.calls.length;
     await user.click(screen.getByRole('button', { name: /운영진 권한 부여/ }));

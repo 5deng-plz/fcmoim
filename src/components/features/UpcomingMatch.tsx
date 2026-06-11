@@ -8,6 +8,7 @@ import { useScheduleStore } from '@/stores/useScheduleStore';
 import { getSchedulePollErrorMessage } from '@/stores/schedulePollClient';
 import { useToastStore } from '@/stores/useToastStore';
 import Badge from '@/components/ui/Badge';
+import type { EventType } from '@/types';
 
 export default function UpcomingMatch() {
   const { activeClubId } = useAppStore();
@@ -22,6 +23,7 @@ export default function UpcomingMatch() {
   const nextMatch = upcomingMatches.find((match) => (
     match.status !== 'cancelled' && new Date(match.date).getTime() >= nowMs
   )) ?? null;
+  const shimmerClassName = nextMatch ? getEventShimmerClassName(nextMatch.type) : '';
 
   useEffect(() => {
     if (upcomingMatchesStatus !== 'idle') return;
@@ -73,7 +75,7 @@ export default function UpcomingMatch() {
 
           <div className="flex items-center gap-3.5 min-h-[92px]">
             {/* Football/Icon Emblem Wrapper */}
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl blue-shimmer-icon-bg ring-1 ring-blue-team-border/60">
+            <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ring-1 ring-border/60 ${shimmerClassName}`}>
               {nextMatch.type === 'match' ? (
                 <Image
                   src="/icons/svgrepo-football.svg"
@@ -216,4 +218,11 @@ function formatMatchDate(value: string) {
     parts.find((part) => part.type === type)?.value ?? '';
 
   return `${getPart('month')}월 ${getPart('day')}일 ${getPart('weekday')} ${getPart('hour')}:${getPart('minute')}`;
+}
+
+function getEventShimmerClassName(type: EventType) {
+  if (type === 'match') return 'event-match-shimmer-icon-bg';
+  if (type === 'training') return 'event-training-shimmer-icon-bg';
+  if (type === 'seminar') return 'event-seminar-shimmer-icon-bg';
+  return 'event-etc-shimmer-icon-bg';
 }

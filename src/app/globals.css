@@ -820,6 +820,30 @@
     animation: gold-shimmer 3s ease infinite !important;
     box-shadow: 0 0 12px rgba(59, 130, 246, 0.22);
   }
+  .event-match-shimmer-icon-bg {
+    background: linear-gradient(135deg, var(--event-match-bg) 0%, var(--event-match-icon-bg) 30%, var(--event-match-map-accent) 50%, var(--event-match-icon-bg) 70%, var(--event-match-bg) 100%) !important;
+    background-size: 200% 200% !important;
+    animation: gold-shimmer 3s ease infinite !important;
+    box-shadow: 0 0 12px color-mix(in srgb, var(--event-match-map-accent) 22%, transparent);
+  }
+  .event-training-shimmer-icon-bg {
+    background: linear-gradient(135deg, var(--event-training-bg) 0%, var(--event-training-icon-bg) 30%, var(--event-training-map-accent) 50%, var(--event-training-icon-bg) 70%, var(--event-training-bg) 100%) !important;
+    background-size: 200% 200% !important;
+    animation: gold-shimmer 3s ease infinite !important;
+    box-shadow: 0 0 12px color-mix(in srgb, var(--event-training-map-accent) 22%, transparent);
+  }
+  .event-seminar-shimmer-icon-bg {
+    background: linear-gradient(135deg, var(--event-seminar-bg) 0%, var(--event-seminar-icon-bg) 30%, var(--event-seminar-map-accent) 50%, var(--event-seminar-icon-bg) 70%, var(--event-seminar-bg) 100%) !important;
+    background-size: 200% 200% !important;
+    animation: gold-shimmer 3s ease infinite !important;
+    box-shadow: 0 0 12px color-mix(in srgb, var(--event-seminar-map-accent) 22%, transparent);
+  }
+  .event-etc-shimmer-icon-bg {
+    background: linear-gradient(135deg, var(--event-etc-bg) 0%, var(--event-etc-icon-bg) 30%, var(--event-etc-map-accent) 50%, var(--event-etc-icon-bg) 70%, var(--event-etc-bg) 100%) !important;
+    background-size: 200% 200% !important;
+    animation: gold-shimmer 3s ease infinite !important;
+    box-shadow: 0 0 12px color-mix(in srgb, var(--event-etc-map-accent) 22%, transparent);
+  }
 
   @keyframes counter-spin {
     to { transform: rotate(-360deg); }
