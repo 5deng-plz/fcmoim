@@ -26,6 +26,7 @@ import { useRecordsStore } from '../src/stores/useRecordsStore';
 import { useToastStore } from '../src/stores/useToastStore';
 import type { SchedulePoll } from '../src/stores/schedulePollClient';
 import { DEFAULT_STATS } from '../src/types';
+import { lockBodyScroll, unlockBodyScroll } from '../src/utils/scrollLock';
 
 const OWNER_PROFILE_NAME = '권나라';
 const OWNER_PROFILE_PHOTO_URL =
@@ -107,6 +108,33 @@ describe('match anticipation state helper', () => {
       ],
       currentMembershipId: 'bench-member',
     })).toMatchObject({ stage: 'finalizing', memberState: 'bench', benchCount: 1 });
+  });
+});
+
+describe('body scroll lock utility', () => {
+  it('restores previous body styles after nested locks are released', () => {
+    document.body.style.overflow = 'auto';
+    document.body.style.touchAction = 'pan-y';
+
+    lockBodyScroll();
+    lockBodyScroll();
+    expect(document.body.style.overflow).toBe('hidden');
+    expect(document.body.style.touchAction).toBe('none');
+
+    unlockBodyScroll();
+    expect(document.body.style.overflow).toBe('hidden');
+    expect(document.body.style.touchAction).toBe('none');
+
+    unlockBodyScroll();
+    expect(document.body.style.overflow).toBe('auto');
+    expect(document.body.style.touchAction).toBe('pan-y');
+
+    unlockBodyScroll();
+    expect(document.body.style.overflow).toBe('auto');
+    expect(document.body.style.touchAction).toBe('pan-y');
+
+    document.body.style.overflow = '';
+    document.body.style.touchAction = '';
   });
 });
 
@@ -3091,6 +3119,9 @@ describe('v1.0 schedule and poll UX', () => {
         onMatchUpdated={onMatchUpdated}
       />,
     );
+
+    expect(await screen.findByTestId('tactics-field')).toHaveClass('touch-none', 'select-none');
+    expect(screen.getByTestId('tactics-bench-dropzone')).toHaveClass('touch-none', 'select-none');
 
     await user.click(screen.getByRole('button', { name: 'Red Wing' }));
     await user.click(screen.getByTestId('red-tactics-slot-0'));

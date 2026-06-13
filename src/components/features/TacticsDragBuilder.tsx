@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { Check, Lock, Plus, Send } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { useToastStore } from '@/stores/useToastStore';
 import Modal from '@/components/ui/Modal';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
+import { lockBodyScroll, unlockBodyScroll } from '@/utils/scrollLock';
 import SoccerPitch from './SoccerPitch';
 import {
   DndContext,
@@ -139,6 +140,7 @@ function DraggablePlayerAvatar({
   stackIndex = 1,
   slotIndex,
   isSelected = false,
+  isRecentlyDropped = false,
   onSelect,
 }: {
   player: Player;
@@ -147,6 +149,7 @@ function DraggablePlayerAvatar({
   stackIndex?: number;
   slotIndex?: number;
   isSelected?: boolean;
+  isRecentlyDropped?: boolean;
   onSelect?: (playerId: string) => void;
 }) {
   const {
@@ -183,7 +186,7 @@ function DraggablePlayerAvatar({
         disabled ? 'cursor-default' : 'cursor-grab active:cursor-grabbing active:scale-105'
       } ${
         isDragging || isSelected ? 'shadow-xl ring-2 ring-fcgreen-500' : 'hover:shadow-md'
-      }`}
+      } ${isRecentlyDropped ? 'animate-bounceSubtle' : ''}`}
     >
       <TacticsPlayerAvatarContent player={player} teamId={zone as TacticsAvatarTeam} />
     </button>
@@ -196,6 +199,7 @@ function TacticsSlot({
   player,
   canDrag,
   selectedPlayerId,
+  recentDropPlayerId,
   onSelectPlayer,
   onPlacePlayer,
 }: {
@@ -204,6 +208,7 @@ function TacticsSlot({
   player?: Player;
   canDrag: boolean;
   selectedPlayerId: string | null;
+  recentDropPlayerId: string | null;
   onSelectPlayer: (playerId: string) => void;
   onPlacePlayer: (teamId: 'red' | 'blue', slotIndex: number) => void;
 }) {
@@ -231,6 +236,7 @@ function TacticsSlot({
           stackIndex={Math.floor(index / TACTICS_COLUMNS) + 1}
           slotIndex={index}
           isSelected={selectedPlayerId === player.id}
+          isRecentlyDropped={recentDropPlayerId === player.id}
           onSelect={onSelectPlayer}
         />
       ) : null}
@@ -240,7 +246,7 @@ function TacticsSlot({
 
 function PlayerOverlay({ player }: { player: Player }) {
   return (
-    <div className="flex h-9 w-9 scale-110 cursor-grabbing items-center justify-center rounded-full border-2 border-fcgreen-500 bg-white shadow-xl">
+    <div className="flex h-9 w-9 scale-110 cursor-grabbing touch-none select-none items-center justify-center rounded-full border-2 border-fcgreen-500 bg-white opacity-90 shadow-glass-shadow transition-transform duration-200">
       <Image
         src={getPlayerPhotoSrc(player)}
         alt={player.name}
@@ -350,6 +356,7 @@ function TeamDropZone({
   canEdit,
   canArrange,
   selectedPlayerId,
+  recentDropPlayerId,
   onSelectPlayer,
   onPlacePlayer,
 }: {
@@ -357,6 +364,7 @@ function TeamDropZone({
   canEdit: boolean;
   canArrange: boolean;
   selectedPlayerId: string | null;
+  recentDropPlayerId: string | null;
   onSelectPlayer: (playerId: string) => void;
   onPlacePlayer: (teamId: 'red' | 'blue', slotIndex: number) => void;
 }) {
@@ -370,7 +378,7 @@ function TeamDropZone({
     <div
       ref={setNodeRef}
       data-testid={`${team.id}-tactics-zone`}
-      className={`relative flex-1 px-2 py-1.5 transition-[box-shadow,background-color,transform] ${
+      className={`relative flex-1 touch-none select-none px-2 py-1.5 transition-[box-shadow,background-color,transform] ${
         team.id === 'red' ? 'rounded-l-2xl' : 'rounded-r-2xl'
       } ${isOver ? 'scale-[1.01] bg-white/25 shadow-lg ring-2 ring-fcgreen-500' : ''}`}
     >
@@ -389,6 +397,7 @@ function TeamDropZone({
               player={getPlayerInSlot(team.players, index)}
               canDrag={canEdit && canArrange}
               selectedPlayerId={selectedPlayerId}
+              recentDropPlayerId={recentDropPlayerId}
               onSelectPlayer={onSelectPlayer}
               onPlacePlayer={onPlacePlayer}
             />
@@ -410,6 +419,7 @@ function TacticsPitch({
   canConfirmRed,
   canConfirmBlue,
   selectedPlayerId,
+  recentDropPlayerId,
   onSelectPlayer,
   onPlacePlayer,
   onConfirm,
@@ -425,6 +435,7 @@ function TacticsPitch({
   canConfirmRed: boolean;
   canConfirmBlue: boolean;
   selectedPlayerId: string | null;
+  recentDropPlayerId: string | null;
   onSelectPlayer: (playerId: string) => void;
   onPlacePlayer: (teamId: 'red' | 'blue', slotIndex: number) => void;
   onConfirm: (teamNumber: 1 | 2, confirmed?: boolean) => Promise<void>;
@@ -443,6 +454,7 @@ function TacticsPitch({
             canEdit={canEdit && !isSaving}
             canArrange={isOperator || (team.id === 'red' ? isRedLeader : isBlueLeader)}
             selectedPlayerId={selectedPlayerId}
+            recentDropPlayerId={recentDropPlayerId}
             onSelectPlayer={onSelectPlayer}
             onPlacePlayer={onPlacePlayer}
           />
@@ -543,6 +555,7 @@ function BenchStrip({
   isSaving,
   match,
   selectedPlayerId,
+  recentDropPlayerId,
   onSelectPlayer,
   nodeRef,
   isOver,
@@ -552,6 +565,7 @@ function BenchStrip({
   isSaving: boolean;
   match: UpcomingMatch | null;
   selectedPlayerId: string | null;
+  recentDropPlayerId: string | null;
   onSelectPlayer: (playerId: string) => void;
   nodeRef?: (element: HTMLElement | null) => void;
   isOver?: boolean;
@@ -562,7 +576,8 @@ function BenchStrip({
       return (
         <div
           ref={nodeRef}
-          className={`h-2 rounded-full transition-colors ${
+          data-testid="tactics-bench-dropzone"
+          className={`h-2 touch-none select-none rounded-full transition-colors ${
             isOver ? 'bg-green-500/30 ring-2 ring-green-500/20' : 'bg-transparent'
           }`}
           aria-hidden="true"
@@ -572,7 +587,8 @@ function BenchStrip({
     return (
       <div
         ref={nodeRef}
-        className={`h-2 rounded-full transition-colors ${
+        data-testid="tactics-bench-dropzone"
+        className={`h-2 touch-none select-none rounded-full transition-colors ${
           isOver ? 'bg-green-500/30 ring-2 ring-green-500/20' : 'bg-transparent'
         }`}
         aria-hidden="true"
@@ -583,7 +599,8 @@ function BenchStrip({
   return (
     <div
       ref={nodeRef}
-      className={`rounded-2xl border transition-all duration-200 min-h-[54px] flex items-center justify-between ${
+      data-testid="tactics-bench-dropzone"
+      className={`rounded-2xl border transition-all duration-200 min-h-[54px] flex touch-none select-none items-center justify-between ${
         isOver
           ? 'border-green-500 bg-green-900/20 scale-[1.01] ring-2 ring-green-500/30'
           : 'border-green-800/15 bg-green-900/10'
@@ -598,6 +615,7 @@ function BenchStrip({
               zone="bench"
               disabled={!canEdit || isSaving}
               isSelected={selectedPlayerId === player.id}
+              isRecentlyDropped={recentDropPlayerId === player.id}
               onSelect={onSelectPlayer}
             />
           ))}
@@ -626,6 +644,7 @@ export default function TacticsDragBuilder({
   const { showToast } = useToastStore();
   const [isSaving, setIsSaving] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [recentDropPlayerId, setRecentDropPlayerId] = useState<string | null>(null);
   const [selectedPlacementPlayerId, setSelectedPlacementPlayerId] = useState<string | null>(null);
   const [showAddAttendee, setShowAddAttendee] = useState(false);
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
@@ -633,6 +652,7 @@ export default function TacticsDragBuilder({
 
   const [bench, setBench] = useState<Player[]>(() => buildInitialBench(players, lineup));
   const [teams, setTeams] = useState<TeamState[]>(() => buildInitialTeams(lineup));
+  const isDragScrollLockedRef = useRef(false);
 
   const isOperator = userRole === 'admin' || userRole === 'operator';
   const isMatchTacticsCompleted = match?.tacticsCompleted ?? false;
@@ -655,7 +675,7 @@ export default function TacticsDragBuilder({
   }, [lineup, players]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
   );
 
@@ -667,6 +687,22 @@ export default function TacticsDragBuilder({
 
   const activePlayer = [bench, ...teams.flatMap(t => t.players)].flat().find((p) => p.id === activeId);
 
+  const releaseDragScrollLock = useCallback(() => {
+    if (!isDragScrollLockedRef.current) return;
+    unlockBodyScroll();
+    isDragScrollLockedRef.current = false;
+  }, []);
+
+  useEffect(() => {
+    if (!recentDropPlayerId) return undefined;
+    const timeoutId = window.setTimeout(() => setRecentDropPlayerId(null), 420);
+    return () => window.clearTimeout(timeoutId);
+  }, [recentDropPlayerId]);
+
+  useEffect(() => () => {
+    releaseDragScrollLock();
+  }, [releaseDragScrollLock]);
+
   const findPlayerZone = (id: string): string | null => {
     if (bench.find((p) => p.id === id)) return 'bench';
     const team = teams.find(t => t.players.find(p => p.id === id));
@@ -675,6 +711,10 @@ export default function TacticsDragBuilder({
   };
 
   const handleDragStart = (event: DragStartEvent) => {
+    if (!isDragScrollLockedRef.current) {
+      lockBodyScroll();
+      isDragScrollLockedRef.current = true;
+    }
     setActiveId(event.active.id as string);
     setSelectedPlacementPlayerId(null);
   };
@@ -878,6 +918,7 @@ export default function TacticsDragBuilder({
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
+    releaseDragScrollLock();
     setActiveId(null);
     const { active, over } = event;
     if (!over) return;
@@ -886,6 +927,12 @@ export default function TacticsDragBuilder({
     if (targetZone !== 'red' && targetZone !== 'blue' && targetZone !== 'bench') return;
 
     await placePlayerInSlot(active.id as string, targetZone, getDropSlotIndex(over));
+    setRecentDropPlayerId(active.id as string);
+  };
+
+  const handleDragCancel = () => {
+    releaseDragScrollLock();
+    setActiveId(null);
   };
 
   if (!canEdit && !isMatchTacticsCompleted) {
@@ -1009,6 +1056,7 @@ export default function TacticsDragBuilder({
         collisionDetection={slotFirstCollisionDetection}
         onDragStart={canEdit ? handleDragStart : undefined}
         onDragEnd={canEdit ? handleDragEnd : undefined}
+        onDragCancel={canEdit ? handleDragCancel : undefined}
       >
         <div className="mb-1.5">
           <TacticsPitch
@@ -1022,6 +1070,7 @@ export default function TacticsDragBuilder({
             canConfirmRed={canConfirmRed}
             canConfirmBlue={canConfirmBlue}
             selectedPlayerId={selectedPlacementPlayerId}
+            recentDropPlayerId={recentDropPlayerId}
             onSelectPlayer={setSelectedPlacementPlayerId}
             onPlacePlayer={(teamId, slotIndex) => {
               if (!selectedPlacementPlayerId) return;
@@ -1038,12 +1087,13 @@ export default function TacticsDragBuilder({
           isSaving={isSaving}
           match={match ?? null}
           selectedPlayerId={selectedPlacementPlayerId}
+          recentDropPlayerId={recentDropPlayerId}
           onSelectPlayer={setSelectedPlacementPlayerId}
           nodeRef={setBenchNodeRef}
           isOver={isOverBench}
         />
 
-        <DragOverlay>
+        <DragOverlay adjustScale>
           {activePlayer ? <PlayerOverlay player={activePlayer} /> : null}
         </DragOverlay>
       </DndContext>

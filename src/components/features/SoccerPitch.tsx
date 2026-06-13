@@ -15,7 +15,7 @@ export default function SoccerPitch({
 }: SoccerPitchProps) {
   return (
     <div
-      className={`relative aspect-[5/2] max-h-[152px] overflow-hidden rounded-3xl border border-fcgreen-200/60 p-2 shadow-inner tactics-tension ring-1 ring-white/10 bg-soccer-pitch ${className}`}
+      className={`relative aspect-[5/2] max-h-[152px] touch-none select-none overflow-hidden rounded-3xl border border-fcgreen-200/60 p-2 shadow-inner tactics-tension ring-1 ring-white/10 bg-soccer-pitch ${className}`}
       data-testid={testId}
     >
       <SoccerPitchLines />

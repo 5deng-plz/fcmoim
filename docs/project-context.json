@@ -1,38 +1,42 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 81,
-  "updatedAt": "2026-06-13T15:20:54+09:00",
+  "updateVersion": 82,
+  "updatedAt": "2026-06-13T15:25:18+09:00",
   "updatedBy": "orchestrator",
-  "currentPhase": "ux-area-03-schedule-smart-focus",
+  "currentPhase": "ux-area-04-tactics-mobile-drag-ux",
   "activeWork": {
-    "taskId": "ux-area-03-schedule-smart-focus",
+    "taskId": "ux-area-04-tactics-mobile-drag-ux",
     "status": "ready",
-    "baselineCommit": "5de40a0e1a9dd18b5e3c1a9821a6bd5fc0722d10",
+    "baselineCommit": "97d5645453ad61668a290eb9f5c2b2797a91e849",
     "changedFiles": [
-      "src/hooks/useSmartFocus.ts",
-      "src/components/tabs/ScheduleTab.tsx",
+      "src/utils/scrollLock.ts",
+      "src/components/features/TacticsDragBuilder.tsx",
+      "src/components/features/SoccerPitch.tsx",
+      "src/app/globals.css",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
     "changedSurfaces": ["ui", "tests", "docs"],
     "allowedPaths": [
-      "src/hooks/useSmartFocus.ts",
-      "src/components/tabs/ScheduleTab.tsx",
+      "src/utils/scrollLock.ts",
+      "src/components/features/TacticsDragBuilder.tsx",
+      "src/components/features/SoccerPitch.tsx",
+      "src/app/globals.css",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
     "evidence": {
       "scopeSync": {
         "status": "passed",
-        "summary": "Scoped active work to 영역 03 Schedule Smart Focus: detail interaction focus hook, dimmed/inert schedule operations and calendar zones, outside-tap/back-release handling, and glass loading skeleton styling."
+        "summary": "Scoped active work to 영역 04 Tactics mobile drag UX: dnd-kit sensor thresholds, body scroll lock utility, drag cancel cleanup, touch-action contracts, glass drag overlay, and reduced-motion-safe drop bounce feedback."
       },
       "targetedTest": {
         "status": "passed",
         "provider": "Vitest",
         "target": "tests/frontend-auth-and-schedule-ui.test.tsx",
         "command": "npm run test -- tests/frontend-auth-and-schedule-ui.test.tsx --run",
-        "summary": "70 tests passed, including confirmed schedule detail rendering plus smart focus activation from tactics/comments, dimmed pointer-blocked calendar/ops zones, inert aria state, and outside release."
+        "summary": "71 tests passed, including nested body scroll lock restoration and TacticsDragBuilder pitch/bench touch-action class contracts."
       },
       "lint": {
         "status": "passed",
@@ -44,13 +48,13 @@
         "status": "passed",
         "provider": "TypeScript",
         "command": "npm run verify:baseline",
-        "summary": "TypeScript passed for useSmartFocus, ScheduleTab inert props, pointer handlers, and UI test changes."
+        "summary": "TypeScript passed for scrollLock, TacticsDragBuilder dnd lifecycle changes, SoccerPitch props, CSS class usage, and UI test changes."
       },
       "baseline": {
         "status": "passed",
         "provider": "Vitest, ESLint, TypeScript",
         "command": "npm run verify:baseline",
-        "summary": "Harness validation, lint, typecheck, and full Vitest suite passed: 19 test files passed, 1 skipped; 230 tests passed, 15 skipped."
+        "summary": "Harness validation, lint, typecheck, and full Vitest suite passed: 19 test files passed, 1 skipped; 231 tests passed, 15 skipped."
       },
       "build": {
         "status": "passed",
@@ -60,11 +64,11 @@
       }
     },
     "retrospective": {
-      "issuesObserved": "ScheduleTab is large, so the focus state machine was kept in a small hook and wired through existing SelectedMatchPanel boundaries rather than adding more local interaction state.",
-      "missedEvidence": "Manual mobile browser back verification was not run; deterministic tests cover the visible focus contracts while the hook owns the history pop release path.",
-      "harnessImprovementProposal": "Consider a focused ScheduleTab interaction fixture that can exercise browser history and pointer capture without full store setup.",
+      "issuesObserved": "Direct body style writes would conflict with modal locks, so scroll blocking was routed through a small reference-counted utility and released on drag end, cancel, and unmount.",
+      "missedEvidence": "Manual iOS Safari and Android Chrome drag testing was not run in this environment; deterministic tests cover scroll lock nesting and visible touch-action contracts.",
+      "harnessImprovementProposal": "Consider a focused dnd-kit interaction fixture that can simulate drag start/cancel and assert body scroll state without relying on full ScheduleTab setup.",
       "promotionRecommendation": "defer",
-      "reason": "The smart focus behavior is section-specific interaction work and does not require a durable harness rule promotion."
+      "reason": "The mobile drag behavior is section-specific interaction work and does not require a durable harness rule promotion."
     },
     "reviewStatus": "ready",
     "loopCounters": {
