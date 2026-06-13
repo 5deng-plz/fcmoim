@@ -103,6 +103,7 @@ if (rules) {
     'guardDesign',
     'guardDesignStaged',
     'guardEvidence',
+    'guardTokenSync',
     'projectPreCommit',
     'projectVerify'
   ]);
@@ -141,6 +142,14 @@ if (rules) {
       for (const slot of dp.semanticSlots) {
         if (!slot.id) errors.push('designPolicy.semanticSlots[].id must be non-empty');
         if (!Array.isArray(slot.paths)) errors.push(`designPolicy.semanticSlots.${slot.id || '?'}.paths must be an array`);
+        if (!slot.stability) errors.push(`designPolicy.semanticSlots.${slot.id || '?'}.stability must be non-empty`);
+        if (!slot.rationale) errors.push(`designPolicy.semanticSlots.${slot.id || '?'}.rationale must be non-empty`);
+        if (!slot.owner) errors.push(`designPolicy.semanticSlots.${slot.id || '?'}.owner must be non-empty`);
+      }
+    }
+    if (dp.modeProfiles) {
+      for (const mode of ['maintenance', 'redesign', 'token-migration']) {
+        if (!dp.modeProfiles[mode]) errors.push(`designPolicy.modeProfiles.${mode} must be configured`);
       }
     }
   }

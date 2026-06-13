@@ -62,6 +62,14 @@
 - `feedback-warning-*` — 경고/주의/투표 진행 강조
 - `feedback-error-*` — 오류/파괴적 액션/취소 피드백
 
+## 디자인 모드별 색상 정책
+
+- `maintenance`: 위 허용 목록에 없는 Tailwind 색상 prefix는 blocker입니다.
+- `redesign`: 신규 색상 prefix는 warning으로 허용됩니다. 완료 전 기존 토큰으로 수렴하거나 `activeWork.tokenProposals`에 후보를 남깁니다.
+- `token-migration`: 토큰 정의 파일과 UI 적용을 함께 바꿀 수 있지만 `tokenSync` evidence가 필요합니다.
+- 모든 모드에서 컴포넌트 코드의 hardcoded hex/rgb/rgba, 레이아웃 파손 유틸, durable semantic slot 위반은 blocker입니다.
+- `guard-token-sync`는 이 문서의 허용 토큰 prefix와 `docs/agent-rules.json`의 허용 prefix가 어긋나면 실패합니다.
+
 ## 사용 맥락 제한
 
 - `brand-*`는 브랜드 액센트의 기본 시맨틱입니다. 기존 `fcgreen-*`는 호환성을 위해 유지하지만, 새 UI에서는 `brand-*`를 우선 사용합니다.
@@ -100,3 +108,4 @@
 2. Infra가 `docs/design-tokens.md`와 `globals.css`에 토큰을 추가한다.
 3. `docs/agent-rules.json`의 `designPolicy.allowedTailwindColorPrefixes`에 새 프리픽스를 등록한다.
 4. `tailwind.config.ts`에 시맨틱 참조를 추가한다.
+5. `node .agents/scripts/guard-token-sync.mjs`로 문서와 기계 설정의 drift가 없는지 확인한다.

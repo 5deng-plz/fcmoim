@@ -11,6 +11,34 @@
       "expectedExit": 1
     },
     {
+      "id": "design-guard-redesign-color-warning",
+      "description": "guard-design allows unregistered Tailwind color prefix as warning in redesign mode",
+      "command": "node .agents/scripts/guard-design.mjs",
+      "statePatch": {
+        "activeWork": {
+          "designMode": "redesign"
+        }
+      },
+      "mutations": [
+        { "path": "app/view/ExperimentalCard.tsx", "content": "export default function ExperimentalCard() { return <div className=\"bg-blue-500 text-gray-900\">test</div>; }" }
+      ],
+      "expectedExit": 0
+    },
+    {
+      "id": "design-guard-redesign-hardcoded-hex",
+      "description": "guard-design still rejects hardcoded hex color in redesign mode",
+      "command": "node .agents/scripts/guard-design.mjs",
+      "statePatch": {
+        "activeWork": {
+          "designMode": "redesign"
+        }
+      },
+      "mutations": [
+        { "path": "app/view/ExperimentalHex.tsx", "content": "export default function ExperimentalHex() { return <div style={{ color: '#ff0000' }}>test</div>; }" }
+      ],
+      "expectedExit": 1
+    },
+    {
       "id": "design-guard-all-mode-hardcoded-hex",
       "description": "guard-design --all scans the full guarded file set",
       "command": "node .agents/scripts/guard-design.mjs --all",
@@ -38,6 +66,20 @@
       "expectedExit": 1
     },
     {
+      "id": "design-guard-redesign-horizontal-scroll",
+      "description": "guard-design rejects layout blockers even in redesign mode",
+      "command": "node .agents/scripts/guard-design.mjs",
+      "statePatch": {
+        "activeWork": {
+          "designMode": "redesign"
+        }
+      },
+      "mutations": [
+        { "path": "app/view/RedesignWideTable.tsx", "content": "export default function RedesignWideTable() { return <div className=\"overflow-x-auto\"><div className=\"min-w-[620px]\">wide</div></div>; }" }
+      ],
+      "expectedExit": 1
+    },
+    {
       "id": "design-guard-instructional-copy",
       "description": "guard-design rejects visible how-to copy in product UI",
       "command": "node .agents/scripts/guard-design.mjs",
@@ -47,11 +89,79 @@
       "expectedExit": 1
     },
     {
+      "id": "design-guard-expired-exempt",
+      "description": "guard-design rejects expired design-exempt metadata",
+      "command": "node .agents/scripts/guard-design.mjs",
+      "rulesPatch": {
+        "designPolicy": {
+          "exemptPatterns": ["design-exempt"]
+        }
+      },
+      "mutations": [
+        { "path": "app/view/ExpiredExempt.tsx", "content": "export default function ExpiredExempt() { return <div className=\"bg-blue-500\">test</div>; } // design-exempt(reason: temporary-redesign-spike, expires: 2020-01-01)" }
+      ],
+      "expectedExit": 1
+    },
+    {
+      "id": "token-sync-drift",
+      "description": "guard-token-sync rejects documented token prefixes missing from agent rules",
+      "command": "node .agents/scripts/guard-token-sync.mjs",
+      "mutations": [
+        { "path": "docs/design-tokens.md", "content": "# Tokens\n\n- `glass-*` — glass card tokens\n" }
+      ],
+      "expectedExit": 1
+    },
+    {
+      "id": "semantic-slot-metadata-missing",
+      "description": "validate-harness rejects semantic slots without durable metadata",
+      "command": "node .agents/scripts/validate-harness.mjs",
+      "rulesPatch": {
+        "designPolicy": {
+          "semanticSlots": [
+            {
+              "id": "missing-metadata-slot",
+              "paths": ["app/view/Locker.tsx"],
+              "requiredContent": ["ConditionIcon"],
+              "forbiddenContent": []
+            }
+          ]
+        }
+      },
+      "expectedExit": 1
+    },
+    {
       "id": "diff-guard-outside-allowed-paths",
       "description": "guard-diff rejects changed files outside allowed paths",
       "command": "node .agents/scripts/guard-diff.mjs",
       "mutations": [
         { "path": "forbidden/change.txt", "content": "change" }
+      ],
+      "expectedExit": 1
+    },
+    {
+      "id": "evidence-guard-redesign-visual-review-missing",
+      "description": "guard-evidence rejects ready redesign UI work without visualReview evidence",
+      "command": "node .agents/scripts/guard-evidence.mjs",
+      "statePatch": {
+        "activeWork": {
+          "status": "complete",
+          "designMode": "redesign",
+          "changedFiles": ["app/view/ExperimentalCard.tsx"],
+          "changedSurfaces": ["interface"],
+          "allowedPaths": ["app/view/**"],
+          "evidence": {},
+          "reviewStatus": "ready",
+          "retrospective": {
+            "issuesObserved": [],
+            "missedEvidence": ["visualReview"],
+            "harnessImprovementProposal": [],
+            "promotionRecommendation": "none",
+            "reason": "Fixture retrospective present."
+          }
+        }
+      },
+      "mutations": [
+        { "path": "app/view/ExperimentalCard.tsx", "content": "export default function ExperimentalCard() { return <div className=\"bg-gray-100\">test</div>; }" }
       ],
       "expectedExit": 1
     },

@@ -111,6 +111,31 @@ function createRules() {
       tokenDefinitionFiles: ['app/styles/tokens.css'],
       guardedPaths: ['app/view/**'],
       allowedTailwindColorPrefixes: ['gray'],
+      modeProfiles: {
+        maintenance: {
+          disallowedTailwindColorSeverity: 'blocker',
+          enforceSemanticSlots: true
+        },
+        redesign: {
+          disallowedTailwindColorSeverity: 'warning',
+          enforceSemanticSlots: true,
+          requireVisualReview: true
+        },
+        'token-migration': {
+          disallowedTailwindColorSeverity: 'blocker',
+          enforceSemanticSlots: true,
+          requireTokenSyncEvidence: true
+        }
+      },
+      ruleSeverity: {
+        hardcodedColor: 'blocker',
+        inlineSvg: 'blocker',
+        layout: 'blocker',
+        instructionalCopy: 'blocker',
+        semanticSlot: 'blocker',
+        expiredExempt: 'blocker',
+        tokenSync: 'blocker'
+      },
       exemptPatterns: [],
       layoutPolicy: {
         forbiddenClasses: ['overflow-x-auto', 'overflow-x-scroll'],
@@ -119,6 +144,9 @@ function createRules() {
       semanticSlots: [
         {
           id: 'fixture-condition-slot',
+          stability: 'durable',
+          rationale: 'Fixture condition status must stay on the shared semantic renderer.',
+          owner: 'design-system',
           paths: ['app/view/Locker.tsx'],
           requiredContent: ['ConditionIcon', 'level="normal"'],
           forbiddenContent: ['CircleCheck', '컨디션 정상']
@@ -126,6 +154,10 @@ function createRules() {
       ],
       inAppInstructionPolicy: {
         forbiddenPatterns: ['드래그하세요', '클릭하세요', '사용법']
+      },
+      tokenSync: {
+        docs: 'docs/design-tokens.md',
+        ignoredDocumentPrefixes: []
       }
     },
     harnessPurity: { forbiddenTokens: [] }
@@ -143,6 +175,7 @@ function createState() {
     activeWork: {
       taskId: 'fixture-task',
       status: 'ready',
+      designMode: 'maintenance',
       baselineCommit: null,
       changedFiles: [],
       changedSurfaces: ['interface'],

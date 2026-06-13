@@ -1,61 +1,82 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 86,
-  "updatedAt": "2026-06-13T22:02:05+09:00",
+  "updateVersion": 88,
+  "updatedAt": "2026-06-13T22:12:29+09:00",
   "updatedBy": "orchestrator",
-  "currentPhase": "remove-overfit-harness-feedback",
+  "currentPhase": "design-harness-mode-aware-guards",
   "activeWork": {
-    "taskId": "remove-overfit-harness-feedback",
-    "status": "complete",
-    "baselineCommit": "18e4d42dae2bf36a19cb9207f1a14c272608c293",
+    "taskId": "design-harness-mode-aware-guards",
+    "status": "ready",
+    "designMode": "maintenance",
+    "baselineCommit": "75244fdc5431147b0c235310860312b773e88497",
     "changedFiles": [
-      "AGENT.md",
-      "docs/agent-feedback.md",
+      ".agents/fixtures/negative-fixtures.json",
+      ".agents/scripts/guard-design.mjs",
+      ".agents/scripts/guard-evidence.mjs",
+      ".agents/scripts/guard-runner.mjs",
+      ".agents/scripts/guard-token-sync.mjs",
+      ".agents/scripts/test-harness.mjs",
+      ".agents/scripts/validate-harness.mjs",
+      ".agents/state/project-context.schema.json",
+      "docs/agent-rules.json",
+      "docs/design-tokens.md",
       "docs/user/design-harness-workflow.md",
-      "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
-    "changedSurfaces": ["docs", "tests"],
+    "changedSurfaces": ["docs", "infra"],
     "allowedPaths": [
-      "AGENT.md",
-      "docs/agent-feedback.md",
+      ".agents/fixtures/negative-fixtures.json",
+      ".agents/scripts/guard-design.mjs",
+      ".agents/scripts/guard-evidence.mjs",
+      ".agents/scripts/guard-runner.mjs",
+      ".agents/scripts/guard-token-sync.mjs",
+      ".agents/scripts/test-harness.mjs",
+      ".agents/scripts/validate-harness.mjs",
+      ".agents/state/project-context.schema.json",
+      "docs/agent-rules.json",
+      "docs/design-tokens.md",
       "docs/user/design-harness-workflow.md",
-      "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
     "evidence": {
-      "userFeedback": {
+      "harnessRegression": {
         "status": "passed",
-        "provider": "User review",
-        "summary": "The previous global DOM side-effect rule was rejected as project-local over-optimization and not a reusable Harness improvement."
+        "provider": "Harness fixtures",
+        "command": "npm run harness:test",
+        "summary": "Harness regression passed with 16 cases covering redesign warning mode, hardcoded color blockers, layout blockers, expired design-exempt, token sync drift, semantic slot metadata, and visualReview evidence."
       },
-      "instructionCorrection": {
+      "harnessValidate": {
+        "status": "passed",
+        "provider": "Harness",
+        "command": "npm run harness:validate",
+        "summary": "Harness validation passed after adding designMode schema, semantic slot metadata requirements, and guardTokenSync as a known guard step."
+      },
+      "tokenSync": {
+        "status": "passed",
+        "provider": "Harness",
+        "command": "node .agents/scripts/guard-token-sync.mjs",
+        "summary": "Token sync guard passed after aligning documented glass-* tokens with allowed Tailwind color prefixes and ignoring forbidden-example token names."
+      },
+      "documentationReview": {
         "status": "passed",
         "provider": "Manual doc review",
-        "target": "AGENT.md, docs/agent-feedback.md, docs/user/design-harness-workflow.md",
-        "summary": "Removed the project-local DOM rule and replaced it with the reusable criterion that Harness feedback must generalize to Agent-process failures."
-      },
-      "targetedTestFix": {
-        "status": "passed",
-        "provider": "Vitest",
-        "target": "tests/frontend-auth-and-schedule-ui.test.tsx",
-        "command": "npm run test -- tests/frontend-auth-and-schedule-ui.test.tsx --run",
-        "summary": "Pinned the weather forecast card test clock before its fixed 2026-06-13 match time so it does not fail after that date passes."
+        "target": "docs/design-tokens.md, docs/user/design-harness-workflow.md, docs/agent-rules.json",
+        "summary": "Documented maintenance/redesign/token-migration modes, visualReview evidence, token sync drift checks, structured design-exempt metadata, and durable semantic slot metadata."
       },
       "guardVerify": {
         "status": "passed",
         "provider": "Harness",
         "command": "npm run harness:guard:verify",
-        "summary": "Harness validation, design guard, diff guard, lint, typecheck, full Vitest suite, SQL contract check, and evidence guard passed after removing the overfit rule."
+        "summary": "Harness validation, token sync guard, design guard, diff guard, lint, typecheck, full Vitest suite, SQL contract check, and evidence guard passed."
       }
     },
     "retrospective": {
-      "issuesObserved": ["The previous automation incorrectly promoted a project-local implementation concern into reusable Harness guidance."],
-      "missedEvidence": ["No browser runtime evidence is required for this documentation-only sync."],
-      "harnessImprovementProposal": ["Before updating AGENT.md or Harness docs, require the proposed feedback to generalize beyond the latest feature implementation."],
+      "issuesObserved": ["The previous design guard treated all UI work as maintenance and could block broad redesign exploration on color prefix choice rather than durable quality risks."],
+      "missedEvidence": ["No browser runtime evidence is required because this change only updates Harness scripts, rules, fixtures, schema, and docs."],
+      "harnessImprovementProposal": ["Keep design guard severity mode-aware: maintenance remains strict, redesign allows exploratory color warnings, and durable accessibility/layout/token drift risks remain blockers."],
       "promotionRecommendation": "propose",
-      "reason": "This correction addresses the reusable failure in the automation process, not the tactics feature implementation detail."
+      "reason": "The change generalizes a repeated Agent-process failure during broad UI/UX redesign work into durable harness behavior."
     },
     "reviewStatus": "ready",
     "loopCounters": {

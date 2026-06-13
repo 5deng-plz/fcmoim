@@ -25,6 +25,7 @@ if (isReady && blockers.length > 0) {
 
 validateBrowserSmoke();
 validateSurfaceEvidence();
+validateDesignModeEvidence();
 validateRetrospective();
 
 fail(errors, 'Evidence guard failed');
@@ -64,6 +65,30 @@ function validateSurfaceEvidence() {
       addMissingEvidence(
         surface,
         `Non-mock evidence is required for changed surface "${surface}".`
+      );
+    }
+  }
+}
+
+function validateDesignModeEvidence() {
+  const designMode = normalizeDesignMode(work.designMode);
+  const designPolicy = rules.designPolicy || {};
+  const modeProfile = designPolicy.modeProfiles?.[designMode] || {};
+
+  if (designMode === 'redesign' && modeProfile.requireVisualReview !== false && changedGuardedUiFiles().length > 0) {
+    if (!hasPassedEvidence('visualReview')) {
+      addMissingEvidence(
+        'visualReview',
+        `visualReview evidence is required for redesign work that changes UI files: ${changedGuardedUiFiles().join(', ')}`
+      );
+    }
+  }
+
+  if (designMode === 'token-migration' && modeProfile.requireTokenSyncEvidence !== false && tokenDefinitionFilesChanged()) {
+    if (!hasPassedEvidence('tokenSync')) {
+      addMissingEvidence(
+        'tokenSync',
+        'tokenSync evidence is required for token-migration work that changes token definition files.'
       );
     }
   }
@@ -124,6 +149,20 @@ function addMissingEvidence(key, message) {
 function hasRelevantBlocker(key) {
   const needle = String(key).toLowerCase();
   return blockers.some((blocker) => blocker.includes(needle) || blocker.includes('evidence'));
+}
+
+function changedGuardedUiFiles() {
+  const guardedPaths = rules.designPolicy?.guardedPaths || [];
+  return files.filter((file) => /\.(tsx|ts|css)$/.test(file) && matchAny(file, guardedPaths));
+}
+
+function tokenDefinitionFilesChanged() {
+  const tokenDefinitionFiles = new Set((rules.designPolicy?.tokenDefinitionFiles || []).map((file) => file.replace(/^\.\//, '')));
+  return files.some((file) => tokenDefinitionFiles.has(file));
+}
+
+function normalizeDesignMode(value) {
+  return ['maintenance', 'redesign', 'token-migration'].includes(value) ? value : 'maintenance';
 }
 
 function evidenceEntryStatus(entry) {

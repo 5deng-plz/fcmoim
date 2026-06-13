@@ -29,6 +29,7 @@ function runStep(step) {
   else if (step === 'guardDesign') runCommand('node .agents/scripts/guard-design.mjs', step);
   else if (step === 'guardDesignStaged') runCommand('node .agents/scripts/guard-design.mjs --staged', step);
   else if (step === 'guardEvidence') runCommand('node .agents/scripts/guard-evidence.mjs', step);
+  else if (step === 'guardTokenSync') runCommand('node .agents/scripts/guard-token-sync.mjs', step);
   else if (step === 'projectPreCommit') runCommand(commands.preCommit || 'true', step);
   else if (step === 'projectVerify') runCommand(commands.verify || 'true', step);
   else {

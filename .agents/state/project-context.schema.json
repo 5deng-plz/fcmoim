@@ -16,11 +16,16 @@
       "properties": {
         "taskId": { "type": ["string", "null"] },
         "status": { "type": "string" },
+        "designMode": { "type": "string", "enum": ["maintenance", "redesign", "token-migration"] },
         "baselineCommit": { "type": ["string", "null"] },
         "changedFiles": { "type": "array", "items": { "type": "string" } },
         "changedSurfaces": { "type": "array", "items": { "type": "string" } },
         "allowedPaths": { "type": "array", "items": { "type": "string" } },
         "evidence": { "type": "object" },
+        "tokenProposals": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
         "reviewStatus": { "type": ["string", "null"] },
         "retrospective": {
           "type": "object",

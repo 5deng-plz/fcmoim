@@ -1,12 +1,15 @@
-import { fail, getChangedFiles, hasArg, loadRules, matchAny } from './harness-lib.mjs';
+import { fail, getChangedFiles, hasArg, loadRules, loadState, matchAny } from './harness-lib.mjs';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
 const rules = loadRules();
+const state = loadState(rules);
+const work = state.activeWork || {};
 const policy = rules.designPolicy;
-const errors = [];
+const blockers = [];
+const warnings = [];
 
 if (!policy) {
   console.log('Design guard skipped (no designPolicy in project rules).');
@@ -31,6 +34,10 @@ const forbiddenLayoutClasses = policy.layoutPolicy?.forbiddenClasses || [];
 const forbiddenLayoutClassSet = new Set(forbiddenLayoutClasses);
 const instructionPolicy = policy.inAppInstructionPolicy || {};
 const forbiddenInstructionPatterns = (instructionPolicy.forbiddenPatterns || []).map((pattern) => new RegExp(pattern));
+const designMode = normalizeDesignMode(work.designMode);
+const modeProfile = policy.modeProfiles?.[designMode] || policy.modeProfiles?.maintenance || {};
+const disallowedTailwindColorSeverity = modeProfile.disallowedTailwindColorSeverity || 'blocker';
+const enforceSemanticSlots = modeProfile.enforceSemanticSlots !== false;
 
 const guardedFiles = files.filter((file) => {
   if (tokenFiles.has(file)) return false;
@@ -57,8 +64,10 @@ for (const file of guardedFiles) {
 
     // Skip comments and imports
     if (/^\s*(\/\/|\/\*|\*|import\s)/.test(line)) continue;
-    // Skip exempt patterns
-    if (exemptPatterns.some((re) => re.test(line))) continue;
+    if (exemptPatterns.some((re) => re.test(line))) {
+      validateDesignExempt(file, line, lineNumber);
+      continue;
+    }
 
     if (isTsx) {
       // DES-001: Hardcoded hex in component code
@@ -67,48 +76,52 @@ for (const file of guardedFiles) {
         // Allow hex inside var() references or CSS variable fallbacks
         const before = line.slice(0, match.index);
         if (/var\(\s*--[\w-]+,\s*$/.test(before)) continue;
-        errors.push(`DES-001 [${file}:${lineNumber}] Hardcoded hex: ${match[0]}`);
+        addBlocker(`DES-001 [${file}:${lineNumber}] Hardcoded hex: ${match[0]}`);
       }
 
       // DES-002: Hardcoded rgba in component code
       if (/rgba?\(\s*\d/.test(line)) {
-        errors.push(`DES-002 [${file}:${lineNumber}] Hardcoded rgba()`);
+        addBlocker(`DES-002 [${file}:${lineNumber}] Hardcoded rgba()`);
       }
 
       // DES-003: Inline SVG path
       if (!matchAny(file, customSvgAllowedPaths) && (/<svg[\s>]/.test(line) || /<path[\s>]/.test(line) || /<polygon[\s>]/.test(line))) {
-        errors.push(`DES-003 [${file}:${lineNumber}] Inline SVG element`);
+        addBlocker(`DES-003 [${file}:${lineNumber}] Inline SVG element`);
       }
 
       // DES-007: Visible how-to copy in product UI
       for (const pattern of forbiddenInstructionPatterns) {
         if (pattern.test(line)) {
-          errors.push(`DES-007 [${file}:${lineNumber}] Forbidden instructional UI copy: ${pattern.source}`);
+          addBlocker(`DES-007 [${file}:${lineNumber}] Forbidden instructional UI copy: ${pattern.source}`);
         }
       }
     }
 
     // DES-004: Disallowed Tailwind color class
     for (const className of findDisallowedTailwindColorClasses(line, allowedPrefixes)) {
-      errors.push(`DES-004 [${file}:${lineNumber}] Disallowed Tailwind color class: ${className}`);
+      addBySeverity(
+        disallowedTailwindColorSeverity,
+        `DES-004 [${file}:${lineNumber}] Disallowed Tailwind color class: ${className} (designMode=${designMode})`
+      );
     }
 
     // DES-006: Project-forbidden layout utilities
     for (const className of findClassTokens(line)) {
       const baseClassName = normalizeUtilityClass(className);
       if (forbiddenLayoutClassSet.has(baseClassName)) {
-        errors.push(`DES-006 [${file}:${lineNumber}] Forbidden layout utility: ${baseClassName}`);
+        addBlocker(`DES-006 [${file}:${lineNumber}] Forbidden layout utility: ${baseClassName}`);
       }
       if (policy.layoutPolicy?.forbidArbitraryMinWidth && /^min-w-\[/.test(baseClassName)) {
-        errors.push(`DES-006 [${file}:${lineNumber}] Arbitrary min-width can create horizontal scroll: ${baseClassName}`);
+        addBlocker(`DES-006 [${file}:${lineNumber}] Arbitrary min-width can create horizontal scroll: ${baseClassName}`);
       }
     }
   }
 
-  validateSemanticSlots(file, uncommentedContent);
+  if (enforceSemanticSlots) validateSemanticSlots(file, uncommentedContent);
 }
 
-fail(errors, 'Design guard failed');
+printWarnings();
+fail(blockers, 'Design guard failed');
 console.log(`Design guard passed (${guardedFiles.length} guarded file${guardedFiles.length === 1 ? '' : 's'}).`);
 
 function validateSemanticSlots(file, content) {
@@ -117,16 +130,53 @@ function validateSemanticSlots(file, content) {
 
     for (const required of slot.requiredContent || []) {
       if (!content.includes(required)) {
-        errors.push(`DES-005 [${file}] Semantic slot ${slot.id || '<unknown>'} missing required content: ${required}`);
+        addBlocker(`DES-005 [${file}] Semantic slot ${slot.id || '<unknown>'} missing required content: ${required}`);
       }
     }
 
     for (const forbidden of slot.forbiddenContent || []) {
       if (content.includes(forbidden)) {
-        errors.push(`DES-005 [${file}] Semantic slot ${slot.id || '<unknown>'} contains forbidden content: ${forbidden}`);
+        addBlocker(`DES-005 [${file}] Semantic slot ${slot.id || '<unknown>'} contains forbidden content: ${forbidden}`);
       }
     }
   }
+}
+
+function validateDesignExempt(file, line, lineNumber) {
+  const match = line.match(/design-exempt\(\s*reason:\s*([^)]+?)\s*,\s*expires:\s*(\d{4}-\d{2}-\d{2})\s*\)/);
+  if (!match) {
+    addBlocker(`DES-008 [${file}:${lineNumber}] design-exempt requires reason and expires metadata`);
+    return;
+  }
+
+  const expiry = new Date(`${match[2]}T23:59:59.999Z`);
+  if (Number.isNaN(expiry.getTime())) {
+    addBlocker(`DES-008 [${file}:${lineNumber}] design-exempt has invalid expiry: ${match[2]}`);
+    return;
+  }
+
+  if (expiry.getTime() < Date.now()) {
+    addBlocker(`DES-008 [${file}:${lineNumber}] design-exempt expired on ${match[2]}`);
+  }
+}
+
+function addBlocker(message) {
+  blockers.push(message);
+}
+
+function addBySeverity(severity, message) {
+  if (severity === 'warning') warnings.push(message);
+  else blockers.push(message);
+}
+
+function printWarnings() {
+  if (warnings.length === 0) return;
+  console.warn('Design guard warnings:');
+  for (const warning of warnings) console.warn(`- ${warning}`);
+}
+
+function normalizeDesignMode(value) {
+  return ['maintenance', 'redesign', 'token-migration'].includes(value) ? value : 'maintenance';
 }
 
 function readGuardedContent(file, mode) {

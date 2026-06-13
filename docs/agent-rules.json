@@ -48,7 +48,7 @@
   },
   "guardProfiles": {
     "preCommit": { "steps": ["validateHarness", "guardDesignStaged", "projectPreCommit"] },
-    "verify": { "steps": ["validateHarness", "guardDesign", "guardDiff", "projectVerify", "guardEvidence"] }
+    "verify": { "steps": ["validateHarness", "guardTokenSync", "guardDesign", "guardDiff", "projectVerify", "guardEvidence"] }
   },
   "statePolicy": {
     "writer": "orchestrator"
@@ -123,21 +123,26 @@
       "attend", "result", "matchst", "award", "fee", "skill", "trend", "feedback",
       "gray", "slate", "green", "white", "black",
       "red-team", "blue-team", "background", "foreground", "transparent", "current", "event",
-      "highlight", "metric", "social"
+      "highlight", "metric", "social", "glass"
     ],
+    "modeProfiles": {
+      "maintenance": { "disallowedTailwindColorSeverity": "blocker", "enforceSemanticSlots": true },
+      "redesign": { "disallowedTailwindColorSeverity": "warning", "enforceSemanticSlots": true, "requireVisualReview": true },
+      "token-migration": { "disallowedTailwindColorSeverity": "blocker", "enforceSemanticSlots": true, "requireTokenSyncEvidence": true }
+    },
+    "ruleSeverity": { "hardcodedColor": "blocker", "inlineSvg": "blocker", "layout": "blocker", "instructionalCopy": "blocker", "semanticSlot": "blocker", "expiredExempt": "blocker", "tokenSync": "blocker" },
+    "tokenSync": { "docs": "docs/design-tokens.md", "ignoredDocumentPrefixes": ["icon"] },
     "customSvgAllowedPaths": ["src/components/brand/**", "src/components/ui/**", "src/components/icons/**"],
     "exemptPatterns": ["// design-exempt"],
-    "layoutPolicy": {
-      "forbiddenClasses": ["overflow-x-auto", "overflow-x-scroll"],
-      "forbidArbitraryMinWidth": true
-    },
-    "inAppInstructionPolicy": {
-      "forbiddenPatterns": ["드래그하세요", "클릭하세요", "첫 선수는 주장입니다", "사용법"]
-    },
+    "layoutPolicy": { "forbiddenClasses": ["overflow-x-auto", "overflow-x-scroll"], "forbidArbitraryMinWidth": true },
+    "inAppInstructionPolicy": { "forbiddenPatterns": ["드래그하세요", "클릭하세요", "첫 선수는 주장입니다", "사용법"] },
     "semanticSlots": [
       {
         "id": "locker-room-squad-condition",
         "description": "Locker room squad condition indicators must use the shared condition icon and condition-* tokens.",
+        "stability": "durable",
+        "rationale": "Player condition is a long-lived domain status and must not be represented as a generic success/check state.",
+        "owner": "design-system",
         "paths": ["src/components/tabs/LockerRoomTab.tsx"],
         "requiredContent": ["ConditionIcon", "getDisplayCondition"],
         "forbiddenContent": ["CircleCheck", "컨디션 정상"]
@@ -145,6 +150,9 @@
       {
         "id": "condition-icon-token-contract",
         "description": "The shared condition icon must expose the five condition token styles.",
+        "stability": "durable",
+        "rationale": "ConditionIcon is the shared renderer for the five player condition states.",
+        "owner": "design-system",
         "paths": ["src/components/ui/ConditionIcon.tsx"],
         "requiredContent": ["text-condition-best", "text-condition-good", "text-condition-normal", "text-condition-poor", "text-condition-worst"],
         "forbiddenContent": ["text-green-600", "text-red-500", "text-blue-500"]
