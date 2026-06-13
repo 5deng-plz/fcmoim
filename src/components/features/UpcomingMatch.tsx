@@ -48,34 +48,34 @@ export default function UpcomingMatch() {
       </div>
 
       {upcomingMatchesStatus === 'loading' ? (
-        <div role="status" className="card p-5 text-sm font-bold text-secondary">
+        <div role="status" className="rounded-3xl border border-glass-border bg-glass-bg p-5 text-sm font-bold text-secondary shadow-glass-shadow backdrop-blur-md transition-colors">
           확정 일정을 불러오는 중입니다
         </div>
       ) : null}
 
       {upcomingMatchesStatus === 'error' && upcomingMatchesError ? (
-        <div role="alert" className="card border-feedback-error-border bg-feedback-error-bg p-5">
+        <div role="alert" className="rounded-3xl border border-feedback-error-border bg-feedback-error-bg p-5 shadow-glass-shadow backdrop-blur-md transition-colors">
           <p className="text-sm font-bold text-feedback-error">{upcomingMatchesError}</p>
         </div>
       ) : null}
 
       {upcomingMatchesStatus !== 'loading' && nextMatch ? (
-        <div className="relative overflow-hidden rounded-3xl border border-border bg-surface-card px-5 py-4.5 shadow-md shadow-gray-200/10">
+        <div className="relative overflow-hidden rounded-3xl border border-glass-border bg-glass-bg px-5 py-4.5 shadow-glass-shadow backdrop-blur-md transition-colors">
           {/* Ticket Left Punch Hole */}
-          <div className="absolute -left-3.5 top-[52px] h-7 w-7 rounded-full bg-surface-bg border border-border/60 shadow-inner z-10" />
+          <div className="absolute -left-3.5 top-[52px] z-10 h-7 w-7 rounded-full border border-glass-border/40 bg-surface-bg shadow-inner" />
           {/* Ticket Right Punch Hole */}
-          <div className="absolute -right-3.5 top-[52px] h-7 w-7 rounded-full bg-surface-bg border border-border/60 shadow-inner z-10" />
+          <div className="absolute -right-3.5 top-[52px] z-10 h-7 w-7 rounded-full border border-glass-border/40 bg-surface-bg shadow-inner" />
 
           {/* D-Day Badge */}
           {dDayText && nextMatch.status !== 'cancelled' && (
-            <div className="absolute right-0 top-0 rounded-bl-2xl bg-fcgreen-600 px-4 py-1.5 text-[10px] font-black tracking-wider text-white shadow-sm ring-1 ring-white/10 uppercase">
+            <div className="absolute right-0 top-0 rounded-bl-2xl bg-brand-primary px-3.5 py-1 text-[9px] font-extrabold tracking-wide text-white shadow-sm ring-1 ring-white/10 uppercase">
               {dDayText}
             </div>
           )}
 
           <div className="flex items-center gap-3.5 min-h-[92px]">
             {/* Football/Icon Emblem Wrapper */}
-            <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ring-1 ring-border/60 ${shimmerClassName}`}>
+            <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-glass-border/40 bg-glass-bg/70 shadow-inner ring-1 ring-white/40 backdrop-blur-sm ${shimmerClassName}`}>
               {nextMatch.type === 'match' ? (
                 <Image
                   src="/icons/svgrepo-football.svg"
@@ -139,7 +139,7 @@ export default function UpcomingMatch() {
       ) : null}
 
       {upcomingMatchesStatus === 'ready' && !nextMatch ? (
-        <div className="card p-5">
+        <div className="rounded-3xl border border-glass-border bg-glass-bg p-5 shadow-glass-shadow backdrop-blur-md transition-colors">
           <div className="flex items-start gap-4">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-surface-bg text-tertiary">
               <CalendarClock size={20} />

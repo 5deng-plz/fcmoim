@@ -27,23 +27,23 @@ export default function SeasonStats() {
           현재 시즌 기록
         </div>
       </div>
-      <div className="card p-4">
-        <div className="grid grid-cols-4 gap-y-5 gap-x-2 divide-x divide-border">
+      <div className="rounded-3xl border border-glass-border bg-glass-bg p-5 shadow-glass-shadow backdrop-blur-md transition-colors">
+        <div className="grid grid-cols-4 gap-y-5 gap-x-3 divide-x divide-glass-border">
           {seasonStats.map((stat, idx) => {
             const IconComp = iconMap[stat.icon];
             return (
               <div
                 key={idx}
-                className="flex flex-col items-center justify-center px-1"
+                className="flex flex-col items-center justify-center px-1.5"
               >
-                <div className="flex items-center gap-1 mb-1.5">
-                  {IconComp && <IconComp size={13} className={stat.color} />}
+                <div className="mb-2 flex items-center gap-1.5">
+                  {IconComp && <IconComp size={15} className={stat.color} />}
                   <span className="text-[11px] font-bold text-secondary">
                     {stat.label}
                   </span>
                 </div>
                 <div className="flex items-baseline">
-                  <span className="text-2xl font-extrabold text-primary transition-colors">
+                  <span className="text-[28px] font-extrabold leading-none text-primary transition-colors">
                     {stat.value}
                   </span>
                 </div>

@@ -1134,6 +1134,59 @@ describe('v1.0 schedule and poll UX', () => {
     expect(screen.getByRole('button', { name: '아쉽지만 불참' })).toHaveClass('hover:shadow-sm');
   });
 
+  it('applies the minimal glass dashboard treatment to Home cards', () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date(2026, 5, 1));
+    useScheduleStore.setState({
+      upcomingMatches: [
+        createCalendarMatch('home-next-match', 'Round 9', '2026-06-20T20:00:00.000+09:00', 'match'),
+      ],
+      upcomingMatchesStatus: 'ready',
+      upcomingMatchesError: null,
+    });
+    useAnnouncementStore.setState({
+      announcements: [{
+        id: 'home-announcement',
+        clubId: 'club-test',
+        seasonId: null,
+        title: '6월 운영 공지',
+        content: '우천 시 일정은 다시 안내합니다.',
+        authorMembershipId: 'membership-admin',
+        isPinned: true,
+        createdAt: '2026-06-01T00:00:00.000Z',
+        updatedAt: '2026-06-01T00:00:00.000Z',
+      }],
+      announcementsStatus: 'ready',
+      announcementsError: null,
+    });
+
+    try {
+      render(<HomeTab />);
+
+      expect(screen.getByText('Round 9').closest('.rounded-3xl')).toHaveClass(
+        'border-glass-border',
+        'bg-glass-bg',
+        'backdrop-blur-md',
+        'shadow-glass-shadow',
+      );
+      expect(screen.getByText('승률').closest('.rounded-3xl')).toHaveClass(
+        'border-glass-border',
+        'bg-glass-bg',
+        'backdrop-blur-md',
+        'shadow-glass-shadow',
+      );
+      expect(screen.getByText('6월 운영 공지').closest('section')).toHaveClass(
+        'border-glass-border',
+        'bg-glass-bg',
+        'backdrop-blur-md',
+        'shadow-glass-shadow',
+      );
+      expect(screen.getByText('최근 공지')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('uses approved team member count for a fresh schedule poll attendance denominator', async () => {
     const user = userEvent.setup();
     useScheduleStore.setState({

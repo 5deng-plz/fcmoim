@@ -88,6 +88,9 @@ describe('global viewport shell UX contract', () => {
 
     expect(cssSource).toContain('--bottom-nav-height: 72px');
     expect(cssSource).toContain('--header-height: 56px');
+    expect(cssSource).toContain('--glass-bg: rgba(255, 255, 255, 0.85)');
+    expect(cssSource).toContain('--glass-bg: rgba(255, 255, 255, 0.12)');
+    expect(cssSource).toContain('@supports ((backdrop-filter: blur(1px))');
     expect(cssSource).toContain('-webkit-text-size-adjust: 100%');
     expect(cssSource).toContain('touch-action: pan-y');
     expect(cssSource).toContain('font-size: 16px !important');

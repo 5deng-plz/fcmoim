@@ -238,13 +238,13 @@ export default function RecentNotice() {
 
       <div className="space-y-2">
         {activePollsStatus === 'loading' ? (
-          <div role="status" className="card p-4 text-xs font-bold text-secondary">
+          <div role="status" className="rounded-3xl border border-glass-border bg-glass-bg p-4 text-xs font-bold text-secondary shadow-glass-shadow backdrop-blur-md transition-colors">
             일정 투표를 불러오는 중입니다
           </div>
         ) : null}
 
         {activePollsStatus === 'error' && activePollsError ? (
-          <div role="alert" className="card border-feedback-error-border bg-feedback-error-bg p-4">
+          <div role="alert" className="rounded-3xl border border-feedback-error-border bg-feedback-error-bg p-4 shadow-glass-shadow backdrop-blur-md transition-colors">
             <p className="text-sm font-bold text-feedback-error">{activePollsError}</p>
             <button
               type="button"
@@ -261,23 +261,28 @@ export default function RecentNotice() {
         ) : null}
 
         {pinnedAnnouncements.map((announcement) => (
-          <section key={announcement.id} className="card overflow-hidden rounded-xl">
+          <section key={announcement.id} className="overflow-hidden rounded-3xl border border-glass-border bg-glass-bg shadow-glass-shadow backdrop-blur-md transition-colors">
             <button
               type="button"
               onClick={() => useAppStore.getState().setActiveTab('community')}
-              className="w-full p-4 flex items-center justify-between gap-3 text-left hover:bg-surface-hover transition-colors"
+              className="flex w-full items-center justify-between gap-3 p-3.5 text-left transition-colors hover:bg-glass-bg-hover"
             >
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-highlight-rose-bg text-highlight-rose">
                   <Pin size={17} />
                 </div>
-                <div className="min-w-0">
-                  <h3 className="mb-0.5 min-w-0 truncate text-sm font-bold leading-snug text-primary">
-                    {announcement.title}
-                  </h3>
-                  <p className="truncate text-xs font-medium leading-snug text-secondary">
-                    {announcement.content}
-                  </p>
+                  <div className="min-w-0">
+                    <div className="mb-1 flex min-w-0 items-center gap-1.5">
+                      <span className="shrink-0 rounded-md border border-highlight-rose/20 bg-highlight-rose-bg px-1.5 py-0.5 text-[9px] font-black leading-none text-highlight-rose">
+                        최근 공지
+                      </span>
+                      <h3 className="min-w-0 truncate text-sm font-bold leading-snug text-primary">
+                        {announcement.title}
+                      </h3>
+                    </div>
+                    <p className="truncate text-xs font-medium leading-snug text-secondary">
+                      {announcement.content}
+                    </p>
                 </div>
               </div>
               <Megaphone size={18} className="shrink-0 text-tertiary" />
@@ -297,7 +302,7 @@ export default function RecentNotice() {
           const submitDisabled = isCancelled || isPromoted || !canVote || selectedOptionIds.length === 0 || isSubmitting;
 
           return (
-            <section key={poll.id} className="card border-event-vote-border bg-event-vote-bg overflow-hidden rounded-xl">
+            <section key={poll.id} className="overflow-hidden rounded-3xl border border-event-vote-border bg-event-vote-bg shadow-glass-shadow backdrop-blur-md transition-colors">
               <button
                 type="button"
                 onClick={() => setExpandedPollId(isExpanded ? null : poll.id)}
@@ -309,7 +314,7 @@ export default function RecentNotice() {
                 }}
                 aria-expanded={isExpanded}
                 aria-controls={`poll-options-${poll.id}`}
-                className="w-full p-4 flex items-center justify-between gap-3 text-left hover:bg-event-vote-bg/50 transition-colors"
+                className="flex w-full items-center justify-between gap-3 p-3.5 text-left transition-colors hover:bg-event-vote-bg/50"
               >
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-event-vote-icon-bg text-event-vote-icon-text">
@@ -488,7 +493,7 @@ export default function RecentNotice() {
         })}
 
         {activePollsStatus === 'ready' && activePolls.length === 0 && pinnedAnnouncements.length === 0 ? (
-          <div className="card p-4 flex items-center gap-3">
+              <div className="flex items-center gap-3 rounded-3xl border border-glass-border bg-glass-bg p-4 shadow-glass-shadow backdrop-blur-md transition-colors">
             <div className="w-10 h-10 bg-surface-bg rounded-full flex items-center justify-center shrink-0">
               <Megaphone size={18} className="text-tertiary" />
             </div>
