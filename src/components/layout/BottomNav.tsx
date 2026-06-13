@@ -29,7 +29,7 @@ export default function BottomNav() {
   };
 
   return (
-    <nav className="sticky bottom-0 z-20 bg-surface-card/80 backdrop-blur-xl px-2 pb-[env(safe-area-inset-bottom)] shadow-sm">
+    <nav className="sticky bottom-0 z-20 min-h-[var(--bottom-nav-height)] bg-surface-card/80 backdrop-blur-xl px-2 pb-[var(--safe-area-bottom)] shadow-sm">
       <div className="flex justify-around">
         {tabs.map(({ key, label, Icon }) => {
           const isActive = activeTab === key && !showMyPage && !showJoinForm;

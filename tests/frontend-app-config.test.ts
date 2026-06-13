@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 async function loadAppConfig(env: Record<string, string>) {
   vi.resetModules();
@@ -65,5 +67,31 @@ describe('v1.0 frontend runtime config', () => {
 
     expect(activeProfile).toBe('prod');
     expect(appConfig.profile).toBe('prod');
+  });
+});
+
+describe('global viewport shell UX contract', () => {
+  const root = process.cwd();
+
+  it('keeps viewport zoom control accessible and notch-aware', () => {
+    const layoutSource = readFileSync(join(root, 'src/app/layout.tsx'), 'utf8');
+
+    expect(layoutSource).toContain('maximumScale: 1');
+    expect(layoutSource).toContain('viewportFit: "cover"');
+    expect(layoutSource).toContain('width: "device-width"');
+    expect(layoutSource).toContain('themeColor: "var(--brand-primary)"');
+    expect(layoutSource).not.toContain('userScalable');
+  });
+
+  it('keeps the mobile shell touch and input zoom safeguards in global CSS', () => {
+    const cssSource = readFileSync(join(root, 'src/app/globals.css'), 'utf8');
+
+    expect(cssSource).toContain('--bottom-nav-height: 72px');
+    expect(cssSource).toContain('--header-height: 56px');
+    expect(cssSource).toContain('-webkit-text-size-adjust: 100%');
+    expect(cssSource).toContain('touch-action: pan-y');
+    expect(cssSource).toContain('font-size: 16px !important');
+    expect(cssSource).toContain('.app-viewport::before');
+    expect(cssSource).toContain('@media (prefers-reduced-motion: reduce)');
   });
 });

@@ -108,7 +108,7 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-20 bg-surface-card/80 backdrop-blur-xl px-4 py-3 flex justify-between items-center min-h-[56px] shadow-sm animate-fadeIn">
+    <header className="sticky top-0 z-20 flex min-h-[var(--header-height)] items-center justify-between bg-surface-card/80 px-4 py-3 shadow-sm backdrop-blur-xl animate-fadeIn">
       {isCenteredSubPage ? (
         <div className="relative w-full flex items-center justify-center h-10">
           <button

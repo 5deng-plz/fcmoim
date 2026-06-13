@@ -1,69 +1,87 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 73,
-  "updatedAt": "2026-06-12T18:03:44.000+09:00",
+  "updateVersion": 75,
+  "updatedAt": "2026-06-13T14:17:04+09:00",
   "updatedBy": "orchestrator",
-  "currentPhase": "ux-plan-guidance-harness-sync",
+  "currentPhase": "ux-area-01-viewport-desktop",
   "activeWork": {
-    "taskId": "ux-plan-guidance-harness-sync",
-    "status": "in_progress",
-    "baselineCommit": "3fb9879bd96435cb8a88e3f7a4115998d4ad0aa2",
+    "taskId": "ux-area-01-viewport-desktop",
+    "status": "ready",
+    "baselineCommit": "c72328f594da26aaf8d5c843fad7d44971a5d3aa",
     "changedFiles": [
-      "AGENT.md",
-      "docs/plan/01_viewport_desktop_ux.md",
-      "docs/plan/02_home_dashboard_ux.md",
-      "docs/plan/03_schedule_all_in_one_ux.md",
-      "docs/plan/04_tactics_builder_ux.md",
-      "docs/plan/05_result_records_ux.md",
-      "docs/plan/06_squad_player_card_ux.md",
-      "docs/plan/07_guest_onboarding_ux.md",
-      "docs/plan/08_notifications_toast_ux.md",
-      "docs/plan/Guidance.md",
-      "docs/plan/Preview.md",
-      "docs/user/design-harness-workflow.md",
+      "src/app/layout.tsx",
+      "src/app/globals.css",
+      "src/components/layout/Header.tsx",
+      "src/components/layout/BottomNav.tsx",
+      "tests/frontend-app-config.test.ts",
       "docs/project-context.json"
     ],
-    "changedSurfaces": ["docs"],
+    "changedSurfaces": ["ui", "tests", "docs"],
     "allowedPaths": [
-      "AGENT.md",
-      "docs/plan/01_viewport_desktop_ux.md",
-      "docs/plan/02_home_dashboard_ux.md",
-      "docs/plan/03_schedule_all_in_one_ux.md",
-      "docs/plan/04_tactics_builder_ux.md",
-      "docs/plan/05_result_records_ux.md",
-      "docs/plan/06_squad_player_card_ux.md",
-      "docs/plan/07_guest_onboarding_ux.md",
-      "docs/plan/08_notifications_toast_ux.md",
-      "docs/plan/Guidance.md",
-      "docs/plan/Preview.md",
-      "docs/user/design-harness-workflow.md",
+      "src/app/layout.tsx",
+      "src/app/globals.css",
+      "src/components/layout/Header.tsx",
+      "src/components/layout/BottomNav.tsx",
+      "tests/frontend-app-config.test.ts",
       "docs/project-context.json"
     ],
     "evidence": {
       "scopeSync": {
         "status": "passed",
-        "summary": "Synced active work to the current UX planning document updates plus the minimal AGENT/workflow rule that docs/plan input must be verified before promotion into durable harness policy."
+        "summary": "Scoped active work to 영역 01 viewport and desktop backdrop implementation files plus deterministic config/CSS contract tests."
       },
-      "harnessValidate": {
+      "targetedTest": {
         "status": "passed",
-        "command": "npm run harness:validate",
-        "summary": "Harness validation passed after the AGENT and workflow wording update."
+        "provider": "Vitest",
+        "target": "tests/frontend-app-config.test.ts",
+        "command": "npm run test -- tests/frontend-app-config.test.ts --run",
+        "summary": "5 tests passed, including viewport maximumScale/viewportFit/userScalable contract and global CSS safeguards for touch/input zoom/layout/backdrop."
       },
-      "guardVerify": {
+      "lint": {
         "status": "passed",
-        "command": "npm run harness:guard:verify",
-        "summary": "Final verify guard passed for 13 changed files: harness validation passed, design guard had no guarded app files, diff guard passed, baseline passed with 19 test files passed and 1 skipped, DB contract check passed for 18 SQL files, and evidence guard passed."
+        "provider": "ESLint",
+        "command": "npm run lint",
+        "summary": "ESLint passed for the viewport shell UI changes."
       },
-      "runtimeSmoke": {
-        "status": "not_required",
-        "summary": "Only documentation and planning files changed; no app entrypoint, Auth/session/API bootstrap, package/runtime config, Supabase schema, or API route files changed."
+      "typecheck": {
+        "status": "passed",
+        "provider": "TypeScript",
+        "command": "npm run typecheck",
+        "summary": "TypeScript passed after typing the Next.js viewport export as Viewport."
+      },
+      "baseline": {
+        "status": "passed",
+        "provider": "Vitest, ESLint, TypeScript",
+        "command": "npm run verify:baseline",
+        "summary": "Harness validation, lint, typecheck, and full Vitest suite passed: 19 test files passed, 1 skipped; 228 tests passed, 15 skipped."
+      },
+      "build": {
+        "status": "passed",
+        "provider": "Next.js",
+        "command": "APP_PROFILE=prod NEXT_PUBLIC_APP_PROFILE=prod NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=placeholder npm run build",
+        "summary": "Production build passed after providing build-time public Supabase env; direct default build is blocked by local APP_PROFILE requiring a local Supabase URL."
+      },
+      "browserRuntime": {
+        "status": "passed",
+        "type": "runtime",
+        "provider": "npm run dev, in-app browser, server terminal log",
+        "target": "http://localhost:3000/",
+        "command": "npm run dev; in-app browser opened http://localhost:3000/",
+        "summary": "Dev server reported Ready on localhost:3000. Browser loaded title FC moim with .app-viewport and .phone-shell present, app viewport display flex/overflow hidden, phone shell touch-action pan-y, CSS variables --bottom-nav-height 72px and --header-height 56px, and 0 console error logs."
       }
     },
-    "reviewStatus": "needs-review",
+    "retrospective": {
+      "issuesObserved": "Default npm run build is environment-blocked when APP_PROFILE=local lacks a local Supabase URL; Turbopack also needed unsandboxed execution after the env issue was resolved.",
+      "missedEvidence": "Mobile real-device pinch and iOS Safari keyboard zoom checks were not run in this turn.",
+      "harnessImprovementProposal": "Consider adding a documented build verification script that injects safe public build-time env for PRD build checks.",
+      "promotionRecommendation": "defer",
+      "reason": "The viewport/backdrop behavior is area-specific PRD work; no new durable harness policy is needed beyond existing CSS variable and evidence rules."
+    },
+    "reviewStatus": "ready",
     "loopCounters": {
       "reviewRounds": 0,
-      "guardRetries": 0
+      "guardRetries": 1
     }
   },
   "workstreams": [

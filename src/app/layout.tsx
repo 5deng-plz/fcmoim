@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -12,8 +12,12 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport = {
-  themeColor: "green",
+export const viewport: Viewport = {
+  themeColor: "var(--brand-primary)",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
