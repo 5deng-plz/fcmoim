@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import GuestDashboard from '../src/components/features/GuestDashboard';
@@ -8,6 +8,7 @@ import LockerProfile from '../src/components/features/LockerProfile';
 import MatchCreateModal from '../src/components/features/MatchCreateModal';
 import EventComments from '../src/components/features/EventComments';
 import NotificationPanel from '../src/components/features/NotificationPanel';
+import Toast from '../src/components/ui/Toast';
 import HomeTab from '../src/components/tabs/HomeTab';
 import CommunityPage from '../src/components/tabs/CommunityPage';
 import LockerRoomTab from '../src/components/tabs/LockerRoomTab';
@@ -1623,7 +1624,20 @@ describe('v1.0 schedule and poll UX', () => {
 
       await userEvent.click(screen.getByRole('button', { name: '알림 열기' }));
       expect(screen.getByRole('dialog', { name: '알림' })).toBeInTheDocument();
-      expect(screen.getByText('졌다.. 겜비내자')).toBeInTheDocument();
+      const settlementTitle = screen.getByText('졌다.. 겜비내자');
+      const settlementCard = settlementTitle.closest('section');
+      expect(settlementCard).toHaveClass(
+        'rounded-2xl',
+        'border-glass-border',
+        'bg-glass-bg',
+        'backdrop-blur-md',
+        'shadow-glass-shadow',
+      );
+      expect(settlementCard?.querySelector('.lucide-banknote')?.parentElement).toHaveClass(
+        'border-feedback-warning-border',
+        'bg-feedback-warning-bg',
+        'text-feedback-warning',
+      );
       expect(screen.getByRole('button', { name: '정산하기' })).toBeInTheDocument();
     } finally {
       vi.useRealTimers();
@@ -1688,6 +1702,49 @@ describe('v1.0 schedule and poll UX', () => {
       expect(screen.getByText('새로운 알림이 없어요')).toBeInTheDocument();
       expect(screen.queryByText('졌다.. 겜비내자')).not.toBeInTheDocument();
     } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('positions toast above the bottom nav and keeps it readable for at least five seconds', () => {
+    vi.useFakeTimers({ shouldAdvanceTime: false });
+
+    try {
+      useToastStore.setState({ message: null });
+      render(<Toast />);
+
+      act(() => {
+        useToastStore.getState().showToast('저장했어요.');
+      });
+
+      const toast = screen.getByRole('status');
+      expect(toast).toHaveAttribute('aria-live', 'polite');
+      expect(toast).toHaveClass(
+        'bottom-[calc(var(--bottom-nav-height,72px)+12px)]',
+        'animate-slideUp',
+        'motion-reduce:animate-none',
+      );
+      expect(toast.firstElementChild).toHaveClass(
+        'bg-slate-900/80',
+        'backdrop-blur-md',
+        'border-glass-border/20',
+        'shadow-glass-shadow',
+      );
+      expect(screen.getByText('저장했어요.')).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(4999);
+      });
+      expect(screen.getByRole('status')).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    } finally {
+      act(() => {
+        useToastStore.getState().hideToast();
+      });
       vi.useRealTimers();
     }
   });

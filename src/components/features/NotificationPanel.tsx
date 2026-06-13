@@ -48,10 +48,10 @@ function SettlementNoticeCard({ title }: { title: string }) {
   };
 
   return (
-    <section className="overflow-hidden rounded-xl border border-fee-unpaid/20 bg-fee-unpaid/10 settlement-cta-flow">
+    <section className="overflow-hidden rounded-2xl border border-glass-border bg-glass-bg shadow-glass-shadow backdrop-blur-md settlement-cta-flow">
       <div className="flex items-center justify-between gap-3 p-4">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-fee-unpaid/15 text-fee-unpaid">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-feedback-warning-border bg-feedback-warning-bg text-feedback-warning">
             <Banknote size={17} aria-hidden="true" />
           </div>
           <div className="min-w-0">
@@ -64,7 +64,7 @@ function SettlementNoticeCard({ title }: { title: string }) {
         <button
           type="button"
           onClick={openSettlement}
-          className="shrink-0 rounded-lg bg-fee-unpaid px-3 py-2 text-xs font-black text-white transition-all hover:brightness-110 active:scale-95"
+          className="shrink-0 rounded-lg bg-feedback-warning px-3 py-2 text-xs font-black text-white transition-all hover:brightness-110 active:scale-95"
         >
           정산하기
         </button>

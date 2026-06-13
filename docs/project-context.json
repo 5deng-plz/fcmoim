@@ -1,84 +1,72 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 76,
-  "updatedAt": "2026-06-13T14:24:54+09:00",
+  "updateVersion": 77,
+  "updatedAt": "2026-06-13T14:29:36+09:00",
   "updatedBy": "orchestrator",
-  "currentPhase": "ux-area-02-home-dashboard-glass",
+  "currentPhase": "ux-area-08-notifications-toast",
   "activeWork": {
-    "taskId": "ux-area-02-home-dashboard-glass",
+    "taskId": "ux-area-08-notifications-toast",
     "status": "ready",
-    "baselineCommit": "ab4b178e98f5ec2135765a642d57411b4e33a7cc",
+    "baselineCommit": "c156797372e2b73177a10c5c6dac05260d9b9195",
     "changedFiles": [
-      "src/app/globals.css",
-      "src/components/features/UpcomingMatch.tsx",
-      "src/components/features/SeasonStats.tsx",
-      "src/components/features/RecentNotice.tsx",
-      "tests/frontend-app-config.test.ts",
+      "src/components/ui/Toast.tsx",
+      "src/stores/useToastStore.ts",
+      "src/components/features/NotificationPanel.tsx",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
     "changedSurfaces": ["ui", "tests", "docs"],
     "allowedPaths": [
-      "src/app/globals.css",
-      "src/components/features/UpcomingMatch.tsx",
-      "src/components/features/SeasonStats.tsx",
-      "src/components/features/RecentNotice.tsx",
-      "tests/frontend-app-config.test.ts",
+      "src/components/ui/Toast.tsx",
+      "src/stores/useToastStore.ts",
+      "src/components/features/NotificationPanel.tsx",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
     "evidence": {
       "scopeSync": {
         "status": "passed",
-        "summary": "Scoped active work to 영역 02 Home dashboard glassmorphism cards, shared glass token fallback, and deterministic UI/config tests."
+        "summary": "Scoped active work to 영역 08 Toast bottom placement/accessibility, toast lifecycle timing, NotificationPanel settlement card glass styling, and deterministic UI tests."
       },
       "targetedTest": {
         "status": "passed",
         "provider": "Vitest",
-        "target": "tests/frontend-app-config.test.ts, tests/frontend-auth-and-schedule-ui.test.tsx",
-        "command": "npm run test -- tests/frontend-app-config.test.ts tests/frontend-auth-and-schedule-ui.test.tsx --run",
-        "summary": "2 files passed with 74 tests, including Home dashboard glass class assertions for upcoming match, season stats, pinned notice, recent notice badge, and CSS glass fallback/support tokens."
+        "target": "tests/frontend-auth-and-schedule-ui.test.tsx",
+        "command": "npm run test -- tests/frontend-auth-and-schedule-ui.test.tsx --run",
+        "summary": "70 tests passed, including Toast bottom-nav offset, aria-live status, slideUp/reduced-motion classes, glass styling, 5 second auto-dismiss, and NotificationPanel settlement glass card styling."
       },
       "lint": {
         "status": "passed",
         "provider": "ESLint",
         "command": "npm run lint",
-        "summary": "ESLint passed for Home dashboard glass card changes."
+        "summary": "ESLint passed for Toast and NotificationPanel changes."
       },
       "typecheck": {
         "status": "passed",
         "provider": "TypeScript",
         "command": "npm run typecheck",
-        "summary": "TypeScript passed after Home dashboard JSX and test changes."
+        "summary": "TypeScript passed after toast store timer and UI test changes."
       },
       "baseline": {
         "status": "passed",
         "provider": "Vitest, ESLint, TypeScript",
         "command": "npm run verify:baseline",
-        "summary": "Harness validation, lint, typecheck, and full Vitest suite passed: 19 test files passed, 1 skipped; 229 tests passed, 15 skipped."
+        "summary": "Harness validation, lint, typecheck, and full Vitest suite passed: 19 test files passed, 1 skipped; 230 tests passed, 15 skipped."
       },
       "build": {
         "status": "passed",
         "provider": "Next.js",
         "command": "APP_PROFILE=prod NEXT_PUBLIC_APP_PROFILE=prod NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=placeholder npm run build",
         "summary": "Production build passed with build-time public Supabase env."
-      },
-      "browserRuntime": {
-        "status": "passed",
-        "type": "runtime",
-        "provider": "npm run dev, in-app browser, server terminal log",
-        "target": "http://localhost:3000/",
-        "command": "npm run dev; in-app browser opened http://localhost:3000/",
-        "summary": "Dev server reported Ready on localhost:3000. Browser loaded title FC moim, glass CSS variables were present, and there were 0 console error logs. Approved-member Home glass cards are covered by deterministic UI tests because the browser session was in guest state."
       }
     },
     "retrospective": {
-      "issuesObserved": "In-app browser was in guest state, so approved-member Home dashboard cards were not visible for direct browser DOM inspection.",
-      "missedEvidence": "Manual light/dark visual contrast inspection on a real mobile device was not run in this turn.",
-      "harnessImprovementProposal": "Consider adding a deterministic visual fixture or authenticated browser seed for approved-member Home dashboard states.",
+      "issuesObserved": "The toast store previously used a 3 second timeout and did not clear older timers, so repeated toasts could dismiss a newer message early.",
+      "missedEvidence": "Manual mobile visual check of the toast floating above BottomNav was not run; deterministic class and timer tests cover the contract.",
+      "harnessImprovementProposal": "Consider a reusable Toast behavior test fixture so future notification changes do not need to live in the large frontend-auth-and-schedule UI suite.",
       "promotionRecommendation": "defer",
-      "reason": "The Home glass card treatment is PRD-specific UI styling; no durable harness policy promotion is needed."
+      "reason": "The notification/toast behavior is PRD-specific UI work and is now covered by deterministic tests; no durable harness rule promotion is needed."
     },
     "reviewStatus": "ready",
     "loopCounters": {

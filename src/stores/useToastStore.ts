@@ -8,11 +8,28 @@ interface ToastState {
   hideToast: () => void;
 }
 
+const TOAST_AUTO_DISMISS_MS = 5000;
+let toastTimeout: ReturnType<typeof setTimeout> | null = null;
+
 export const useToastStore = create<ToastState>((set) => ({
   message: null,
   showToast: (msg) => {
+    if (toastTimeout) {
+      clearTimeout(toastTimeout);
+    }
+
     set({ message: msg });
-    setTimeout(() => set({ message: null }), 3000);
+    toastTimeout = setTimeout(() => {
+      set({ message: null });
+      toastTimeout = null;
+    }, TOAST_AUTO_DISMISS_MS);
   },
-  hideToast: () => set({ message: null }),
+  hideToast: () => {
+    if (toastTimeout) {
+      clearTimeout(toastTimeout);
+      toastTimeout = null;
+    }
+
+    set({ message: null });
+  },
 }));
