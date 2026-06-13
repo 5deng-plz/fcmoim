@@ -4,7 +4,7 @@ export type MembershipStatus = 'pending' | 'approved' | 'rejected' | 'suspended'
 
 export type MembershipState = 'new' | MembershipStatus;
 
-export type PositionCode = 'FW' | 'MF' | 'DF';
+export type PositionCode = 'FW' | 'MF' | 'DF' | 'GK';
 
 export type PreferredFootCode = 'left' | 'right' | 'both';
 

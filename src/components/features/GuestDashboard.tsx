@@ -189,7 +189,7 @@ export default function GuestDashboard({
 
   return (
     <div className="flex-1 flex flex-col overflow-y-auto no-scrollbar">
-      <div className="p-4 space-y-5 pb-24">
+      <div className="p-4 space-y-5 pb-[calc(var(--bottom-nav-height,72px)+32px)]">
         {pendingMembership ? (
           <button
             type="button"
@@ -203,7 +203,7 @@ export default function GuestDashboard({
               setUserStatus('pending');
               setShowJoinForm(true);
             }}
-            className="w-full rounded-xl border border-highlight-amber/30 bg-highlight-amber/10 px-4 py-3 text-left transition-all active:scale-[0.99]"
+            className="w-full rounded-2xl border border-highlight-amber/30 bg-glass-bg/70 px-4 py-3 text-left shadow-sm backdrop-blur-xl transition-all active:scale-[0.99]"
           >
             <span className="block text-xs font-black text-highlight-amber">승인 대기 중</span>
             <span className="mt-1 block text-sm font-bold text-gray-900">
@@ -224,8 +224,8 @@ export default function GuestDashboard({
               key={club.id}
               type="button"
               onClick={() => void handleSelectClub(club.id)}
-              className={`w-full rounded-xl border bg-white p-3 text-left transition-all active:scale-[0.99] ${
-                selectedClub?.id === club.id ? 'border-green-300 ring-2 ring-green-100' : 'border-gray-100'
+              className={`w-full rounded-2xl border bg-glass-bg/70 p-3 text-left shadow-sm backdrop-blur-xl transition-all active:scale-[0.99] ${
+                selectedClub?.id === club.id ? 'border-green-300 ring-2 ring-green-100' : 'border-glass-border'
               }`}
             >
               <div className="flex items-center gap-3">
@@ -245,7 +245,7 @@ export default function GuestDashboard({
           <button
             type="button"
             onClick={() => void handleOpenCreateClub()}
-            className="flex w-full items-center justify-center gap-3 rounded-xl border border-dashed border-gray-300 bg-gray-50/50 p-4 text-center transition-all hover:border-green-500 hover:bg-gray-50 active:scale-[0.99]"
+            className="flex w-full items-center justify-center gap-3 rounded-2xl border border-dashed border-glass-border bg-glass-bg/60 p-4 text-center shadow-sm backdrop-blur-xl transition-all hover:border-green-500 hover:bg-glass-bg-hover active:scale-[0.99]"
           >
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-green-600">
               <Plus size={20} />
@@ -256,7 +256,7 @@ export default function GuestDashboard({
             </span>
           </button>
           {!isLoading && clubs.length === 0 ? (
-            <div className="rounded-xl border border-gray-100 bg-white px-4 py-10 text-center">
+            <div className="rounded-2xl border border-glass-border bg-glass-bg/70 px-4 py-10 text-center shadow-sm backdrop-blur-xl">
               <p className="text-sm font-black text-gray-900">공개된 팀이 아직 없어요</p>
               <p className="mt-1 text-xs font-medium text-gray-400">
                 입단신청은 공개 팀이 등록된 뒤 시작할 수 있습니다.
@@ -285,7 +285,7 @@ export default function GuestDashboard({
               <Metric icon={<CalendarDays size={16} />} label="최근 경기" value={formatRecentMatchDate(clubDetail.recentMatches[0]?.date)} />
             </div>
 
-            <div className="rounded-xl border border-gray-100 bg-white p-4">
+            <div className="rounded-2xl border border-glass-border bg-glass-bg/70 p-4 shadow-sm backdrop-blur-xl">
               <div className="mb-3 flex items-center gap-2">
                 <Shield size={16} className="text-green-600" />
                 <h3 className="text-sm font-black text-gray-900">최근 경기 요약</h3>
@@ -306,14 +306,14 @@ export default function GuestDashboard({
       </div>
 
       {selectedClub && selectedMembership?.status !== 'approved' ? (
-      <div className="sticky bottom-0 p-4 bg-gradient-to-t from-gray-50 via-gray-50 to-transparent pt-8">
-        <button
-          onClick={() => void handleJoin()}
-          className="w-full bg-gray-900 text-white font-bold py-3.5 rounded-xl text-sm hover:bg-gray-800 active:scale-[0.98] transition-all shadow-lg"
-        >
-          {getJoinButtonLabel(selectedMembership?.status)}
-        </button>
-      </div>
+        <div className="sticky bottom-[calc(var(--bottom-nav-height,72px)+8px)] z-30 px-4 pb-3 pt-5 bg-gradient-to-t from-surface-bg via-surface-bg/90 to-transparent">
+          <button
+            onClick={() => void handleJoin()}
+            className="w-full rounded-2xl bg-brand-primary px-5 py-4 text-sm font-black text-white shadow-lg shadow-brand-primary/20 transition-all hover:bg-brand-primary-hover active:scale-[0.98]"
+          >
+            {getJoinButtonLabel(selectedMembership?.status)}
+          </button>
+        </div>
       ) : null}
       <ClubCreateModal
         isOpen={isCreateModalOpen}
@@ -544,7 +544,7 @@ function formatMatchResult(match: PublicClubDetail['recentMatches'][number]) {
 
 function Metric({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-gray-100 bg-white p-3 text-center">
+    <div className="rounded-2xl border border-glass-border bg-glass-bg/70 p-3 text-center shadow-sm backdrop-blur-xl">
       <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center text-green-600">
         {icon}
       </div>

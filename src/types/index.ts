@@ -11,7 +11,7 @@ export type UserRole = 'admin' | 'operator' | 'member';
 export type UserStatus = 'guest' | 'pending' | 'approved' | 'rejected' | 'suspended' | 'withdrawn';
 
 // ─── 포지션 ───
-export type Position = 'FW' | 'MF' | 'DF';
+export type Position = 'FW' | 'MF' | 'DF' | 'GK';
 
 // ─── 경기 / 이벤트 ───
 export type EventType = 'match' | 'vote_match' | 'training' | 'seminar' | 'etc';

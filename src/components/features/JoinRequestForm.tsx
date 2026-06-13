@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import type { FocusEvent, ReactNode } from 'react';
 import Image from 'next/image';
 import { ArrowLeft, Camera, Clock, LoaderCircle, Send } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
@@ -13,6 +14,9 @@ import PlayerAbilityPanel from '@/components/ui/PlayerAbilityPanel';
 import type { ProfileField } from '@/components/ui/PlayerAbilityPanel';
 import { DEFAULT_STATS } from '@/types';
 import type { MembershipStatus } from '@/types/domain';
+
+const PREFERRED_FOOT_OPTIONS = ['왼발', '양발', '오른발'] as const;
+const POSITION_OPTIONS: Position[] = ['FW', 'MF', 'DF', 'GK'];
 
 type JoinRequestFormProps = {
   showHeader?: boolean;
@@ -134,20 +138,25 @@ export default function JoinRequestForm({
     }
   };
 
-  // 3) 주발 순환 변경 (오른발 -> 왼발 -> 양발)
-  const cyclePreferredFoot = () => {
-    if (isPending) return;
-    setFormData((prev) => {
-      const current = prev.preferredFoot;
-      let next: '오른발' | '왼발' | '양발' = '오른발';
-      if (current === '오른발') next = '왼발';
-      else if (current === '왼발') next = '양발';
-      else next = '오른발';
-      return { ...prev, preferredFoot: next };
-    });
+  const handleFormControlFocus = (event: FocusEvent<HTMLDivElement>) => {
+    const target = event.target;
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) {
+      if (typeof target.scrollIntoView === 'function') {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
   };
 
-  // 4) 가입 신청 제출 흐름
+  const handleFormControlBlur = (event: FocusEvent<HTMLDivElement>) => {
+    const target = event.target;
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) {
+      if (typeof window.scrollTo === 'function' && !window.scrollTo.toString().includes('notImplemented')) {
+        window.scrollTo(0, window.scrollY);
+      }
+    }
+  };
+
+  // 3) 가입 신청 제출 흐름
   const handleSubmitClick = () => {
     if (!formData.name.trim()) {
       showToast('이름을 입력해주세요.');
@@ -267,7 +276,7 @@ export default function JoinRequestForm({
     }
   };
 
-  // 5) 가입 신청 취소 흐름
+  // 4) 가입 신청 취소 흐름
   const handleCancelClick = () => {
     setIsCancelModalOpen(true);
   };
@@ -306,7 +315,7 @@ export default function JoinRequestForm({
     }
   };
 
-  // 6) 마이페이지 스타일 카드 수정 연동
+  // 5) 마이페이지 스타일 카드 수정 연동
   const handleProfileCardClick = (field: ProfileField) => {
     setEditingField(field);
     setEditValue(getProfileEditValue(field, formData));
@@ -339,7 +348,11 @@ export default function JoinRequestForm({
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-20">
+    <div
+      className="space-y-6 animate-fadeIn pb-20"
+      onFocusCapture={handleFormControlFocus}
+      onBlurCapture={handleFormControlBlur}
+    >
       {showHeader ? (
         <div className="flex items-center gap-3 pb-3 border-b border-border/40">
           <button
@@ -366,8 +379,8 @@ export default function JoinRequestForm({
       ) : null}
 
       {/* Locker Profile 카드 리재사용 디자인 */}
-      <section className="overflow-hidden rounded-3xl border border-border bg-surface-card shadow-md shadow-brand-primary/5">
-        <div className="flex items-center gap-3 bg-surface-elevated px-4 py-4 profile-card-header">
+      <section className="overflow-hidden rounded-3xl border border-glass-border bg-glass-bg/80 shadow-md shadow-brand-primary/5 backdrop-blur-xl">
+        <div className="flex items-center gap-3 bg-glass-bg/60 px-4 py-4 profile-card-header">
           <div className="relative shrink-0">
             <button
               type="button"
@@ -422,7 +435,7 @@ export default function JoinRequestForm({
                 value={formData.name}
                 onChange={(event) => setFormData({ ...formData, name: event.target.value })}
                 placeholder="이름 입력 *"
-                className="w-full bg-transparent text-2xl font-black tracking-tight text-primary placeholder:text-tertiary focus:outline-none border-b border-border/40 focus:border-brand-primary py-1"
+                className="w-full rounded-xl border border-glass-border bg-glass-bg/60 px-3 py-2 text-2xl font-black tracking-tight text-primary placeholder:text-tertiary focus:border-brand-primary focus:outline-none"
               />
             )}
           </div>
@@ -448,7 +461,7 @@ export default function JoinRequestForm({
         </div>
 
         {/* 마이페이지 정보 수정 필드 컴포넌트 그대로 재사용 */}
-        <div className="border-t border-brand-primary/10 bg-surface-card px-3 py-2 profile-card-body">
+        <div className="space-y-4 border-t border-brand-primary/10 bg-glass-bg/60 px-3 py-3 profile-card-body">
           <PlayerAbilityPanel
             stats={stats}
             ovr={Math.round(Object.values(stats).reduce((a, b) => a + b, 0) / 6)}
@@ -465,7 +478,6 @@ export default function JoinRequestForm({
             onCancelEdit={() => setEditingField(null)}
             onSave={handleSaveProfileField}
             isSaving={false}
-            onPreferredFootClick={isPending ? undefined : cyclePreferredFoot}
             onRadarAxisClick={isPending ? undefined : handleRadarAxisClick}
             editingStat={editingStat}
             editingStatValue={editingStatValue}
@@ -473,6 +485,38 @@ export default function JoinRequestForm({
             onSaveStat={handleSaveStat}
             onCancelSaveStat={handleCancelSaveStat}
           />
+          {!isPending ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <SegmentedField label="주발" ariaLabel="주발 선택">
+                {PREFERRED_FOOT_OPTIONS.map((foot) => (
+                  <button
+                    key={foot}
+                    type="button"
+                    role="radio"
+                    aria-checked={formData.preferredFoot === foot}
+                    onClick={() => setFormData((prev) => ({ ...prev, preferredFoot: foot }))}
+                    className={getSegmentButtonClass(formData.preferredFoot === foot)}
+                  >
+                    {foot}
+                  </button>
+                ))}
+              </SegmentedField>
+              <SegmentedField label="포지션" ariaLabel="포지션 선택">
+                {POSITION_OPTIONS.map((position) => (
+                  <button
+                    key={position}
+                    type="button"
+                    role="radio"
+                    aria-checked={formData.mainPosition === position}
+                    onClick={() => setFormData((prev) => ({ ...prev, mainPosition: position }))}
+                    className={getSegmentButtonClass(formData.mainPosition === position)}
+                  >
+                    {position}
+                  </button>
+                ))}
+              </SegmentedField>
+            </div>
+          ) : null}
         </div>
       </section>
 
@@ -514,7 +558,7 @@ export default function JoinRequestForm({
         <div className="text-center pt-2">
           <button
             type="button"
-          onClick={() => {
+            onClick={() => {
               if (isSecondary) {
                 onSecondaryClose?.();
                 return;
@@ -597,6 +641,34 @@ export default function JoinRequestForm({
 
     </div>
   );
+}
+
+function SegmentedField({
+  label,
+  ariaLabel,
+  children,
+}: {
+  label: string;
+  ariaLabel: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-glass-border bg-glass-bg/60 p-3 backdrop-blur-sm">
+      <span className="block text-[11px] font-black text-secondary">{label}</span>
+      <div className="mt-2 grid grid-flow-col auto-cols-fr gap-1 rounded-xl bg-surface-bg/70 p-1" role="radiogroup" aria-label={ariaLabel}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function getSegmentButtonClass(isActive: boolean) {
+  return [
+    'min-h-10 rounded-lg px-2 text-xs font-black transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40',
+    isActive
+      ? 'bg-brand-primary text-white shadow-sm'
+      : 'text-secondary hover:bg-glass-bg-hover',
+  ].join(' ');
 }
 
 // ─── 헬퍼 함수: 정보 수정 파싱 매핑 ───

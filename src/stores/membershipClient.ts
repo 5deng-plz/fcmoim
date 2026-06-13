@@ -553,7 +553,7 @@ function formatPreferredFoot(foot: PreferredFootCode): '왼발' | '오른발' | 
 }
 
 function normalizePosition(position: Position | string | null): Position {
-  if (position === 'FW' || position === 'MF' || position === 'DF') {
+  if (position === 'FW' || position === 'MF' || position === 'DF' || position === 'GK') {
     return position;
   }
 

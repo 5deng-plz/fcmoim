@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import GuestDashboard from '../src/components/features/GuestDashboard';
@@ -332,7 +332,11 @@ describe('v1.0 auth provider UI', () => {
     expect(screen.getByText('Round 5').closest('.rounded-lg')).toHaveClass('bg-event-match-bg', 'border-event-match-border');
     expect(screen.getByText('5월 전지훈련').closest('.rounded-lg')).toHaveClass('bg-event-training-bg', 'border-event-training-border');
     expect(screen.getByText('5월 장비 점검').closest('.rounded-lg')).toHaveClass('bg-event-etc-bg', 'border-event-etc-border');
-    expect(screen.getByRole('button', { name: /입단신청 시작/ })).toBeInTheDocument();
+    const joinButton = screen.getByRole('button', { name: /입단신청 시작/ });
+    expect(joinButton.closest('.sticky')).toHaveClass('z-30', 'bottom-[calc(var(--bottom-nav-height,72px)+8px)]');
+    expect(joinButton).toHaveClass('rounded-2xl', 'bg-brand-primary', 'py-4');
+    expect(screen.getByText('FC Orca').closest('button')).toHaveClass('bg-glass-bg/70', 'backdrop-blur-xl');
+    expect(screen.getByText('최근 경기 요약').closest('.rounded-2xl')).toHaveClass('bg-glass-bg/70', 'border-glass-border');
     expect(screen.queryByRole('button', { name: /FC moim 랜딩으로 이동/ })).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: /FC Orca/ }));
@@ -654,8 +658,26 @@ describe('v1.0 auth provider UI', () => {
     render(<HomePage />);
 
     expect(await screen.findByRole('dialog', { name: '입단신청' })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('이름 입력 *')).toBeInTheDocument();
+    const nameInput = screen.getByPlaceholderText('이름 입력 *');
+    const scrollIntoView = vi.fn();
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    nameInput.scrollIntoView = scrollIntoView;
+
+    expect(nameInput).toHaveClass('bg-glass-bg/60', 'border-glass-border', 'focus:border-brand-primary');
+    fireEvent.focus(nameInput);
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' });
+    fireEvent.blur(nameInput);
+    expect(scrollTo).toHaveBeenCalledWith(0, window.scrollY);
+    expect(screen.getByRole('radiogroup', { name: '주발 선택' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: '오른발' })).toHaveAttribute('aria-checked', 'true');
+    await userEvent.click(screen.getByRole('radio', { name: '왼발' }));
+    expect(screen.getByRole('radio', { name: '왼발' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radiogroup', { name: '포지션 선택' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'MF' })).toHaveAttribute('aria-checked', 'true');
+    await userEvent.click(screen.getByRole('radio', { name: 'GK' }));
+    expect(screen.getByRole('radio', { name: 'GK' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByRole('button', { name: /FC Orca Second club/ })).toBeInTheDocument();
+    scrollTo.mockRestore();
   });
 
   it('renders pending join state after login without opening a duplicate submit path', async () => {

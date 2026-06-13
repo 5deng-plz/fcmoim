@@ -1,52 +1,58 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 77,
-  "updatedAt": "2026-06-13T14:29:36+09:00",
+  "updateVersion": 78,
+  "updatedAt": "2026-06-13T15:05:48+09:00",
   "updatedBy": "orchestrator",
-  "currentPhase": "ux-area-08-notifications-toast",
+  "currentPhase": "ux-area-07-guest-onboarding",
   "activeWork": {
-    "taskId": "ux-area-08-notifications-toast",
+    "taskId": "ux-area-07-guest-onboarding",
     "status": "ready",
-    "baselineCommit": "c156797372e2b73177a10c5c6dac05260d9b9195",
+    "baselineCommit": "01805b6e15c516f950a27d67ca9d9d6263bce338",
     "changedFiles": [
-      "src/components/ui/Toast.tsx",
-      "src/stores/useToastStore.ts",
-      "src/components/features/NotificationPanel.tsx",
+      "src/components/features/JoinRequestForm.tsx",
+      "src/components/features/GuestDashboard.tsx",
+      "src/types/index.ts",
+      "src/types/domain.ts",
+      "src/stores/membershipClient.ts",
+      "supabase/migrations/20260613070000_add_gk_position.sql",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
-    "changedSurfaces": ["ui", "tests", "docs"],
+    "changedSurfaces": ["ui", "domain", "data", "tests", "docs"],
     "allowedPaths": [
-      "src/components/ui/Toast.tsx",
-      "src/stores/useToastStore.ts",
-      "src/components/features/NotificationPanel.tsx",
+      "src/components/features/JoinRequestForm.tsx",
+      "src/components/features/GuestDashboard.tsx",
+      "src/types/index.ts",
+      "src/types/domain.ts",
+      "src/stores/membershipClient.ts",
+      "supabase/migrations/20260613070000_add_gk_position.sql",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
     "evidence": {
       "scopeSync": {
         "status": "passed",
-        "summary": "Scoped active work to 영역 08 Toast bottom placement/accessibility, toast lifecycle timing, NotificationPanel settlement card glass styling, and deterministic UI tests."
+        "summary": "Scoped active work to 영역 07 guest onboarding: JoinRequestForm segmented controls/mobile focus handling, GuestDashboard glass cards and sticky join CTA, plus GK position persistence support."
       },
       "targetedTest": {
         "status": "passed",
         "provider": "Vitest",
         "target": "tests/frontend-auth-and-schedule-ui.test.tsx",
         "command": "npm run test -- tests/frontend-auth-and-schedule-ui.test.tsx --run",
-        "summary": "70 tests passed, including Toast bottom-nav offset, aria-live status, slideUp/reduced-motion classes, glass styling, 5 second auto-dismiss, and NotificationPanel settlement glass card styling."
+        "summary": "70 tests passed, including guest dashboard glass cards/sticky CTA and join request name input glass focus behavior plus preferred-foot and GK position segmented controls."
       },
       "lint": {
         "status": "passed",
         "provider": "ESLint",
-        "command": "npm run lint",
-        "summary": "ESLint passed for Toast and NotificationPanel changes."
+        "command": "npm run verify:baseline",
+        "summary": "ESLint passed as part of baseline verification."
       },
       "typecheck": {
         "status": "passed",
         "provider": "TypeScript",
-        "command": "npm run typecheck",
-        "summary": "TypeScript passed after toast store timer and UI test changes."
+        "command": "npm run verify:baseline",
+        "summary": "TypeScript passed after adding GK to the shared position domain and membership normalization."
       },
       "baseline": {
         "status": "passed",
@@ -54,19 +60,33 @@
         "command": "npm run verify:baseline",
         "summary": "Harness validation, lint, typecheck, and full Vitest suite passed: 19 test files passed, 1 skipped; 230 tests passed, 15 skipped."
       },
+      "database": {
+        "status": "passed",
+        "type": "database",
+        "provider": "tracked SQL, Local Supabase CLI",
+        "command": "npm run db:check; npm run verify:db:local",
+        "summary": "Non-mock database evidence: Supabase contract check passed for 19 SQL files; local Supabase db reset applied 20260613070000_add_gk_position.sql before an unrelated QA auth seed permission error stopped the broader local API suite."
+      },
       "build": {
         "status": "passed",
         "provider": "Next.js",
         "command": "APP_PROFILE=prod NEXT_PUBLIC_APP_PROFILE=prod NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=placeholder npm run build",
         "summary": "Production build passed with build-time public Supabase env."
+      },
+      "browserRuntime": {
+        "status": "passed",
+        "type": "runtime",
+        "provider": "npm run dev, in-app browser, server terminal log",
+        "command": "npm run dev; curl -I http://127.0.0.1:3000/; in-app Browser open http://127.0.0.1:3000/",
+        "summary": "Runtime smoke passed: dev server reported Ready on port 3000, curl returned HTTP 200, in-app Browser loaded title FC moim with document.readyState complete and 0 console errors. After local DB reset the visible app remained on auth-loading text, but no startup/runtime error was observed."
       }
     },
     "retrospective": {
-      "issuesObserved": "The toast store previously used a 3 second timeout and did not clear older timers, so repeated toasts could dismiss a newer message early.",
-      "missedEvidence": "Manual mobile visual check of the toast floating above BottomNav was not run; deterministic class and timer tests cover the contract.",
-      "harnessImprovementProposal": "Consider a reusable Toast behavior test fixture so future notification changes do not need to live in the large frontend-auth-and-schedule UI suite.",
+      "issuesObserved": "The PRD requested a GK position segment, but the existing app domain and Supabase enum only allowed FW/MF/DF; UI-only implementation would have produced a submit-time persistence failure.",
+      "missedEvidence": "Manual mobile browser visual QA was not run for the sticky CTA; deterministic class tests cover BottomNav offset and CTA sizing.",
+      "harnessImprovementProposal": "Consider a small onboarding form fixture so future segmented-control and viewport-scroll behavior can be tested without rendering the full HomePage path.",
       "promotionRecommendation": "defer",
-      "reason": "The notification/toast behavior is PRD-specific UI work and is now covered by deterministic tests; no durable harness rule promotion is needed."
+      "reason": "The onboarding changes are section-specific and covered by deterministic tests; no durable harness rule promotion is needed."
     },
     "reviewStatus": "ready",
     "loopCounters": {
