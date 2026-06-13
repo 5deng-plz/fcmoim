@@ -6,7 +6,7 @@ loadDotenv('.env.local');
 
 const supabaseUrl = firstEnv('NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_URL');
 const serviceRoleKey = firstEnv('SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEY');
-const password = process.env.QA_TEST_PASSWORD;
+const password = process.env.QA_LOCAL_ACCOUNT_PASSWORD;
 
 if (process.env.DEV_TEST !== 'true') {
   throw new Error('DEV_TEST=true is required before seeding QA auth users.');
@@ -18,7 +18,7 @@ if (!serviceRoleKey) {
   throw new Error('SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY is required.');
 }
 if (!password || password.length < 8) {
-  throw new Error('QA_TEST_PASSWORD must be at least 8 characters.');
+  throw new Error('QA_LOCAL_ACCOUNT_PASSWORD must be at least 8 characters.');
 }
 
 const qaUsers = [

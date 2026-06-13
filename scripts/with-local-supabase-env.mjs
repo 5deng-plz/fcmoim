@@ -36,9 +36,9 @@ if (missingKeys.length > 0) {
 }
 
 const dotenvEnv = loadDotenv('.env.local');
-const qaTestPassword =
-  process.env.QA_TEST_PASSWORD ||
-  dotenvEnv.QA_TEST_PASSWORD ||
+const qaLocalAccountPassword =
+  process.env.QA_LOCAL_ACCOUNT_PASSWORD ||
+  dotenvEnv.QA_LOCAL_ACCOUNT_PASSWORD ||
   'password';
 const defaultClubId =
   process.env.NEXT_PUBLIC_DEFAULT_CLUB_ID ||
@@ -59,7 +59,7 @@ const child = spawnSync(command, args, {
     }),
     SUPABASE_SECRET_KEY: localEnv.SECRET_KEY,
     SUPABASE_SERVICE_ROLE_KEY: localEnv.SERVICE_ROLE_KEY || localEnv.SECRET_KEY,
-    QA_TEST_PASSWORD: qaTestPassword,
+    QA_LOCAL_ACCOUNT_PASSWORD: qaLocalAccountPassword,
     NEXT_PUBLIC_DEFAULT_CLUB_ID: defaultClubId,
   },
   stdio: 'inherit',

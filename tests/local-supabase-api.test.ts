@@ -43,7 +43,7 @@ vi.mock('next/headers', () => ({
 async function signIn(email: string) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  const password = process.env.QA_TEST_PASSWORD;
+  const password = process.env.QA_LOCAL_ACCOUNT_PASSWORD;
 
   if (!supabaseUrl || !publishableKey || !password) {
     throw new Error('Local Supabase API tests require local Supabase env vars.');

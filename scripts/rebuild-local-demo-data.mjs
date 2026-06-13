@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const secretKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || '';
-const qaPassword = process.env.QA_TEST_PASSWORD || '';
+const qaPassword = process.env.QA_LOCAL_ACCOUNT_PASSWORD || '';
 
 const tablesToTruncate = [
   'membership_badges',
@@ -56,7 +56,7 @@ function assertLocalOnly() {
     throw new Error('SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY is required.');
   }
   if (qaPassword !== 'password') {
-    throw new Error('QA_TEST_PASSWORD must be password for local demo rebuild.');
+    throw new Error('QA_LOCAL_ACCOUNT_PASSWORD must be password for local demo rebuild.');
   }
 }
 
