@@ -1271,50 +1271,57 @@ describe('v1.0 schedule and poll UX', () => {
   });
 
   it('shows weather and fine dust forecast on the upcoming match card', () => {
-    useScheduleStore.setState({
-      upcomingMatches: [
-        {
-          id: 'match-weather',
-          clubId: 'club-test',
-          seasonId: 'season-1',
-          round: null,
-          title: 'Round 7',
-          date: '2026-06-13T20:00:00.000+09:00',
-          location: '잠실 풋살파크',
-          type: 'match',
-          status: 'scheduled',
-          ourScore: null,
-          oppScore: null,
-          tacticsCompleted: false,
-          memo: null,
-          createdByMembershipId: 'membership-admin',
-          cancellationReason: null,
-          cancelledAt: null,
-        },
-      ],
-      upcomingMatchesStatus: 'ready',
-      upcomingMatchesError: null,
-    });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date('2026-06-13T10:00:00+09:00'));
 
-    const { container } = render(<HomeTab />);
+    try {
+      useScheduleStore.setState({
+        upcomingMatches: [
+          {
+            id: 'match-weather',
+            clubId: 'club-test',
+            seasonId: 'season-1',
+            round: null,
+            title: 'Round 7',
+            date: '2026-06-13T20:00:00.000+09:00',
+            location: '잠실 풋살파크',
+            type: 'match',
+            status: 'scheduled',
+            ourScore: null,
+            oppScore: null,
+            tacticsCompleted: false,
+            memo: null,
+            createdByMembershipId: 'membership-admin',
+            cancellationReason: null,
+            cancelledAt: null,
+          },
+        ],
+        upcomingMatchesStatus: 'ready',
+        upcomingMatchesError: null,
+      });
 
-    const scheduleIcon = container.querySelector('img[src*="svgrepo-football.svg"]');
-    expect(scheduleIcon).toBeInTheDocument();
-    expect(scheduleIcon).toHaveClass('animate-counter-spin');
-    expect(scheduleIcon?.closest('.event-match-shimmer-icon-bg')).toBeInTheDocument();
-    expect(scheduleIcon?.closest('.blue-shimmer-icon-bg')).not.toBeInTheDocument();
-    expect(screen.getByText('6월 13일 토 20:00')).toHaveClass('text-secondary');
-    expect(screen.getByText('잠실 풋살파크')).toHaveClass('text-secondary');
-    expect(container.querySelector('.lucide-clock-3')).toHaveClass('text-secondary');
-    expect(container.querySelector('.lucide-map-pin')).toHaveClass('text-secondary');
-    const forecastLink = screen.getByRole('link', { name: /경기일 예보/ });
-    expect(forecastLink).toHaveAttribute('href', expect.stringContaining('search.naver.com'));
-    expect(decodeURIComponent(forecastLink.getAttribute('href') ?? '')).toContain('잠실 풋살파크 날씨');
-    expect(forecastLink).toHaveAttribute('target', '_blank');
-    expect(screen.getByText('날씨')).toBeInTheDocument();
-    expect(screen.getByText('맑음 24°')).toBeInTheDocument();
-    expect(screen.getByText('미세먼지')).toBeInTheDocument();
-    expect(screen.getByText('보통')).toBeInTheDocument();
+      const { container } = render(<HomeTab />);
+
+      const scheduleIcon = container.querySelector('img[src*="svgrepo-football.svg"]');
+      expect(scheduleIcon).toBeInTheDocument();
+      expect(scheduleIcon).toHaveClass('animate-counter-spin');
+      expect(scheduleIcon?.closest('.event-match-shimmer-icon-bg')).toBeInTheDocument();
+      expect(scheduleIcon?.closest('.blue-shimmer-icon-bg')).not.toBeInTheDocument();
+      expect(screen.getByText('6월 13일 토 20:00')).toHaveClass('text-secondary');
+      expect(screen.getByText('잠실 풋살파크')).toHaveClass('text-secondary');
+      expect(container.querySelector('.lucide-clock-3')).toHaveClass('text-secondary');
+      expect(container.querySelector('.lucide-map-pin')).toHaveClass('text-secondary');
+      const forecastLink = screen.getByRole('link', { name: /경기일 예보/ });
+      expect(forecastLink).toHaveAttribute('href', expect.stringContaining('search.naver.com'));
+      expect(decodeURIComponent(forecastLink.getAttribute('href') ?? '')).toContain('잠실 풋살파크 날씨');
+      expect(forecastLink).toHaveAttribute('target', '_blank');
+      expect(screen.getByText('날씨')).toBeInTheDocument();
+      expect(screen.getByText('맑음 24°')).toBeInTheDocument();
+      expect(screen.getByText('미세먼지')).toBeInTheDocument();
+      expect(screen.getByText('보통')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('renders compact comments composer without an empty placeholder panel', async () => {

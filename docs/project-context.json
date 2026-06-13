@@ -1,54 +1,61 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 84,
-  "updatedAt": "2026-06-13T18:04:19+09:00",
+  "updateVersion": 86,
+  "updatedAt": "2026-06-13T22:02:05+09:00",
   "updatedBy": "orchestrator",
-  "currentPhase": "update-agents-md",
+  "currentPhase": "remove-overfit-harness-feedback",
   "activeWork": {
-    "taskId": "update-agents-md",
+    "taskId": "remove-overfit-harness-feedback",
     "status": "complete",
-    "baselineCommit": "135c10d490a1124bdc7303145e68369a1ef3518a",
+    "baselineCommit": "18e4d42dae2bf36a19cb9207f1a14c272608c293",
     "changedFiles": [
       "AGENT.md",
       "docs/agent-feedback.md",
       "docs/user/design-harness-workflow.md",
+      "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
-    "changedSurfaces": ["docs"],
+    "changedSurfaces": ["docs", "tests"],
     "allowedPaths": [
       "AGENT.md",
       "docs/agent-feedback.md",
       "docs/user/design-harness-workflow.md",
+      "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
     "evidence": {
-      "recentWorkSync": {
+      "userFeedback": {
         "status": "passed",
-        "provider": "Git",
-        "target": "135c10d490a1124bdc7303145e68369a1ef3518a",
-        "command": "git status --short && git log --oneline -6",
-        "summary": "Worktree was clean; latest completed work is 영역 04 전술판 모바일 드래그 UX 적용."
+        "provider": "User review",
+        "summary": "The previous global DOM side-effect rule was rejected as project-local over-optimization and not a reusable Harness improvement."
       },
-      "instructionUpdate": {
+      "instructionCorrection": {
         "status": "passed",
         "provider": "Manual doc review",
         "target": "AGENT.md, docs/agent-feedback.md, docs/user/design-harness-workflow.md",
-        "summary": "Added the minimal durable rule from the latest work: global DOM side effects must use scoped utilities or an explicit cleanup contract with regression coverage."
+        "summary": "Removed the project-local DOM rule and replaced it with the reusable criterion that Harness feedback must generalize to Agent-process failures."
+      },
+      "targetedTestFix": {
+        "status": "passed",
+        "provider": "Vitest",
+        "target": "tests/frontend-auth-and-schedule-ui.test.tsx",
+        "command": "npm run test -- tests/frontend-auth-and-schedule-ui.test.tsx --run",
+        "summary": "Pinned the weather forecast card test clock before its fixed 2026-06-13 match time so it does not fail after that date passes."
       },
       "guardVerify": {
         "status": "passed",
         "provider": "Harness",
         "command": "npm run harness:guard:verify",
-        "summary": "Harness validation, design guard, diff guard, lint, typecheck, full Vitest suite, SQL contract check, and evidence guard passed."
+        "summary": "Harness validation, design guard, diff guard, lint, typecheck, full Vitest suite, SQL contract check, and evidence guard passed after removing the overfit rule."
       }
     },
     "retrospective": {
-      "issuesObserved": ["The latest mobile drag work exposed a repeatable risk: direct body/document state writes can conflict with other runtime locks if cleanup is not explicit."],
+      "issuesObserved": ["The previous automation incorrectly promoted a project-local implementation concern into reusable Harness guidance."],
       "missedEvidence": ["No browser runtime evidence is required for this documentation-only sync."],
-      "harnessImprovementProposal": ["Keep the prevention as a compact documented rule; do not add a new guard until a concrete false negative recurs."],
+      "harnessImprovementProposal": ["Before updating AGENT.md or Harness docs, require the proposed feedback to generalize beyond the latest feature implementation."],
       "promotionRecommendation": "propose",
-      "reason": "The rule is durable because it governs shared global DOM side effects while staying independent of the specific tactics screen design."
+      "reason": "This correction addresses the reusable failure in the automation process, not the tactics feature implementation detail."
     },
     "reviewStatus": "ready",
     "loopCounters": {

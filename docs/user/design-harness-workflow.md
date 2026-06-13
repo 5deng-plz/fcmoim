@@ -83,7 +83,7 @@ UI 또는 디자인 관련 코드를 수정할 때는 아래 순서를 따릅니
 - 완료된 턴의 변경은 커밋으로 경계를 남깁니다. 커밋 메시지는 작업 요약을 담고, 서로 다른 관심사는 가능한 한 별도 커밋으로 분리합니다.
 - guard 실패는 CI나 guard script 안에서 자동 수정하지 않습니다. `loopPolicy.maxGuardRetries`를 초과하면 현재 상태, 실패 원인, 다음 단계를 사용자에게 보고하고 중단합니다.
 - `docs/project-context.json`의 `updateVersion`은 orchestrator가 상태를 갱신할 때마다 증가시킵니다. 이번 정책은 lightweight versioning이며 JSON Patch 또는 RFC 6902 도입을 의미하지 않습니다.
-- 전역 DOM 상태(body scroll, overflow, pointer/touch/focus)를 바꾸는 UI는 기존 scoped utility를 우선 재사용하고, 새 경로가 필요하면 cleanup 계약과 회귀 테스트를 함께 둡니다.
+- retrospective의 `promotionRecommendation`은 검토 신호입니다. 특정 구현에만 맞는 개선안은 하네스 정책으로 승격하지 않고, 재사용 가능한 Agent-process 실패로 일반화될 때만 기록합니다.
 
 ## Gates
 
@@ -134,7 +134,7 @@ Verifier는 디자인 규칙, semantic slot, evidence 누락, runtime risk를 bl
 - `// design-exempt`를 일반적인 탈출구로 사용하지 않습니다.
 - forbidden path를 `activeWork.allowedPaths`로 우회하지 않습니다.
 - `docs/plan/**`의 영역별 구현 지시를 검증 없이 영구 하네스 정책으로 승격하지 않습니다.
-- body/document 전역 상태를 직접 쓰고 cleanup evidence 없이 완료 처리하지 않습니다.
+- 특정 기능 구현 패턴을 재사용 가능한 하네스 정책인 것처럼 기록하지 않습니다.
 - 새 UI 상태를 임의 색상이나 일반 아이콘으로 표현하지 않습니다.
 - evidence 없이 `docs/project-context.json`의 상태만 `ready`로 바꾸지 않습니다.
 - Review verdict를 active work agent가 직접 만든 것으로 처리하지 않습니다.
