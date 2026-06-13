@@ -48,4 +48,5 @@
 - Read `docs/decisions.md` before changing architecture, data, auth, deployment, or quality gates.
 - Run `npm run harness:validate` after harness, Agent, or contract changes.
 - Do not mark a runtime-affecting task complete without configured QA evidence.
+- For global DOM side effects, reuse scoped utilities or document an equivalent cleanup contract before writing body/document state directly.
 - Preserve role boundaries. If another Agent owns the affected path, document the needed change instead of silently crossing ownership.

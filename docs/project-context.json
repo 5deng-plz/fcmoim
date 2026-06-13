@@ -1,82 +1,68 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 82,
-  "updatedAt": "2026-06-13T15:25:18+09:00",
+  "updateVersion": 84,
+  "updatedAt": "2026-06-13T18:04:19+09:00",
   "updatedBy": "orchestrator",
-  "currentPhase": "ux-area-04-tactics-mobile-drag-ux",
+  "currentPhase": "update-agents-md",
   "activeWork": {
-    "taskId": "ux-area-04-tactics-mobile-drag-ux",
-    "status": "ready",
-    "baselineCommit": "97d5645453ad61668a290eb9f5c2b2797a91e849",
+    "taskId": "update-agents-md",
+    "status": "complete",
+    "baselineCommit": "135c10d490a1124bdc7303145e68369a1ef3518a",
     "changedFiles": [
-      "src/utils/scrollLock.ts",
-      "src/components/features/TacticsDragBuilder.tsx",
-      "src/components/features/SoccerPitch.tsx",
-      "src/app/globals.css",
-      "tests/frontend-auth-and-schedule-ui.test.tsx",
+      "AGENT.md",
+      "docs/agent-feedback.md",
+      "docs/user/design-harness-workflow.md",
       "docs/project-context.json"
     ],
-    "changedSurfaces": ["ui", "tests", "docs"],
+    "changedSurfaces": ["docs"],
     "allowedPaths": [
-      "src/utils/scrollLock.ts",
-      "src/components/features/TacticsDragBuilder.tsx",
-      "src/components/features/SoccerPitch.tsx",
-      "src/app/globals.css",
-      "tests/frontend-auth-and-schedule-ui.test.tsx",
+      "AGENT.md",
+      "docs/agent-feedback.md",
+      "docs/user/design-harness-workflow.md",
       "docs/project-context.json"
     ],
     "evidence": {
-      "scopeSync": {
+      "recentWorkSync": {
         "status": "passed",
-        "summary": "Scoped active work to 영역 04 Tactics mobile drag UX: dnd-kit sensor thresholds, body scroll lock utility, drag cancel cleanup, touch-action contracts, glass drag overlay, and reduced-motion-safe drop bounce feedback."
+        "provider": "Git",
+        "target": "135c10d490a1124bdc7303145e68369a1ef3518a",
+        "command": "git status --short && git log --oneline -6",
+        "summary": "Worktree was clean; latest completed work is 영역 04 전술판 모바일 드래그 UX 적용."
       },
-      "targetedTest": {
+      "instructionUpdate": {
         "status": "passed",
-        "provider": "Vitest",
-        "target": "tests/frontend-auth-and-schedule-ui.test.tsx",
-        "command": "npm run test -- tests/frontend-auth-and-schedule-ui.test.tsx --run",
-        "summary": "71 tests passed, including nested body scroll lock restoration and TacticsDragBuilder pitch/bench touch-action class contracts."
+        "provider": "Manual doc review",
+        "target": "AGENT.md, docs/agent-feedback.md, docs/user/design-harness-workflow.md",
+        "summary": "Added the minimal durable rule from the latest work: global DOM side effects must use scoped utilities or an explicit cleanup contract with regression coverage."
       },
-      "lint": {
+      "guardVerify": {
         "status": "passed",
-        "provider": "ESLint",
-        "command": "npm run verify:baseline",
-        "summary": "ESLint passed as part of baseline verification."
-      },
-      "typecheck": {
-        "status": "passed",
-        "provider": "TypeScript",
-        "command": "npm run verify:baseline",
-        "summary": "TypeScript passed for scrollLock, TacticsDragBuilder dnd lifecycle changes, SoccerPitch props, CSS class usage, and UI test changes."
-      },
-      "baseline": {
-        "status": "passed",
-        "provider": "Vitest, ESLint, TypeScript",
-        "command": "npm run verify:baseline",
-        "summary": "Harness validation, lint, typecheck, and full Vitest suite passed: 19 test files passed, 1 skipped; 231 tests passed, 15 skipped."
-      },
-      "build": {
-        "status": "passed",
-        "provider": "Next.js",
-        "command": "APP_PROFILE=prod NEXT_PUBLIC_APP_PROFILE=prod NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=placeholder npm run build",
-        "summary": "Production build passed with build-time public Supabase env."
+        "provider": "Harness",
+        "command": "npm run harness:guard:verify",
+        "summary": "Harness validation, design guard, diff guard, lint, typecheck, full Vitest suite, SQL contract check, and evidence guard passed."
       }
     },
     "retrospective": {
-      "issuesObserved": "Direct body style writes would conflict with modal locks, so scroll blocking was routed through a small reference-counted utility and released on drag end, cancel, and unmount.",
-      "missedEvidence": "Manual iOS Safari and Android Chrome drag testing was not run in this environment; deterministic tests cover scroll lock nesting and visible touch-action contracts.",
-      "harnessImprovementProposal": "Consider a focused dnd-kit interaction fixture that can simulate drag start/cancel and assert body scroll state without relying on full ScheduleTab setup.",
-      "promotionRecommendation": "defer",
-      "reason": "The mobile drag behavior is section-specific interaction work and does not require a durable harness rule promotion."
+      "issuesObserved": ["The latest mobile drag work exposed a repeatable risk: direct body/document state writes can conflict with other runtime locks if cleanup is not explicit."],
+      "missedEvidence": ["No browser runtime evidence is required for this documentation-only sync."],
+      "harnessImprovementProposal": ["Keep the prevention as a compact documented rule; do not add a new guard until a concrete false negative recurs."],
+      "promotionRecommendation": "propose",
+      "reason": "The rule is durable because it governs shared global DOM side effects while staying independent of the specific tactics screen design."
     },
     "reviewStatus": "ready",
     "loopCounters": {
       "reviewRounds": 0,
-      "guardRetries": 1
+      "guardRetries": 0
     }
   },
   "workstreams": [
+    {
+      "id": "ux-area-04-tactics-mobile-drag-ux",
+      "status": "complete",
+      "completedAt": "2026-06-13T15:26:18+09:00",
+      "commit": "135c10d490a1124bdc7303145e68369a1ef3518a"
+    },
     {
       "id": "schedule-detail-tactics-ui-rework",
       "status": "complete",

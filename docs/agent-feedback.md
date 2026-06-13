@@ -20,3 +20,4 @@
 - Korean for plans and commits: 사용자가 리뷰하는 구현 계획서(implementation_plan.md) 및 Git 커밋 메시지는 한글(Korean)로 작성합니다.
 - Keep harness durable: 하네스에는 장기 유지할 변경 경계, 공유 토큰/컴포넌트, 접근성 계약만 고정합니다. 특정 화면의 최신 기획 디테일은 작업별 테스트와 evidence로 검증하고, 이후 변경을 막는 고정 규칙으로 승격하지 않습니다.
 - Do not encode volatile specs in harness: 색상, 아이콘, 문구, 배치, 특정 URL처럼 현재 기획/리뷰 코멘트에 종속된 UI 세부사항은 사용자가 명시적으로 영구 정책화를 요청하지 않는 한 하네스 규칙이나 semantic slot에 추가하지 않습니다.
+- Contain global DOM side effects: body scroll, overflow, pointer, touch, focus처럼 전역 DOM 상태를 바꾸는 UI는 기존 scoped utility를 재사용하거나 reference-counted cleanup 계약과 회귀 테스트를 함께 둡니다.
