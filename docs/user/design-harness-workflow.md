@@ -132,6 +132,7 @@ Verifier는 디자인 규칙, semantic slot, evidence 누락, runtime risk를 bl
 
 - `// design-exempt`를 일반적인 탈출구로 사용하지 않습니다.
 - forbidden path를 `activeWork.allowedPaths`로 우회하지 않습니다.
+- `docs/plan/**`의 영역별 구현 지시를 검증 없이 영구 하네스 정책으로 승격하지 않습니다.
 - 새 UI 상태를 임의 색상이나 일반 아이콘으로 표현하지 않습니다.
 - evidence 없이 `docs/project-context.json`의 상태만 `ready`로 바꾸지 않습니다.
 - Review verdict를 active work agent가 직접 만든 것으로 처리하지 않습니다.

@@ -1,67 +1,66 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 71,
-  "updatedAt": "2026-06-12T07:52:00.000+09:00",
+  "updateVersion": 73,
+  "updatedAt": "2026-06-12T18:03:44.000+09:00",
   "updatedBy": "orchestrator",
-  "currentPhase": "poll-cancel-scope-warning-copy",
+  "currentPhase": "ux-plan-guidance-harness-sync",
   "activeWork": {
-    "taskId": "poll-cancel-scope-warning-copy",
-    "status": "complete",
-    "baselineCommit": "4eec8db92a69c9e61dc7114536b332b23115fa5d",
+    "taskId": "ux-plan-guidance-harness-sync",
+    "status": "in_progress",
+    "baselineCommit": "3fb9879bd96435cb8a88e3f7a4115998d4ad0aa2",
     "changedFiles": [
-      "src/components/tabs/ScheduleTab.tsx",
-      "tests/frontend-auth-and-schedule-ui.test.tsx",
+      "AGENT.md",
+      "docs/plan/01_viewport_desktop_ux.md",
+      "docs/plan/02_home_dashboard_ux.md",
+      "docs/plan/03_schedule_all_in_one_ux.md",
+      "docs/plan/04_tactics_builder_ux.md",
+      "docs/plan/05_result_records_ux.md",
+      "docs/plan/06_squad_player_card_ux.md",
+      "docs/plan/07_guest_onboarding_ux.md",
+      "docs/plan/08_notifications_toast_ux.md",
+      "docs/plan/Guidance.md",
+      "docs/plan/Preview.md",
+      "docs/user/design-harness-workflow.md",
       "docs/project-context.json"
     ],
-    "changedSurfaces": ["ui", "tests", "docs"],
+    "changedSurfaces": ["docs"],
     "allowedPaths": [
-      "src/components/tabs/ScheduleTab.tsx",
-      "tests/frontend-auth-and-schedule-ui.test.tsx",
+      "AGENT.md",
+      "docs/plan/01_viewport_desktop_ux.md",
+      "docs/plan/02_home_dashboard_ux.md",
+      "docs/plan/03_schedule_all_in_one_ux.md",
+      "docs/plan/04_tactics_builder_ux.md",
+      "docs/plan/05_result_records_ux.md",
+      "docs/plan/06_squad_player_card_ux.md",
+      "docs/plan/07_guest_onboarding_ux.md",
+      "docs/plan/08_notifications_toast_ux.md",
+      "docs/plan/Guidance.md",
+      "docs/plan/Preview.md",
+      "docs/user/design-harness-workflow.md",
       "docs/project-context.json"
     ],
     "evidence": {
-      "baseline": {
+      "scopeSync": {
         "status": "passed",
-        "command": "npm run verify:baseline",
-        "summary": "Harness validation, lint, typecheck, and full Vitest suite passed: 19 test files passed, 1 skipped; 226 tests passed, 15 skipped."
+        "summary": "Synced active work to the current UX planning document updates plus the minimal AGENT/workflow rule that docs/plan input must be verified before promotion into durable harness policy."
       },
-      "pollCancelScopeCopy": {
-        "type": "deterministic",
+      "harnessValidate": {
         "status": "passed",
-        "provider": "Vitest, Testing Library",
-        "target": "tests/frontend-auth-and-schedule-ui.test.tsx",
-        "command": "npm run test -- tests/frontend-auth-and-schedule-ui.test.tsx --run",
-        "summary": "Calendar poll cancellation modal now explains that cancelling from one selected date cancels the full poll and all candidate dates, not only that date."
-      },
-      "dbCheck": {
-        "type": "database",
-        "status": "passed",
-        "command": "npm run db:check",
-        "summary": "Supabase contract check passed for 18 SQL files during the final guard run."
+        "command": "npm run harness:validate",
+        "summary": "Harness validation passed after the AGENT and workflow wording update."
       },
       "guardVerify": {
         "status": "passed",
         "command": "npm run harness:guard:verify",
-        "summary": "Final verify guard passed after syncing this workstream: design guard passed for 1 guarded file, diff guard passed for 3 changed files, baseline passed, DB contract check passed, and evidence guard passed."
+        "summary": "Final verify guard passed for 13 changed files: harness validation passed, design guard had no guarded app files, diff guard passed, baseline passed with 19 test files passed and 1 skipped, DB contract check passed for 18 SQL files, and evidence guard passed."
       },
       "runtimeSmoke": {
         "status": "not_required",
-        "summary": "No app entrypoint, Auth/session/API bootstrap, package/runtime config, Supabase schema, or API route files changed. In-app browser visual check was attempted twice but blocked by Browser webview attach timeout."
+        "summary": "Only documentation and planning files changed; no app entrypoint, Auth/session/API bootstrap, package/runtime config, Supabase schema, or API route files changed."
       }
     },
-    "reviewStatus": "ready",
-    "retrospective": {
-      "issuesObserved": [
-        "The poll option cancel button could be misread as cancelling only the selected date, even though the current API cancels the entire poll."
-      ],
-      "missedEvidence": [],
-      "harnessImprovementProposal": [
-        "No harness change proposed; this was product copy clarification covered by deterministic UI tests."
-      ],
-      "promotionRecommendation": "none",
-      "reason": "The work clarifies existing behavior without changing API, data, or runtime contracts."
-    },
+    "reviewStatus": "needs-review",
     "loopCounters": {
       "reviewRounds": 0,
       "guardRetries": 0

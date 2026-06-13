@@ -43,6 +43,7 @@
 
 - Repository files are the system of record; do not rely on chat history for durable facts.
 - Keep `AGENT.md` compact. Add project knowledge to `docs/`, not here.
+- Treat `docs/plan/**` as planning input. Verify it against current code and promote only durable, confirmed rules into harness policy.
 - When user feedback exposes a repeatable Agent failure, record the prevention rule in `docs/agent-feedback.md`.
 - Read `docs/decisions.md` before changing architecture, data, auth, deployment, or quality gates.
 - Run `npm run harness:validate` after harness, Agent, or contract changes.
