@@ -5,12 +5,24 @@ import type {
   AuthContext,
   ClubMembershipSummaryRow,
   JoinProfileInput,
+  MembershipStats,
   MembershipProfilePatch,
   MembershipStatus,
   NormalizedJoinProfile,
   PendingMembershipReviewRow,
   TeamMembershipRow,
 } from '../types/domain';
+import { calculateStatsOvr } from '../utils/stats';
+
+const MAX_PROFILE_STATS_SUM = 400;
+const MEMBERSHIP_STAT_KEYS: Array<keyof MembershipStats> = [
+  'attack',
+  'defense',
+  'stamina',
+  'mentality',
+  'speed',
+  'manner',
+];
 
 type AccountRepository = {
   upsertFromAuthUser(input: { id: string; email: string | null }): Promise<AccountRow>;
@@ -379,9 +391,44 @@ function normalizeMembershipProfilePatch(profile: MembershipProfilePatch): Membe
   if ('residence' in profile) normalized.residence = normalizeResidence(profile.residence);
   if ('photoUrl' in profile) normalized.photoUrl = normalizePhotoUrl(profile.photoUrl ?? null);
   if ('preferredFoot' in profile) normalized.preferredFoot = normalizePreferredFoot(profile.preferredFoot);
+  if ('stats' in profile) {
+    normalized.stats = normalizeProfileStats(profile.stats);
+    normalized.ovr = calculateStatsOvr(normalized.stats);
+  }
 
   if (Object.keys(normalized).length === 0) {
     throw new AppError('bad_request', '저장할 프로필 정보가 없습니다.');
+  }
+
+  return normalized;
+}
+
+function normalizeProfileStats(value: MembershipProfilePatch['stats']): MembershipStats {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new AppError('bad_request', '능력치 정보가 올바르지 않습니다.');
+  }
+
+  const normalized = {} as MembershipStats;
+  let total = 0;
+
+  for (const key of MEMBERSHIP_STAT_KEYS) {
+    const statValue = value[key];
+
+    if (typeof statValue !== 'number' || !Number.isFinite(statValue)) {
+      throw new AppError('bad_request', '능력치는 숫자로 입력해주세요.');
+    }
+
+    const roundedValue = Math.round(statValue);
+    if (roundedValue !== statValue || roundedValue < 0 || roundedValue > 99) {
+      throw new AppError('bad_request', '능력치는 0 이상 99 이하의 정수여야 합니다.');
+    }
+
+    normalized[key] = roundedValue;
+    total += roundedValue;
+  }
+
+  if (total > MAX_PROFILE_STATS_SUM) {
+    throw new AppError('bad_request', `능력치 총합은 ${MAX_PROFILE_STATS_SUM}점을 초과할 수 없습니다.`);
   }
 
   return normalized;

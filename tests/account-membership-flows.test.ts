@@ -31,6 +31,14 @@ type MembershipRow = {
   residence: string | null;
   photoUrl: string | null;
   ovr: number;
+  stats: {
+    attack: number;
+    defense: number;
+    stamina: number;
+    mentality: number;
+    speed: number;
+    manner: number;
+  };
   matchPoints: number;
   preferredFoot: 'left' | 'right' | 'both';
 };
@@ -72,6 +80,14 @@ type AccountMembershipService = {
     clubId: string;
     membershipId: string;
   }): Promise<MembershipRow>;
+  updateMembershipProfile(input: {
+    auth: AuthContext;
+    clubId: string;
+    profile: {
+      stats?: MembershipRow['stats'] | null;
+      ovr?: number | null;
+    };
+  }): Promise<MembershipRow>;
   listPendingMemberships(input: { auth: AuthContext; clubId: string }): Promise<Array<{
     id: string;
     nickname: string;
@@ -110,6 +126,14 @@ function createMembershipRow(overrides: Partial<MembershipRow> = {}): Membership
     residence: null,
     photoUrl: null,
     ovr: 60,
+    stats: {
+      attack: 60,
+      defense: 60,
+      stamina: 60,
+      mentality: 60,
+      speed: 60,
+      manner: 60,
+    },
     matchPoints: 100,
     preferredFoot: 'right',
     ...overrides,
@@ -349,6 +373,79 @@ describe('v1.0 Account + TeamMembership flows', () => {
       expect(repositories.memberships.createPending).not.toHaveBeenCalled();
     },
   );
+
+  it('updates membership profile stats with a server-calculated ovr', async () => {
+    const repositories = createRepositories({
+      existingMembership: createMembershipRow({
+        id: 'membership-current-user',
+        accountId: 'auth-current-user',
+        status: 'approved',
+      }),
+    });
+    const service = await loadService(repositories);
+    const stats = {
+      attack: 70,
+      defense: 60,
+      stamina: 60,
+      mentality: 60,
+      speed: 60,
+      manner: 60,
+    };
+
+    await service.updateMembershipProfile({
+      auth: {
+        user: {
+          id: 'auth-current-user',
+          email: 'player@example.com',
+        },
+      },
+      clubId: 'club-1',
+      profile: {
+        stats,
+        ovr: 99,
+      },
+    });
+
+    expect(repositories.memberships.updateProfile).toHaveBeenCalledWith({
+      membershipId: 'membership-current-user',
+      profile: {
+        stats,
+        ovr: 62,
+      },
+    });
+  });
+
+  it.each([
+    ['above range', { attack: 100, defense: 60, stamina: 60, mentality: 60, speed: 60, manner: 60 }],
+    ['above total', { attack: 99, defense: 99, stamina: 99, mentality: 99, speed: 99, manner: 99 }],
+    ['missing field', { attack: 70, defense: 60, stamina: 60, mentality: 60, speed: 60 }],
+    ['non-number field', { attack: '70', defense: 60, stamina: 60, mentality: 60, speed: 60, manner: 60 }],
+  ])('rejects invalid membership profile stats: %s', async (_caseName, stats) => {
+    const repositories = createRepositories({
+      existingMembership: createMembershipRow({
+        id: 'membership-current-user',
+        accountId: 'auth-current-user',
+        status: 'approved',
+      }),
+    });
+    const service = await loadService(repositories);
+
+    await expect(service.updateMembershipProfile({
+      auth: {
+        user: {
+          id: 'auth-current-user',
+          email: 'player@example.com',
+        },
+      },
+      clubId: 'club-1',
+      profile: {
+        stats: stats as MembershipRow['stats'],
+      },
+    })).rejects.toMatchObject({
+      code: 'bad_request',
+    });
+    expect(repositories.memberships.updateProfile).not.toHaveBeenCalled();
+  });
 
   it.each([
     ['member', 'approved'],

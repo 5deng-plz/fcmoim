@@ -296,6 +296,8 @@ export type MembershipProfilePatch = {
   residence?: string | null;
   photoUrl?: string | null;
   preferredFoot?: PreferredFootCode | null;
+  stats?: MembershipStats | null;
+  ovr?: number | null;
 };
 
 export type ApprovedMemberAction =

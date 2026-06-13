@@ -1960,6 +1960,8 @@ function toMembershipProfilePatch(profile: MembershipProfilePatch) {
   if ('residence' in profile) payload.residence = profile.residence;
   if ('photoUrl' in profile) payload.photo_url = profile.photoUrl;
   if ('preferredFoot' in profile && profile.preferredFoot) payload.preferred_foot = profile.preferredFoot;
+  if ('stats' in profile && profile.stats) payload.stats = profile.stats;
+  if ('ovr' in profile && typeof profile.ovr === 'number') payload.ovr = profile.ovr;
 
   return payload;
 }

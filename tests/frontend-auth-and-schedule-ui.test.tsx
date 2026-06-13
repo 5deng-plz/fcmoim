@@ -3366,7 +3366,7 @@ describe('locker room team management UI', () => {
     expect(screen.getByText('영업 준비중입니다')).toBeInTheDocument();
     expect(screen.getByText('경기 Point')).toBeInTheDocument();
     expect(screen.getByText('2,000')).toBeInTheDocument();
-    expect(screen.getAllByText('70')).toHaveLength(1);
+    expect(within(screen.getByTestId('player-ovr-style-card')).getByText('60')).toBeInTheDocument();
     expect(screen.getByTestId('player-ability-panel')).toHaveClass('border-glass-border', 'bg-glass-bg', 'backdrop-blur-md');
     expect(screen.getByTestId('player-ovr-style-card')).toHaveClass('w-[104px]', 'border-glass-border', 'bg-glass-bg', 'backdrop-blur-sm', 'shadow-glass-shadow');
     expect(screen.getByTestId('player-trait-card')).toHaveClass('playstyle-neg-card');
@@ -3566,6 +3566,146 @@ describe('locker room team management UI', () => {
 
     expect(saveMemberProfile).not.toHaveBeenCalled();
     expect(useToastStore.getState().message).toBe('몸무게는 30kg 이상 180kg 이하로 입력해주세요.');
+  });
+
+  it('edits locker profile stats locally and saves stats with recalculated ovr', async () => {
+    const user = userEvent.setup();
+    const saveMemberProfile = vi.fn(async () => undefined);
+    useAppStore.setState({ activeClubId: 'club-test' });
+    useAuthStore.setState({
+      saveMemberProfile,
+      memberProfile: createApprovedMember('membership-member', '김멤버', 'member'),
+    });
+
+    render(<LockerProfile />);
+
+    await user.click(screen.getByText('공격'));
+    await user.clear(screen.getByRole('spinbutton'));
+    await user.type(screen.getByRole('spinbutton'), '70');
+    await user.click(screen.getByRole('button', { name: '저장' }));
+
+    expect(screen.getByRole('button', { name: '스탯 저장' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '스탯 저장' }));
+
+    await waitFor(() => expect(saveMemberProfile).toHaveBeenCalledWith({
+      clubId: 'club-test',
+      stats: {
+        ...DEFAULT_STATS,
+        attack: 70,
+      },
+      ovr: 62,
+    }));
+  });
+
+  it('rolls back unsaved locker profile stat changes from the action bar', async () => {
+    const user = userEvent.setup();
+    const saveMemberProfile = vi.fn();
+    useAppStore.setState({ activeClubId: 'club-test' });
+    useAuthStore.setState({
+      saveMemberProfile,
+      memberProfile: createApprovedMember('membership-member', '김멤버', 'member'),
+    });
+
+    render(<LockerProfile />);
+
+    await user.click(screen.getByText('공격'));
+    await user.clear(screen.getByRole('spinbutton'));
+    await user.type(screen.getByRole('spinbutton'), '70');
+    await user.click(screen.getByRole('button', { name: '저장' }));
+    await user.click(screen.getByRole('button', { name: '스탯 변경 취소' }));
+
+    expect(screen.queryByRole('button', { name: '스탯 저장' })).not.toBeInTheDocument();
+    expect(saveMemberProfile).not.toHaveBeenCalled();
+  });
+
+  it('clamps locker profile stat edits to the available stat point total', async () => {
+    const user = userEvent.setup();
+    const saveMemberProfile = vi.fn();
+    const nearlyMaxedStats = {
+      attack: 60,
+      defense: 66,
+      stamina: 66,
+      mentality: 66,
+      speed: 66,
+      manner: 66,
+    };
+    useAppStore.setState({ activeClubId: 'club-test' });
+    useAuthStore.setState({
+      saveMemberProfile,
+      memberProfile: {
+        ...createApprovedMember('membership-member', '김멤버', 'member'),
+        stats: nearlyMaxedStats,
+        ovr: 65,
+      },
+    });
+
+    render(<LockerProfile />);
+
+    await user.click(screen.getByText('공격'));
+    await user.clear(screen.getByRole('spinbutton'));
+    await user.type(screen.getByRole('spinbutton'), '80');
+
+    expect(useToastStore.getState().message).toBe('능력치 총합은 400점을 초과할 수 없습니다.');
+    expect(screen.getByRole('spinbutton')).toHaveValue(70);
+    await user.click(screen.getByRole('button', { name: '저장' }));
+    await user.click(screen.getByRole('button', { name: '스탯 저장' }));
+
+    await waitFor(() => expect(saveMemberProfile).toHaveBeenCalledWith({
+      clubId: 'club-test',
+      stats: {
+        ...nearlyMaxedStats,
+        attack: 70,
+      },
+      ovr: 67,
+    }));
+  });
+
+  it('exposes radar drag handles and updates a stat from pointer drag', async () => {
+    const saveMemberProfile = vi.fn(async () => undefined);
+    useAppStore.setState({ activeClubId: 'club-test' });
+    useAuthStore.setState({
+      saveMemberProfile,
+      memberProfile: createApprovedMember('membership-member', '김멤버', 'member'),
+    });
+
+    render(<LockerProfile />);
+
+    const radar = screen.getByTestId('hexagon-radar');
+    vi.spyOn(radar, 'getBoundingClientRect').mockReturnValue({
+      x: 0,
+      y: 0,
+      left: 0,
+      top: 0,
+      right: 260,
+      bottom: 216,
+      width: 260,
+      height: 216,
+      toJSON: () => ({}),
+    } as DOMRect);
+
+    fireEvent.pointerDown(screen.getByTestId('radar-drag-handle-attack'), {
+      pointerId: 1,
+      clientX: 130,
+      clientY: 54,
+    });
+    fireEvent.pointerMove(radar, {
+      pointerId: 1,
+      clientX: 130,
+      clientY: 64,
+    });
+    fireEvent.pointerUp(radar, { pointerId: 1, clientX: 130, clientY: 64 });
+
+    expect(screen.getByRole('button', { name: '스탯 저장' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '스탯 저장' }));
+
+    await waitFor(() => expect(saveMemberProfile).toHaveBeenCalledWith({
+      clubId: 'club-test',
+      stats: {
+        ...DEFAULT_STATS,
+        attack: 81,
+      },
+      ovr: 64,
+    }));
   });
 });
 

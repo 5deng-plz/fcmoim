@@ -195,10 +195,15 @@ async function getMembershipByAccount(accountId: string, clubId: string) {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from('team_memberships')
-    .select('id, ovr, match_points')
+    .select('id, ovr, stats, match_points')
     .eq('account_id', accountId)
     .eq('club_id', clubId)
-    .single<{ id: string; ovr: number; match_points: number }>();
+    .single<{
+      id: string;
+      ovr: number;
+      stats: { attack: number; defense: number; stamina: number; mentality: number; speed: number; manner: number };
+      match_points: number;
+    }>();
 
   if (error) {
     throw new Error(`Failed to fetch membership for ${accountId}/${clubId}: ${error.message}`);
@@ -473,6 +478,94 @@ describeLocal('local Supabase API integration', () => {
       expect.objectContaining({ clubId: clubIds.guppy, clubName: 'FC Guppy', status: 'approved' }),
       expect.objectContaining({ clubId: clubIds.orca, clubName: 'FC Orca', status: 'approved' }),
     ]));
+  });
+
+  it('patches profile stats, recalculates ovr, persists valid stats, and rejects invalid stats', async () => {
+    const accountId = await signIn('qa-member1@fcmoim.test');
+    const membership = await getMembershipByAccount(accountId, clubIds.guppy);
+    const profileRoute = await import('../src/app/api/membership/profile/route');
+    const membershipRoute = await import('../src/app/api/membership/route');
+    const admin = createAdminClient();
+    const nextStats = {
+      attack: 70,
+      defense: 60,
+      stamina: 60,
+      mentality: 60,
+      speed: 60,
+      manner: 60,
+    };
+
+    try {
+      const updateResponse = await profileRoute.PATCH(new Request('http://localhost/api/membership/profile', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          clubId: clubIds.guppy,
+          stats: nextStats,
+          ovr: 99,
+        }),
+      }));
+      const updated = await updateResponse.json();
+
+      expect(updateResponse.status).toBe(200);
+      expect(updated).toEqual(expect.objectContaining({
+        stats: nextStats,
+        ovr: 62,
+      }));
+
+      const snapshotResponse = await membershipRoute.GET(
+        new Request(`http://localhost/api/membership?clubId=${clubIds.guppy}`),
+      );
+      const snapshot = await snapshotResponse.json();
+
+      expect(snapshotResponse.status).toBe(200);
+      expect(snapshot.membership).toEqual(expect.objectContaining({
+        stats: nextStats,
+        ovr: 62,
+      }));
+
+      const invalidTotalResponse = await profileRoute.PATCH(new Request('http://localhost/api/membership/profile', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          clubId: clubIds.guppy,
+          stats: {
+            attack: 99,
+            defense: 99,
+            stamina: 99,
+            mentality: 99,
+            speed: 99,
+            manner: 99,
+          },
+        }),
+      }));
+      expect(invalidTotalResponse.status).toBe(400);
+
+      const invalidShapeResponse = await profileRoute.PATCH(new Request('http://localhost/api/membership/profile', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          clubId: clubIds.guppy,
+          stats: {
+            attack: 70,
+            defense: 60,
+            stamina: 60,
+            mentality: 60,
+            speed: 60,
+          },
+        }),
+      }));
+      expect(invalidShapeResponse.status).toBe(400);
+    } finally {
+      const { error } = await admin
+        .from('team_memberships')
+        .update({
+          stats: membership.stats,
+          ovr: membership.ovr,
+        })
+        .eq('id', membership.id);
+
+      if (error) {
+        throw new Error(`Failed to restore membership stats: ${error.message}`);
+      }
+    }
   });
 
   it('serves approved and pending clubs together for additional join monitoring', async () => {

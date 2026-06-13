@@ -2,6 +2,7 @@ import { appErrorResponse } from '../../../../types/api';
 import { createPrivilegedSupabaseClient, createSupabaseServerClient, getRequiredServerAuthContext } from '../../../../lib/supabase-server';
 import { createAccountMembershipService } from '../../../../services/account-membership';
 import { createSupabaseAccountMembershipRepositories } from '../../../../services/supabase-repositories';
+import type { MembershipStats } from '../../../../types/domain';
 
 export async function PATCH(request: Request) {
   try {
@@ -14,6 +15,8 @@ export async function PATCH(request: Request) {
       residence?: string | null;
       photoUrl?: string | null;
       preferredFoot?: 'left' | 'right' | 'both' | null;
+      stats?: MembershipStats | null;
+      ovr?: number | null;
     };
 
     if (!body.clubId) {
@@ -37,6 +40,8 @@ export async function PATCH(request: Request) {
         ...('residence' in body ? { residence: body.residence } : {}),
         ...('photoUrl' in body ? { photoUrl: body.photoUrl } : {}),
         ...('preferredFoot' in body ? { preferredFoot: body.preferredFoot } : {}),
+        ...('stats' in body ? { stats: body.stats } : {}),
+        ...('ovr' in body ? { ovr: body.ovr } : {}),
       },
     }));
   } catch (error) {

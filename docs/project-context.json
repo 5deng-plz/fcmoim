@@ -1,77 +1,88 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 90,
-  "updatedAt": "2026-06-13T22:32:47+09:00",
+  "updateVersion": 93,
+  "updatedAt": "2026-06-13T23:27:45+09:00",
   "updatedBy": "orchestrator",
-  "currentPhase": "rename-qa-local-account-password-env",
+  "currentPhase": "mypage-stat-point-profile-stats",
   "activeWork": {
-    "taskId": "rename-qa-local-account-password-env",
+    "taskId": "mypage-stat-point-profile-stats",
     "status": "ready",
     "designMode": "maintenance",
-    "baselineCommit": "d6b662cc4a6bc2b31c83e219c435c86d336f2838",
+    "baselineCommit": "538c77a13528dfdef67a14c60abe5cf9e7b29c02",
     "changedFiles": [
-      ".env.local.example",
-      "scripts/with-local-supabase-env.mjs",
-      "scripts/rebuild-local-demo-data.mjs",
-      "scripts/seed-qa-auth-users.mjs",
+      "src/components/features/LockerProfile.tsx",
+      "src/components/ui/HexagonRadar.tsx",
+      "src/components/ui/PlayerAbilityPanel.tsx",
+      "src/types/domain.ts",
+      "src/stores/membershipClient.ts",
+      "src/stores/useAuthStore.ts",
+      "src/app/api/membership/profile/route.ts",
+      "src/services/account-membership.ts",
+      "src/services/supabase-repositories.ts",
+      "tests/frontend-auth-and-schedule-ui.test.tsx",
+      "tests/frontend-membership-client.test.ts",
+      "tests/account-membership-flows.test.ts",
       "tests/local-supabase-api.test.ts",
       "docs/project-context.json"
     ],
-    "changedSurfaces": ["infra", "tests", "docs"],
+    "changedSurfaces": ["ui", "api", "tests", "docs"],
     "allowedPaths": [
-      ".env.local.example",
-      "scripts/with-local-supabase-env.mjs",
-      "scripts/rebuild-local-demo-data.mjs",
-      "scripts/seed-qa-auth-users.mjs",
+      "src/components/features/LockerProfile.tsx",
+      "src/components/ui/HexagonRadar.tsx",
+      "src/components/ui/PlayerAbilityPanel.tsx",
+      "src/types/domain.ts",
+      "src/stores/membershipClient.ts",
+      "src/stores/useAuthStore.ts",
+      "src/app/api/membership/profile/route.ts",
+      "src/services/account-membership.ts",
+      "src/services/supabase-repositories.ts",
+      "tests/frontend-auth-and-schedule-ui.test.tsx",
+      "tests/frontend-membership-client.test.ts",
+      "tests/account-membership-flows.test.ts",
       "tests/local-supabase-api.test.ts",
       "docs/project-context.json"
     ],
     "evidence": {
-      "envReferenceCheck": {
+      "focusedTests": {
         "status": "passed",
-        "provider": "ripgrep",
-        "command": "rg -n \"QA_TEST_PASSWORD|QA_LOCAL_ACCOUNT_PASSWORD|LOCAL_QA_ACCOUNT_PASSWORD\" .env.local .env.local.example scripts tests package.json",
-        "summary": "Local QA password references now use QA_LOCAL_ACCOUNT_PASSWORD, and the previous QA_TEST_PASSWORD/LOCAL_QA_ACCOUNT_PASSWORD names are absent from runtime and test code paths."
-      },
-      "localSeed": {
-        "status": "passed",
-        "provider": "Local Supabase",
-        "command": "npm run qa:seed-auth:local && npm run db:local:seed-demo",
-        "summary": "Local wrapper exported QA_LOCAL_ACCOUNT_PASSWORD to seed scripts, QA Auth users were seeded, and local demo data rebuild passed."
+        "provider": "Vitest",
+        "command": "npm run test -- tests/frontend-auth-and-schedule-ui.test.tsx tests/frontend-membership-client.test.ts tests/account-membership-flows.test.ts --run",
+        "summary": "Focused UI, membership client/store, and account-membership service tests passed: 3 test files, 119 tests."
       },
       "localApiTest": {
         "status": "passed",
+        "type": "api",
         "provider": "Vitest + Local Supabase",
         "command": "npm run test:api:local",
-        "summary": "Local Supabase API tests passed with QA_LOCAL_ACCOUNT_PASSWORD-driven sign-in."
+        "summary": "Local Supabase API tests passed, including membership profile stats PATCH persistence, invalid stats rejection, and server-side OVR recalculation."
+      },
+      "baseline": {
+        "status": "passed",
+        "provider": "Harness validation, ESLint, TypeScript, Vitest",
+        "command": "npm run verify:baseline",
+        "summary": "Harness validation, lint, typecheck, and full Vitest suite passed: 19 test files passed, 1 skipped; 242 tests passed, 16 skipped."
       },
       "browserRuntime": {
         "status": "passed",
         "type": "runtime",
-        "provider": "local env wrapper",
-        "command": "npm run qa:seed-auth:local && npm run db:local:seed-demo",
-        "summary": "Runtime-impacting local Supabase wrapper still builds the local Auth/API env, now using QA_LOCAL_ACCOUNT_PASSWORD for QA account credentials."
-      },
-      "baseline": {
-        "status": "passed",
-        "provider": "ESLint, TypeScript, Vitest",
-        "command": "npm run verify:baseline",
-        "summary": "Harness validation, lint, typecheck, and full Vitest suite passed: 19 test files passed, 1 skipped; 231 tests passed, 15 skipped."
+        "provider": "npm run dev + in-app browser",
+        "command": "npm run dev on http://localhost:3001/; Browser opened first screen, MyPage, stat input, action bar, and cancel rollback",
+        "summary": "First screen rendered without framework overlay or console warn/error logs. MyPage exposed Stat Point, radar drag handles, inline stat input, action bar, and cancel restored the original attack stat."
       },
       "guard": {
         "status": "passed",
         "provider": "Harness",
         "command": "npm run harness:guard:verify",
-        "summary": "Final harness verify passed."
+        "summary": "Harness verify passed: validation, token sync, design guard, diff guard, baseline, Supabase contract check, and evidence guard."
       }
     },
     "retrospective": {
-      "issuesObserved": ["The previous QA_TEST_PASSWORD name did not clearly communicate that the value belongs to local QA account credentials."],
+      "issuesObserved": ["Existing stored OVR can drift from stats; MyPage now displays OVR from the currently displayed stats and the server recalculates OVR on stats PATCH."],
       "missedEvidence": [],
-      "harnessImprovementProposal": ["Keep local QA-only env names under the QA_ prefix while including the local/account purpose in the variable name."],
-      "promotionRecommendation": "defer",
-      "reason": "This is a project-specific local QA env naming cleanup, not a reusable Harness rule."
+      "harnessImprovementProposal": [],
+      "promotionRecommendation": "none",
+      "reason": "This is feature-specific application behavior and does not require a reusable Harness policy change."
     },
     "reviewStatus": "ready",
     "loopCounters": {

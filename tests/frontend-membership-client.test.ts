@@ -4,6 +4,7 @@ import {
   fetchClubMemberships,
   mapMembershipSnapshotToUser,
   membershipStateToUserStatus,
+  patchMembershipProfile,
   patchMembershipPhoto,
   shouldShowJoinRequest,
   submitJoinRequest,
@@ -215,6 +216,93 @@ describe('frontend join request payload', () => {
     const requestInit = fetchMock.mock.calls[0]?.[1];
     expect(requestInit).toBeDefined();
     expect(JSON.parse(requestInit?.body as string)).not.toHaveProperty('authUid');
+  });
+
+  it('patches membership profile stats and ovr without client authUid', async () => {
+    const nextStats = {
+      ...DEFAULT_STATS,
+      attack: 70,
+    };
+    const fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
+      void input;
+      void init;
+      return new Response(JSON.stringify({
+        id: 'membership-1',
+        stats: nextStats,
+        ovr: 62,
+      }), { status: 200 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await patchMembershipProfile({
+      clubId: 'club-1',
+      stats: nextStats,
+      ovr: 62,
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/membership/profile', expect.objectContaining({
+      method: 'PATCH',
+      body: JSON.stringify({
+        clubId: 'club-1',
+        stats: nextStats,
+        ovr: 62,
+      }),
+    }));
+
+    const requestInit = fetchMock.mock.calls[0]?.[1];
+    expect(requestInit).toBeDefined();
+    expect(JSON.parse(requestInit?.body as string)).not.toHaveProperty('authUid');
+  });
+
+  it('merges saved membership profile stats into the auth store profile', async () => {
+    const nextStats = {
+      ...DEFAULT_STATS,
+      attack: 70,
+    };
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+      id: 'membership-1',
+      nickname: '김풋살',
+      heightCm: null,
+      weightKg: null,
+      birthDate: null,
+      residence: null,
+      stats: nextStats,
+      ovr: 62,
+    }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    useAuthStore.setState({
+      memberProfile: {
+        id: 'membership-1',
+        authUid: 'auth-user-1',
+        name: '김풋살',
+        mainPosition: 'MF',
+        subPosition: null,
+        ovr: 60,
+        stats: DEFAULT_STATS,
+        matchPoints: 100,
+        photoUrl: null,
+        role: 'member',
+        status: 'approved',
+        height: null,
+        weight: null,
+        birth: null,
+        residence: null,
+        preferredFoot: '오른발',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    });
+
+    await useAuthStore.getState().saveMemberProfile({
+      clubId: 'club-1',
+      stats: nextStats,
+      ovr: 62,
+    });
+
+    expect(useAuthStore.getState().memberProfile).toMatchObject({
+      stats: nextStats,
+      ovr: 62,
+    });
   });
 
   it('posts membership approval without client authUid', async () => {

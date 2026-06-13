@@ -157,6 +157,8 @@ export type MembershipProfilePatchRequest = {
   residence?: string | null;
   photoUrl?: string | null;
   preferredFoot?: PreferredFootCode | null;
+  stats?: UserStats | null;
+  ovr?: number | null;
 };
 
 export function membershipStateToUserStatus(state: ApiMembershipState): UserStatus {

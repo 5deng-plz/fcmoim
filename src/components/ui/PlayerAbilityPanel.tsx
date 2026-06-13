@@ -32,6 +32,10 @@ interface PlayerAbilityPanelProps {
   onEditingStatValueChange?: (val: string) => void;
   onSaveStat?: () => void;
   onCancelSaveStat?: () => void;
+  isDraggable?: boolean;
+  onStatDrag?: (key: keyof UserStats, value: number) => void;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
 }
 
 export function calculateOvr(stats: UserStats) {
@@ -200,6 +204,10 @@ export default function PlayerAbilityPanel({
   onEditingStatValueChange,
   onSaveStat,
   onCancelSaveStat,
+  isDraggable,
+  onStatDrag,
+  onDragStart,
+  onDragEnd,
 }: PlayerAbilityPanelProps) {
   const ovr = typeof ovrProp === 'number' && Number.isFinite(ovrProp)
     ? Math.round(ovrProp)
@@ -239,6 +247,10 @@ export default function PlayerAbilityPanel({
               className="w-full max-w-[190px]"
               onAxisClick={onRadarAxisClick}
               showAllValues={Boolean(onRadarAxisClick)}
+              isDraggable={isDraggable}
+              onStatDrag={onStatDrag}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
             />
           </div>
         </div>
@@ -249,6 +261,10 @@ export default function PlayerAbilityPanel({
             className="w-full max-w-[190px]"
             onAxisClick={onRadarAxisClick}
             showAllValues={Boolean(onRadarAxisClick)}
+            isDraggable={isDraggable}
+            onStatDrag={onStatDrag}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
           />
         </div>
       )}

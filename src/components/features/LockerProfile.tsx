@@ -10,7 +10,7 @@ import { useAppStore } from '@/stores/useAppStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useToastStore } from '@/stores/useToastStore';
 import { fetchMatchPointLedger, type MatchPointLedgerEntry } from '@/stores/membershipClient';
-import { DEFAULT_STATS } from '@/types';
+import { DEFAULT_STATS, type UserStats } from '@/types';
 import { calculateOvr } from '@/components/ui/PlayerAbilityPanel';
 
 export default function LockerProfile() {
@@ -29,13 +29,21 @@ export default function LockerProfile() {
   const [isPointHistoryOpen, setIsPointHistoryOpen] = useState(false);
   const [pointLedger, setPointLedger] = useState<MatchPointLedgerEntry[]>([]);
   const [pointLedgerStatus, setPointLedgerStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [tempStats, setTempStats] = useState<UserStats | null>(null);
+  const [editingStat, setEditingStat] = useState<{ key: keyof UserStats; label: string; value: number } | null>(null);
+  const [editingStatValue, setEditingStatValue] = useState('');
+  const [editingStatSnapshot, setEditingStatSnapshot] = useState<UserStats | null>(null);
+  const [isSavingStats, setIsSavingStats] = useState(false);
 
   const displayName = memberProfile?.name || '프로필 준비 중';
   const hasCustomPhoto = Boolean(memberProfile?.photoUrl);
   const avatarSrc = memberProfile?.photoUrl || getFallbackAvatar(memberProfile?.name || 'member-profile');
   const preferredFoot = memberProfile?.preferredFoot || '-';
-  const stats = memberProfile?.stats ?? DEFAULT_STATS;
-  const ovr = memberProfile?.ovr ?? calculateOvr(stats);
+  const baseStats = memberProfile?.stats ?? DEFAULT_STATS;
+  const stats = tempStats ?? baseStats;
+  const ovr = calculateOvr(stats);
+  const remainingStatPoints = Math.max(0, maxStatsSum - sumStats(stats));
+  const isStatsDirty = tempStats !== null && !areStatsEqual(tempStats, baseStats);
   const points = memberProfile?.matchPoints ?? 100;
 
   const handleUploadBannerClick = () => {
@@ -111,6 +119,115 @@ export default function LockerProfile() {
     }
   };
 
+  const updateDraftStat = (key: keyof UserStats, nextValue: number, showLimitToast = false) => {
+    setTempStats((prev) => {
+      const currentStats = prev ?? baseStats;
+      const clampedValue = clampStatValue(nextValue);
+      const allowedValue = getAllowedStatValue(currentStats, key, clampedValue, maxStatsSum);
+
+      if (showLimitToast && allowedValue !== clampedValue) {
+        showToast(`능력치 총합은 ${maxStatsSum}점을 초과할 수 없습니다.`);
+      }
+
+      return {
+        ...currentStats,
+        [key]: allowedValue,
+      };
+    });
+  };
+
+  const handleRadarAxisClick = (key: keyof UserStats, label: string, currentValue: number) => {
+    setEditingStatSnapshot(stats);
+    setEditingStat({ key, label, value: currentValue });
+    setEditingStatValue(currentValue.toString());
+  };
+
+  const handleEditingStatValueChange = (newValue: string) => {
+    if (!editingStat) return;
+
+    const parsedValue = Number.parseInt(newValue.trim(), 10);
+    if (Number.isNaN(parsedValue)) {
+      setEditingStatValue(newValue);
+      updateDraftStat(editingStat.key, 0, true);
+      return;
+    }
+
+    const clampedValue = clampStatValue(parsedValue);
+    const allowedValue = getAllowedStatValue(stats, editingStat.key, clampedValue, maxStatsSum);
+
+    if (allowedValue !== clampedValue) {
+      setEditingStatValue(allowedValue.toString());
+      showToast(`능력치 총합은 ${maxStatsSum}점을 초과할 수 없습니다.`);
+    } else {
+      setEditingStatValue(clampedValue === parsedValue ? newValue : clampedValue.toString());
+    }
+
+    updateDraftStat(editingStat.key, allowedValue);
+  };
+
+  const handleSaveStat = () => {
+    if (!editingStat) return;
+    const parsedValue = Number.parseInt(editingStatValue.trim(), 10);
+
+    if (!Number.isInteger(parsedValue) || parsedValue < 0 || parsedValue > 99) {
+      showToast('능력치는 0 이상 99 이하의 숫자여야 합니다.');
+      return;
+    }
+
+    const otherStatsSum = Object.entries(stats)
+      .filter(([statKey]) => statKey !== editingStat.key)
+      .reduce((sum, [, value]) => sum + value, 0);
+
+    if (otherStatsSum + parsedValue > maxStatsSum) {
+      showToast(`능력치 총합은 ${maxStatsSum}점을 초과할 수 없습니다.`);
+      return;
+    }
+
+    setEditingStat(null);
+    setEditingStatSnapshot(null);
+  };
+
+  const handleCancelSaveStat = () => {
+    setTempStats(editingStatSnapshot);
+    setEditingStat(null);
+    setEditingStatSnapshot(null);
+  };
+
+  const handleStatDrag = (key: keyof UserStats, value: number) => {
+    updateDraftStat(key, value);
+  };
+
+  const handleCancelStats = () => {
+    setTempStats(null);
+    setEditingStat(null);
+    setEditingStatSnapshot(null);
+    setEditingStatValue('');
+  };
+
+  const handleSaveStats = async () => {
+    if (!activeClubId || !tempStats || !isStatsDirty) return;
+    const nextOvr = calculateOvr(tempStats);
+
+    try {
+      setIsSavingStats(true);
+      await saveMemberProfile({
+        clubId: activeClubId,
+        stats: tempStats,
+        ovr: nextOvr,
+      });
+      setTempStats(null);
+      setEditingStat(null);
+      setEditingStatSnapshot(null);
+      setEditingStatValue('');
+      showToast('능력치를 저장했어요.');
+    } catch (error) {
+      console.error('[FC Moim] Profile stats update failed:', error);
+      showToast(error instanceof Error ? error.message : '능력치를 저장하지 못했어요.');
+    } finally {
+      setIsSavingStats(false);
+    }
+  };
+
   return (
     <section className="overflow-hidden rounded-3xl border border-border-subtle bg-surface-card shadow-md shadow-brand-primary/5">
       <div className="flex items-center gap-3 bg-surface-elevated px-4 py-4 profile-card-header">
@@ -178,7 +295,7 @@ export default function LockerProfile() {
               스탯 Point
             </span>
             <strong className="mt-0.5 block text-base font-black leading-none text-primary">
-              {Math.max(0, maxStatsSum - Object.values(stats).reduce((a, b) => a + b, 0))}
+              {remainingStatPoints}
             </strong>
           </div>
         </div>
@@ -201,7 +318,43 @@ export default function LockerProfile() {
           onCancelEdit={() => setEditingField(null)}
           onSave={handleSaveProfileField}
           isSaving={isSavingProfile}
+          onRadarAxisClick={handleRadarAxisClick}
+          editingStat={editingStat}
+          editingStatValue={editingStatValue}
+          onEditingStatValueChange={handleEditingStatValueChange}
+          onSaveStat={handleSaveStat}
+          onCancelSaveStat={handleCancelSaveStat}
+          isDraggable
+          onStatDrag={handleStatDrag}
         />
+        {isStatsDirty ? (
+          <div className="mt-2.5 flex items-center justify-between gap-3 rounded-2xl border border-glass-border bg-glass-bg/80 px-3 py-2.5 shadow-glass-shadow backdrop-blur-md">
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase text-brand-primary">Stat Point</p>
+              <p className="mt-0.5 text-xs font-bold text-secondary">
+                잔여 {remainingStatPoints}P · OVR {ovr}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={handleCancelStats}
+                disabled={isSavingStats}
+                className="rounded-xl border border-border bg-surface-card px-3 py-2 text-xs font-black text-secondary transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                스탯 변경 취소
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSaveStats()}
+                disabled={!activeClubId || isSavingStats}
+                className="rounded-xl bg-brand-primary px-3 py-2 text-xs font-black text-white transition-all hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSavingStats ? '저장 중' : '스탯 저장'}
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <Modal
@@ -286,6 +439,34 @@ function formatPointLedgerDate(value: string) {
     month: '2-digit',
     day: '2-digit',
   });
+}
+
+function sumStats(stats: UserStats) {
+  return Object.values(stats).reduce((sum, value) => sum + value, 0);
+}
+
+function clampStatValue(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(99, Math.round(value)));
+}
+
+function getAllowedStatValue(stats: UserStats, key: keyof UserStats, value: number, maxStatsSum: number) {
+  const otherStatsSum = Object.entries(stats)
+    .filter(([statKey]) => statKey !== key)
+    .reduce((sum, [, statValue]) => sum + statValue, 0);
+
+  return Math.max(0, Math.min(value, maxStatsSum - otherStatsSum));
+}
+
+function areStatsEqual(left: UserStats, right: UserStats) {
+  return (
+    left.attack === right.attack &&
+    left.defense === right.defense &&
+    left.stamina === right.stamina &&
+    left.mentality === right.mentality &&
+    left.speed === right.speed &&
+    left.manner === right.manner
+  );
 }
 
 function getProfileEditValue(field: ProfileField, profile: ReturnType<typeof useAuthStore.getState>['memberProfile']) {

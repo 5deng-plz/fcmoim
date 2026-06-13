@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { appConfig } from '@/config/app.config';
-import type { User, UserStatus } from '@/types';
+import type { User, UserStats, UserStatus } from '@/types';
 import {
   getCurrentAuthUser,
   logout,
@@ -43,6 +43,8 @@ interface AuthState {
     weightKg?: number | null;
     birthDate?: string | null;
     residence?: string | null;
+    stats?: UserStats | null;
+    ovr?: number | null;
   }) => Promise<void>;
   switchClub: (clubId: string) => Promise<void>;
   approveUser: (userId: string) => Promise<void>;
@@ -288,6 +290,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             weight: membership.weightKg,
             birth: membership.birthDate ? new Date(membership.birthDate) : null,
             residence: membership.residence,
+            stats: membership.stats,
+            ovr: membership.ovr,
           }
         : state.memberProfile,
     }));
