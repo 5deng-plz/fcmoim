@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 loadDotenv('.env.local');
 
 const supabaseUrl = firstEnv('NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_URL');
-const serviceRoleKey = firstEnv('SUPABASE_SECRET_KEY', 'SUPABASE_SERVICE_ROLE_KEY');
+const serviceRoleKey = firstEnv('SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEY');
 const password = process.env.QA_TEST_PASSWORD;
 
 if (process.env.DEV_TEST !== 'true') {
@@ -15,7 +15,7 @@ if (!supabaseUrl) {
   throw new Error('NEXT_PUBLIC_SUPABASE_URL is required.');
 }
 if (!serviceRoleKey) {
-  throw new Error('SUPABASE_SECRET_KEY is required.');
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY is required.');
 }
 if (!password || password.length < 8) {
   throw new Error('QA_TEST_PASSWORD must be at least 8 characters.');

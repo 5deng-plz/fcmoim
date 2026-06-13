@@ -1,82 +1,101 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 88,
-  "updatedAt": "2026-06-13T22:12:29+09:00",
+  "updateVersion": 89,
+  "updatedAt": "2026-06-13T22:25:10+09:00",
   "updatedBy": "orchestrator",
-  "currentPhase": "design-harness-mode-aware-guards",
+  "currentPhase": "restore-local-qa-email-login",
   "activeWork": {
-    "taskId": "design-harness-mode-aware-guards",
+    "taskId": "restore-local-qa-email-login",
     "status": "ready",
     "designMode": "maintenance",
-    "baselineCommit": "75244fdc5431147b0c235310860312b773e88497",
+    "baselineCommit": "1cb13e251a89a5583dff9bbab420e7080d9d3d99",
     "changedFiles": [
-      ".agents/fixtures/negative-fixtures.json",
-      ".agents/scripts/guard-design.mjs",
-      ".agents/scripts/guard-evidence.mjs",
-      ".agents/scripts/guard-runner.mjs",
-      ".agents/scripts/guard-token-sync.mjs",
-      ".agents/scripts/test-harness.mjs",
-      ".agents/scripts/validate-harness.mjs",
-      ".agents/state/project-context.schema.json",
-      "docs/agent-rules.json",
-      "docs/design-tokens.md",
-      "docs/user/design-harness-workflow.md",
+      "scripts/prod-supabase-ops.mjs",
+      "scripts/rebuild-local-demo-data.mjs",
+      "scripts/seed-local-demo-data.mjs",
+      "scripts/seed-qa-auth-users.mjs",
+      "src/lib/supabase-server.ts",
+      "tests/local-supabase-api.test.ts",
+      "supabase/migrations/20260613131729_grant_service_role_public_schema.sql",
       "docs/project-context.json"
     ],
-    "changedSurfaces": ["docs", "infra"],
+    "changedSurfaces": ["api", "data", "infra", "tests", "docs"],
     "allowedPaths": [
-      ".agents/fixtures/negative-fixtures.json",
-      ".agents/scripts/guard-design.mjs",
-      ".agents/scripts/guard-evidence.mjs",
-      ".agents/scripts/guard-runner.mjs",
-      ".agents/scripts/guard-token-sync.mjs",
-      ".agents/scripts/test-harness.mjs",
-      ".agents/scripts/validate-harness.mjs",
-      ".agents/state/project-context.schema.json",
-      "docs/agent-rules.json",
-      "docs/design-tokens.md",
-      "docs/user/design-harness-workflow.md",
+      "scripts/prod-supabase-ops.mjs",
+      "scripts/rebuild-local-demo-data.mjs",
+      "scripts/seed-local-demo-data.mjs",
+      "scripts/seed-qa-auth-users.mjs",
+      "src/lib/supabase-server.ts",
+      "tests/local-supabase-api.test.ts",
+      "supabase/migrations/20260613131729_grant_service_role_public_schema.sql",
       "docs/project-context.json"
     ],
     "evidence": {
-      "harnessRegression": {
+      "supabaseChangelogCheck": {
         "status": "passed",
-        "provider": "Harness fixtures",
-        "command": "npm run harness:test",
-        "summary": "Harness regression passed with 16 cases covering redesign warning mode, hardcoded color blockers, layout blockers, expired design-exempt, token sync drift, semantic slot metadata, and visualReview evidence."
+        "provider": "Supabase changelog",
+        "command": "curl -L https://supabase.com/changelog.md | rg -n \"breaking|auth|password|signInWithPassword|admin.updateUserById\" -i | head -40",
+        "summary": "Checked recent Supabase Auth/breaking-change entries before changing local Auth/permission handling."
       },
-      "harnessValidate": {
+      "authReproduction": {
         "status": "passed",
-        "provider": "Harness",
-        "command": "npm run harness:validate",
-        "summary": "Harness validation passed after adding designMode schema, semantic slot metadata requirements, and guardTokenSync as a known guard step."
+        "provider": "Supabase Auth",
+        "command": "node scripts/with-local-supabase-env.mjs node -e \"...signInWithPassword({ email: 'qa-operator@fcmoim.test', password: 'password' })\"",
+        "summary": "Reproduced Invalid login credentials before reseeding, then verified qa-operator@fcmoim.test/password signs in successfully after the fix."
       },
-      "tokenSync": {
+      "localSeed": {
         "status": "passed",
-        "provider": "Harness",
-        "command": "node .agents/scripts/guard-token-sync.mjs",
-        "summary": "Token sync guard passed after aligning documented glass-* tokens with allowed Tailwind color prefixes and ignoring forbidden-example token names."
+        "provider": "Local Supabase",
+        "command": "npm run qa:seed-auth:local && npm run db:local:seed-demo",
+        "summary": "QA Auth users were updated to password and clean local demo data was rebuilt successfully after service_role grants were applied."
       },
-      "documentationReview": {
+      "targetedUiTest": {
         "status": "passed",
-        "provider": "Manual doc review",
-        "target": "docs/design-tokens.md, docs/user/design-harness-workflow.md, docs/agent-rules.json",
-        "summary": "Documented maintenance/redesign/token-migration modes, visualReview evidence, token sync drift checks, structured design-exempt metadata, and durable semantic slot metadata."
+        "provider": "Vitest",
+        "target": "tests/frontend-auth-and-schedule-ui.test.tsx",
+        "command": "npm run test -- tests/frontend-auth-and-schedule-ui.test.tsx --run",
+        "summary": "Frontend auth and schedule UI tests passed: 71 tests."
       },
-      "guardVerify": {
+      "localApiTest": {
         "status": "passed",
-        "provider": "Harness",
-        "command": "npm run harness:guard:verify",
-        "summary": "Harness validation, token sync guard, design guard, diff guard, lint, typecheck, full Vitest suite, SQL contract check, and evidence guard passed."
+        "provider": "Vitest + Local Supabase",
+        "command": "npm run test:api:local",
+        "summary": "Local Supabase API tests passed: 15 tests."
+      },
+      "dataEvidence": {
+        "status": "passed",
+        "type": "database",
+        "provider": "Local Supabase CLI, tracked SQL",
+        "command": "npm run db:local:seed-demo && npm run db:check && npx supabase migration list --local",
+        "summary": "Tracked SQL migration grants service_role access to public schema tables/sequences; local demo data rebuild and SQL contract checks passed, and migration list shows the new local migration file."
+      },
+      "browserRuntime": {
+        "status": "passed",
+        "type": "runtime",
+        "provider": "npm run dev, in-app browser, server terminal log",
+        "command": "npm run dev; Browser reload http://localhost:3000/",
+        "summary": "Dev server was running at http://localhost:3000/, first screen rendered in the in-app browser, and server logs showed /api/membership/clubs plus /api/membership?... returning 200 after QA login reseed. Browser automation could not reliably fire the form submit event, so direct Auth/API evidence covers the credential regression."
+      },
+      "baseline": {
+        "status": "passed",
+        "provider": "ESLint, TypeScript, Vitest",
+        "command": "npm run verify:baseline",
+        "summary": "Harness validation, lint, typecheck, and full Vitest suite passed: 19 test files passed, 1 skipped; 231 tests passed, 15 skipped."
+      },
+      "dbContract": {
+        "status": "passed",
+        "provider": "Supabase SQL contract",
+        "command": "npm run db:check",
+        "summary": "Supabase contract check passed with 20 SQL files."
       }
     },
     "retrospective": {
-      "issuesObserved": ["The previous design guard treated all UI work as maintenance and could block broad redesign exploration on color prefix choice rather than durable quality risks."],
-      "missedEvidence": ["No browser runtime evidence is required because this change only updates Harness scripts, rules, fixtures, schema, and docs."],
-      "harnessImprovementProposal": ["Keep design guard severity mode-aware: maintenance remains strict, redesign allows exploratory color warnings, and durable accessibility/layout/token drift risks remain blockers."],
-      "promotionRecommendation": "propose",
-      "reason": "The change generalizes a repeated Agent-process failure during broad UI/UX redesign work into durable harness behavior."
+      "issuesObserved": ["Local Supabase CLI now exposes both SECRET_KEY and SERVICE_ROLE_KEY; admin seed scripts selected SECRET_KEY first, which could update Auth users but failed Data API table writes with permission denied."],
+      "missedEvidence": ["Browser automation could not produce a reliable click-to-home proof because the in-app automation surface did not fire the form submission event, but direct Auth, local seed, local API, and server API logs verified the real failing path."],
+      "harnessImprovementProposal": ["For local Supabase auth regressions, verify direct Auth credentials and seed scripts before attributing the issue to UI copy or form state."],
+      "promotionRecommendation": "defer",
+      "reason": "The fix is project-specific Supabase key precedence and grant handling, not a reusable Harness rule."
     },
     "reviewStatus": "ready",
     "loopCounters": {

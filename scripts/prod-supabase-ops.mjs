@@ -135,7 +135,7 @@ async function verifyEmpty() {
 
 function createProductionAdminClient() {
   const supabaseUrl = getProductionUrl();
-  const secretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const secretKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
   if (!secretKey) {
     throw new Error('SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY is required.');
   }
