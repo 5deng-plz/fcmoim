@@ -1,40 +1,38 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 80,
-  "updatedAt": "2026-06-13T15:14:32+09:00",
+  "updateVersion": 81,
+  "updatedAt": "2026-06-13T15:20:54+09:00",
   "updatedBy": "orchestrator",
-  "currentPhase": "ux-area-06-squad-player-card",
+  "currentPhase": "ux-area-03-schedule-smart-focus",
   "activeWork": {
-    "taskId": "ux-area-06-squad-player-card",
+    "taskId": "ux-area-03-schedule-smart-focus",
     "status": "ready",
-    "baselineCommit": "32beb7295db2f51222666da5dc6f181140d08eef",
+    "baselineCommit": "5de40a0e1a9dd18b5e3c1a9821a6bd5fc0722d10",
     "changedFiles": [
-      "src/components/ui/PlayerAbilityPanel.tsx",
-      "src/components/ui/HexagonRadar.tsx",
-      "src/app/globals.css",
+      "src/hooks/useSmartFocus.ts",
+      "src/components/tabs/ScheduleTab.tsx",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
     "changedSurfaces": ["ui", "tests", "docs"],
     "allowedPaths": [
-      "src/components/ui/PlayerAbilityPanel.tsx",
-      "src/components/ui/HexagonRadar.tsx",
-      "src/app/globals.css",
+      "src/hooks/useSmartFocus.ts",
+      "src/components/tabs/ScheduleTab.tsx",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
     "evidence": {
       "scopeSync": {
         "status": "passed",
-        "summary": "Scoped active work to 영역 06 squad player card UX: PlayerAbilityPanel glass surfaces, PlayerOvrStyleCard/trait/profile input glass styling, HexagonRadar SVG token colors, --viz-grid light/dark values, and accessibility labels."
+        "summary": "Scoped active work to 영역 03 Schedule Smart Focus: detail interaction focus hook, dimmed/inert schedule operations and calendar zones, outside-tap/back-release handling, and glass loading skeleton styling."
       },
       "targetedTest": {
         "status": "passed",
         "provider": "Vitest",
         "target": "tests/frontend-auth-and-schedule-ui.test.tsx",
         "command": "npm run test -- tests/frontend-auth-and-schedule-ui.test.tsx --run",
-        "summary": "70 tests passed, including player ability glass panel/card classes, playstyle trait class, HexagonRadar max width, and detailed aria-label values."
+        "summary": "70 tests passed, including confirmed schedule detail rendering plus smart focus activation from tactics/comments, dimmed pointer-blocked calendar/ops zones, inert aria state, and outside release."
       },
       "lint": {
         "status": "passed",
@@ -46,7 +44,7 @@
         "status": "passed",
         "provider": "TypeScript",
         "command": "npm run verify:baseline",
-        "summary": "TypeScript passed for PlayerAbilityPanel, HexagonRadar, globals CSS contract, and UI test changes."
+        "summary": "TypeScript passed for useSmartFocus, ScheduleTab inert props, pointer handlers, and UI test changes."
       },
       "baseline": {
         "status": "passed",
@@ -62,11 +60,11 @@
       }
     },
     "retrospective": {
-      "issuesObserved": "The active MyPage path used surface=flat, so only changing the card surface branch would not prove the player card UX in the visible profile path.",
-      "missedEvidence": "Manual light/dark visual comparison for radar grid contrast and blur strength was not run; deterministic tests cover class contracts and the aria-label fallback.",
-      "harnessImprovementProposal": "Consider a focused PlayerAbilityPanel visual fixture covering card and flat surfaces to reduce reliance on MyPage integration rendering.",
+      "issuesObserved": "ScheduleTab is large, so the focus state machine was kept in a small hook and wired through existing SelectedMatchPanel boundaries rather than adding more local interaction state.",
+      "missedEvidence": "Manual mobile browser back verification was not run; deterministic tests cover the visible focus contracts while the hook owns the history pop release path.",
+      "harnessImprovementProposal": "Consider a focused ScheduleTab interaction fixture that can exercise browser history and pointer capture without full store setup.",
       "promotionRecommendation": "defer",
-      "reason": "The squad player card changes are section-specific UI styling and accessibility work covered by deterministic tests; no durable harness rule promotion is needed."
+      "reason": "The smart focus behavior is section-specific interaction work and does not require a durable harness rule promotion."
     },
     "reviewStatus": "ready",
     "loopCounters": {

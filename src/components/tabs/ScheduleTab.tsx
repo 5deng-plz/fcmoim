@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type PointerEvent } from 'react';
 import Image from 'next/image';
 import CalendarView from '@/components/features/CalendarView';
 import { Ban, CalendarCheck2, CalendarX2, Check, Clock3, MapPin, NotebookPen, Vote, X } from 'lucide-react';
@@ -22,6 +22,7 @@ import Badge from '@/components/ui/Badge';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
 import Modal from '@/components/ui/Modal';
 import { getSchedulePollErrorMessage, type SchedulePoll, type SchedulePollOption } from '@/stores/schedulePollClient';
+import { useSmartFocus } from '@/hooks/useSmartFocus';
 
 export default function ScheduleTab() {
   const {
@@ -65,6 +66,12 @@ export default function ScheduleTab() {
   const [pollCancellationReason, setPollCancellationReason] = useState('');
   const [pollCancelError, setPollCancelError] = useState<string | null>(null);
   const [cancellingPollId, setCancellingPollId] = useState<string | null>(null);
+  const {
+    isDetailFocused,
+    activateFocus,
+    releaseFocus,
+    releaseFocusSoon,
+  } = useSmartFocus();
   const canManageSchedule = userRole === 'admin' || userRole === 'operator';
   const currentMembershipId = availableClubs.find((club) => club.clubId === activeClubId)?.membershipId ?? null;
   const scheduleMatches = calendarMatches.length > 0 ? calendarMatches : upcomingMatches;
@@ -197,10 +204,22 @@ export default function ScheduleTab() {
   const selectedMatchDetail = selectedMatch && matchDetail?.matchId === selectedMatch.id ? matchDetail : null;
   const selectedMatchDetailStatus = selectedMatch ? selectedMatchDetail?.status ?? 'loading' : 'idle';
   const focusDate = (isoDate: string) => {
+    releaseFocus(true);
     const [year, month, day] = isoDate.split('-').map(Number);
     if (!year || !month || !day) return;
     setVisibleMonth(new Date(year, month - 1, 1));
     setSelectedDate(day);
+  };
+  const smartFocusDimClass = isDetailFocused
+    ? 'opacity-30 pointer-events-none blur-[1px]'
+    : 'opacity-100 pointer-events-auto blur-0';
+  const smartFocusInertProps = isDetailFocused ? { inert: true, 'aria-hidden': true } : {};
+  const handleSchedulePointerDownCapture = (event: PointerEvent<HTMLDivElement>) => {
+    if (!isDetailFocused) return;
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (target.closest('[data-smart-focus-zone="true"]')) return;
+    releaseFocus(true);
   };
   const handlePromotePollOption = async (poll: SchedulePoll, option: SchedulePollOption) => {
     const optionKey = getPollOptionKey(poll, option);
@@ -329,9 +348,17 @@ export default function ScheduleTab() {
 
   return (
     <PullToRefresh onRefresh={refreshSchedule}>
-      <div className="space-y-6 animate-fadeIn pb-20">
+      <div
+        className="space-y-6 animate-fadeIn pb-20"
+        data-testid="schedule-smartfocus-root"
+        onPointerDownCapture={handleSchedulePointerDownCapture}
+      >
         {canManageSchedule ? (
-          <section className="rounded-xl border border-border bg-surface-card p-3 shadow-sm">
+          <section
+            className={`rounded-xl border border-border bg-surface-card p-3 shadow-sm transition-all duration-300 ease-in-out ${smartFocusDimClass}`}
+            data-testid="schedule-ops-smartfocus"
+            {...smartFocusInertProps}
+          >
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-black text-primary">일정 운영</h3>
@@ -354,17 +381,27 @@ export default function ScheduleTab() {
           </section>
         ) : null}
 
-        <CalendarView
-          value={selectedDate}
-          onChange={setSelectedDate}
-          events={scheduleCalendarEvents}
-          monthDate={visibleMonth}
-          onMonthDateChange={(nextMonth) => {
-            setVisibleMonth(nextMonth);
-            setSelectedDate(1);
-            void loadCalendarMatches({ clubId: activeClubId, ...getMonthRange(nextMonth) }).catch(() => undefined);
-          }}
-        />
+        <div
+          className={`transition-all duration-300 ease-in-out ${smartFocusDimClass}`}
+          data-testid="schedule-calendar-smartfocus"
+          {...smartFocusInertProps}
+        >
+          <CalendarView
+            value={selectedDate}
+            onChange={(nextDate) => {
+              releaseFocus(true);
+              setSelectedDate(nextDate);
+            }}
+            events={scheduleCalendarEvents}
+            monthDate={visibleMonth}
+            onMonthDateChange={(nextMonth) => {
+              releaseFocus(true);
+              setVisibleMonth(nextMonth);
+              setSelectedDate(1);
+              void loadCalendarMatches({ clubId: activeClubId, ...getMonthRange(nextMonth) }).catch(() => undefined);
+            }}
+          />
+        </div>
 
         {selectedPollOptions.length > 0 ? (
           <section className="border border-event-vote-border bg-event-vote-bg overflow-hidden rounded-3xl p-5">
@@ -484,6 +521,8 @@ export default function ScheduleTab() {
                 status: 'ready',
               });
             }}
+            onDetailFocusStart={activateFocus}
+            onDetailFocusEnd={releaseFocusSoon}
           />
         ) : null}
 
@@ -600,6 +639,8 @@ function SelectedMatchPanel({
   onMatchUpdated,
   onCancelMatchRequest,
   onResultSaved,
+  onDetailFocusStart,
+  onDetailFocusEnd,
 }: {
   match: UpcomingMatch | null;
   matches: UpcomingMatch[];
@@ -614,6 +655,8 @@ function SelectedMatchPanel({
   onMatchUpdated?: (nextMatch: UpcomingMatch) => void;
   onCancelMatchRequest?: (match: UpcomingMatch) => void;
   onResultSaved?: (matchId: string) => Promise<void>;
+  onDetailFocusStart?: () => void;
+  onDetailFocusEnd?: () => void;
 }) {
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   if (!match) return null;
@@ -697,7 +740,7 @@ function SelectedMatchPanel({
                       {detailStatus === 'loading' ? (
                         <LoadingIndicator
                           message="전술 설정을 불러오는 중입니다"
-                          className="rounded-2xl border border-border bg-surface-card"
+                          className="rounded-2xl border border-glass-border bg-glass-bg shadow-glass-shadow backdrop-blur-md transition-all duration-300 ease-in-out"
                         />
                       ) : null}
                       {detailStatus === 'error' ? (
@@ -706,26 +749,41 @@ function SelectedMatchPanel({
                         </div>
                       ) : null}
                       {detailStatus === 'ready' ? (
-                        <div className="space-y-3">
-                          <TacticsDragBuilder
-                            clubId={clubId}
-                            matchId={match.id}
-                            players={players}
-                            lineup={lineup}
-                            embedded
-                            onLineupUpdated={onLineupUpdated}
-                            onPlayersUpdated={onPlayersUpdated}
-                            match={match}
-                            onMatchUpdated={onMatchUpdated}
-                          />
-                          <EventComments
-                            clubId={clubId}
-                            targetType="match"
-                            targetId={match.id}
-                            phaseAnchorAt={null}
-                            themeType="match"
-                            embedded
-                          />
+                        <div className="space-y-3 transition-all duration-300 ease-in-out">
+                          <div
+                            data-smart-focus-zone="true"
+                            onPointerDown={onDetailFocusStart}
+                            onPointerUp={onDetailFocusEnd}
+                            onFocusCapture={onDetailFocusStart}
+                            data-testid="schedule-tactics-focus-zone"
+                          >
+                            <TacticsDragBuilder
+                              clubId={clubId}
+                              matchId={match.id}
+                              players={players}
+                              lineup={lineup}
+                              embedded
+                              onLineupUpdated={onLineupUpdated}
+                              onPlayersUpdated={onPlayersUpdated}
+                              match={match}
+                              onMatchUpdated={onMatchUpdated}
+                            />
+                          </div>
+                          <div
+                            data-smart-focus-zone="true"
+                            onPointerDown={onDetailFocusStart}
+                            onFocusCapture={onDetailFocusStart}
+                            data-testid="schedule-comments-focus-zone"
+                          >
+                            <EventComments
+                              clubId={clubId}
+                              targetType="match"
+                              targetId={match.id}
+                              phaseAnchorAt={null}
+                              themeType="match"
+                              embedded
+                            />
+                          </div>
                         </div>
                       ) : null}
                     </div>
