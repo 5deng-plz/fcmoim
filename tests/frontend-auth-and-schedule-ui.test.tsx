@@ -3315,10 +3315,13 @@ describe('locker room team management UI', () => {
     expect(screen.getByText('경기 Point')).toBeInTheDocument();
     expect(screen.getByText('2,000')).toBeInTheDocument();
     expect(screen.getAllByText('70')).toHaveLength(1);
-    expect(screen.getByTestId('player-ovr-style-card')).toHaveClass('w-[104px]');
-    expect(screen.getByTestId('player-trait-card')).toBeInTheDocument();
+    expect(screen.getByTestId('player-ability-panel')).toHaveClass('border-glass-border', 'bg-glass-bg', 'backdrop-blur-md');
+    expect(screen.getByTestId('player-ovr-style-card')).toHaveClass('w-[104px]', 'border-glass-border', 'bg-glass-bg', 'backdrop-blur-sm', 'shadow-glass-shadow');
+    expect(screen.getByTestId('player-trait-card')).toHaveClass('playstyle-neg-card');
     expect(screen.getByTestId('player-preferred-foot-area')).toHaveClass('col-span-2');
     expect(screen.getByTestId('hexagon-radar')).toHaveClass('max-w-[190px]');
+    expect(screen.getByTestId('hexagon-radar')).toHaveAttribute('aria-label', expect.stringContaining('공격 60'));
+    expect(screen.getByTestId('hexagon-radar')).toHaveAttribute('aria-label', expect.stringContaining('체력 60'));
     expect(screen.getAllByTestId('player-badge-slot')).toHaveLength(4);
     expect(screen.queryByText('사용 가능한 아이템이 없어요')).not.toBeInTheDocument();
     ['공격', '수비', '체력', '멘탈', '스피드', '인성'].forEach((label) => {

@@ -37,6 +37,7 @@ export default function HexagonRadar({
     { label: '체력', value: values[2], angle: 300 },
   ] as const;
   const angles = axes.map((axis) => axis.angle);
+  const ariaLabel = `능력치 레이더: ${axes.map((axis) => `${axis.label} ${axis.value}`).join(', ')}`;
 
   const getPoint = (val: number, angle: number) => {
     const rad = ((angle - 90) * Math.PI) / 180;
@@ -48,12 +49,12 @@ export default function HexagonRadar({
       viewBox="0 0 260 216"
       className={`h-auto w-full ${className}`}
       role="img"
-      aria-label="능력치 레이더"
+      aria-label={ariaLabel}
       data-testid="hexagon-radar"
     >
       <polygon
         points={angles.map((angle) => getPoint(maxStat, angle)).join(' ')}
-        fill="var(--surface-card)"
+        fill="var(--glass-bg)"
         opacity="0.5"
       />
 
@@ -65,17 +66,16 @@ export default function HexagonRadar({
           x2={cx + r * Math.cos(((angle - 90) * Math.PI) / 180)}
           y2={cy + r * Math.sin(((angle - 90) * Math.PI) / 180)}
           stroke="var(--viz-grid)"
-          strokeWidth="0.75"
-          opacity="0.55"
+          strokeWidth="1"
+          opacity="1"
         />
       ))}
 
       <polygon
         points={axes.map((axis) => getPoint(axis.value, axis.angle)).join(' ')}
-        fill="var(--result-loss)"
-        fillOpacity="0.25"
-        stroke="var(--result-loss)"
-        strokeWidth="2.75"
+        fill="var(--viz-primary-fill)"
+        stroke="var(--viz-primary)"
+        strokeWidth="1.5"
         strokeLinejoin="round"
       />
 

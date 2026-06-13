@@ -1,38 +1,40 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 79,
-  "updatedAt": "2026-06-13T15:10:03+09:00",
+  "updateVersion": 80,
+  "updatedAt": "2026-06-13T15:14:32+09:00",
   "updatedBy": "orchestrator",
-  "currentPhase": "ux-area-05-records-result",
+  "currentPhase": "ux-area-06-squad-player-card",
   "activeWork": {
-    "taskId": "ux-area-05-records-result",
+    "taskId": "ux-area-06-squad-player-card",
     "status": "ready",
-    "baselineCommit": "db773129ec4455b96034c5a4201e7553d7929e1a",
+    "baselineCommit": "32beb7295db2f51222666da5dc6f181140d08eef",
     "changedFiles": [
-      "src/components/features/MatchResultInputModal.tsx",
-      "src/components/tabs/RecordsTab.tsx",
+      "src/components/ui/PlayerAbilityPanel.tsx",
+      "src/components/ui/HexagonRadar.tsx",
+      "src/app/globals.css",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
     "changedSurfaces": ["ui", "tests", "docs"],
     "allowedPaths": [
-      "src/components/features/MatchResultInputModal.tsx",
-      "src/components/tabs/RecordsTab.tsx",
+      "src/components/ui/PlayerAbilityPanel.tsx",
+      "src/components/ui/HexagonRadar.tsx",
+      "src/app/globals.css",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
     "evidence": {
       "scopeSync": {
         "status": "passed",
-        "summary": "Scoped active work to 영역 05 records/result UX: MatchResultInputModal 44px steppers and team-tinted glass rows, RecordsTab glass ranking/summary cards, tier-token medal badges, and deterministic UI tests."
+        "summary": "Scoped active work to 영역 06 squad player card UX: PlayerAbilityPanel glass surfaces, PlayerOvrStyleCard/trait/profile input glass styling, HexagonRadar SVG token colors, --viz-grid light/dark values, and accessibility labels."
       },
       "targetedTest": {
         "status": "passed",
         "provider": "Vitest",
         "target": "tests/frontend-auth-and-schedule-ui.test.tsx",
         "command": "npm run test -- tests/frontend-auth-and-schedule-ui.test.tsx --run",
-        "summary": "70 tests passed, including result modal 44px glass steppers/team row tinting and RecordsTab glass ranking, summary segments, and tier-token medal badge classes."
+        "summary": "70 tests passed, including player ability glass panel/card classes, playstyle trait class, HexagonRadar max width, and detailed aria-label values."
       },
       "lint": {
         "status": "passed",
@@ -44,7 +46,7 @@
         "status": "passed",
         "provider": "TypeScript",
         "command": "npm run verify:baseline",
-        "summary": "TypeScript passed for MatchResultInputModal, RecordsTab, and UI test changes."
+        "summary": "TypeScript passed for PlayerAbilityPanel, HexagonRadar, globals CSS contract, and UI test changes."
       },
       "baseline": {
         "status": "passed",
@@ -60,11 +62,11 @@
       }
     },
     "retrospective": {
-      "issuesObserved": "The existing result modal used 24px stepper buttons, so applying the PRD literally required widening the stats columns to avoid cramped 44px targets.",
-      "missedEvidence": "Manual mobile visual QA for tap accuracy and light-mode contrast was not run; deterministic tests cover the 44px class contract and glass/tier token usage.",
-      "harnessImprovementProposal": "Consider extracting the result input modal into a focused fixture test so touch-target regressions are not verified only through the large ScheduleTab integration path.",
+      "issuesObserved": "The active MyPage path used surface=flat, so only changing the card surface branch would not prove the player card UX in the visible profile path.",
+      "missedEvidence": "Manual light/dark visual comparison for radar grid contrast and blur strength was not run; deterministic tests cover class contracts and the aria-label fallback.",
+      "harnessImprovementProposal": "Consider a focused PlayerAbilityPanel visual fixture covering card and flat surfaces to reduce reliance on MyPage integration rendering.",
       "promotionRecommendation": "defer",
-      "reason": "The records/result changes are section-specific UI styling and touch-target work covered by deterministic tests; no durable harness rule promotion is needed."
+      "reason": "The squad player card changes are section-specific UI styling and accessibility work covered by deterministic tests; no durable harness rule promotion is needed."
     },
     "reviewStatus": "ready",
     "loopCounters": {

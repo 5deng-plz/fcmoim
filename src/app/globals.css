@@ -221,15 +221,15 @@
     --tactics-marker: #ffffff;       /* 선수 마커 */
 
     /* ── Data Viz: 레이더/히트맵 등 시각화 ── */
-    --viz-primary: #16a34a;          /* fcgreen 계열 기본 */
-    --viz-primary-fill: rgba(22, 163, 74, 0.18);
+    --viz-primary: var(--brand-primary);
+    --viz-primary-fill: rgba(15, 183, 82, 0.25);
     --viz-secondary: #2563eb;
     --viz-secondary-fill: rgba(37, 99, 235, 0.16);
     --viz-tertiary: #f59e0b;
     --viz-tertiary-fill: rgba(245, 158, 11, 0.16);
     --viz-danger: #ef4444;
     --viz-danger-fill: rgba(239, 68, 68, 0.16);
-    --viz-grid: #bbf7d0;
+    --viz-grid: rgba(0, 0, 0, 0.10);
     --viz-label: var(--text-secondary);
 
     /* ══════════════════════════════════════════
@@ -449,15 +449,15 @@
       --tactics-field: #166534;
       --tactics-field-line: rgba(255, 255, 255, 0.3);
       --tactics-marker: #ffffff;
-      --viz-primary: #22c55e;
-      --viz-primary-fill: rgba(34, 197, 94, 0.2);
+      --viz-primary: var(--brand-primary);
+      --viz-primary-fill: rgba(15, 183, 82, 0.25);
       --viz-secondary: #60a5fa;
       --viz-secondary-fill: rgba(96, 165, 250, 0.2);
       --viz-tertiary: #fbbf24;
       --viz-tertiary-fill: rgba(251, 191, 36, 0.2);
       --viz-danger: #f87171;
       --viz-danger-fill: rgba(248, 113, 113, 0.2);
-      --viz-grid: #86efac;
+      --viz-grid: rgba(255, 255, 255, 0.15);
       --viz-label: var(--text-secondary);
 
       /* ── 축구 소셜앱 메타포 (다크 모드) ── */

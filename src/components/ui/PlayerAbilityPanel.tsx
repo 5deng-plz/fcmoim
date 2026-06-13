@@ -134,7 +134,7 @@ function PlayerOvrStyleCard({
 
   return (
     <div
-      className="relative flex h-[136px] w-[104px] flex-col gap-1.5 rounded-2xl border border-border bg-surface-card p-2 text-center shadow-sm select-none"
+      className="relative flex h-[136px] w-[104px] flex-col gap-1.5 rounded-2xl border border-glass-border bg-glass-bg p-2 text-center shadow-glass-shadow backdrop-blur-sm transition-colors hover:bg-glass-bg-hover select-none"
       data-testid="player-ovr-style-card"
     >
       {/* Header Row: OVR + Preferred Foot side-by-side */}
@@ -159,7 +159,7 @@ function PlayerOvrStyleCard({
 
       {/* Trait Section: Styled like the Profile Cards below (square card format) */}
       <div
-        className="flex h-[88px] w-full flex-col items-center justify-center rounded-xl border border-border-subtle bg-surface-bg/80 px-1 py-1.5 shadow-inner"
+        className={`flex h-[88px] w-full flex-col items-center justify-center rounded-xl border px-1 py-1.5 shadow-inner ${styleInfo.cardClass}`}
         data-testid="player-trait-card"
       >
         <span className="text-3xl filter drop-shadow-sm leading-none select-none mb-1 shrink-0">
@@ -216,14 +216,14 @@ export default function PlayerAbilityPanel({
       className={
         layout === 'full'
           ? surface === 'flat'
-            ? `profile-ability-panel-flat ${className}`
-            : `rounded-3xl border border-brand-primary/10 bg-brand-primary-bg/20 px-3.5 py-4 shadow-sm profile-ability-panel ${className}`
+            ? `profile-ability-panel-flat rounded-3xl border border-glass-border bg-glass-bg shadow-glass-shadow backdrop-blur-md ${className}`
+            : `rounded-3xl border border-glass-border bg-glass-bg px-3.5 py-4 shadow-glass-shadow backdrop-blur-md profile-ability-panel ${className}`
           : `p-3 ${className}`
       }
       data-testid="player-ability-panel"
     >
       {layout === 'profile-only' ? null : layout === 'full' ? (
-        <div className="flex w-full items-center justify-between gap-4 rounded-2xl bg-surface-bg/55 px-3 py-3">
+        <div className="flex w-full items-center justify-between gap-4 rounded-2xl border border-glass-border/40 bg-glass-bg/60 px-3 py-3 backdrop-blur-sm">
           <div className="shrink-0">
             <PlayerOvrStyleCard
               ovr={ovr}
@@ -255,9 +255,9 @@ export default function PlayerAbilityPanel({
 
       {/* 헥사곤 능력치 수정 인라인 입력창 (모달 대체) */}
       {editingStat && (
-        <div className="mt-2.5 flex items-center justify-between gap-3 rounded-xl bg-surface-card border border-border px-3 py-2.5 ring-1.5 ring-brand-primary animate-fadeIn shadow-sm">
+        <div className="mt-2.5 flex items-center justify-between gap-3 rounded-xl border border-glass-border bg-glass-bg/60 px-3 py-2.5 shadow-glass-shadow ring-1.5 ring-brand-primary backdrop-blur-sm animate-fadeIn">
           <div className="flex items-center gap-2 shrink-0">
-            <span className="rounded bg-brand-primary px-2.5 py-1 text-xs font-bold leading-none text-white select-none whitespace-nowrap shrink-0 min-w-[56px] text-center">
+            <span className="min-w-14 rounded bg-brand-primary px-2.5 py-1 text-center text-xs font-bold leading-none text-white select-none whitespace-nowrap shrink-0">
               {editingStat.label}
             </span>
           </div>
@@ -271,7 +271,7 @@ export default function PlayerAbilityPanel({
               value={editingStatValue ?? ''}
               onChange={(e) => onEditingStatValueChange?.(e.target.value)}
               autoFocus
-              className="w-20 text-center text-xs font-black text-primary bg-transparent outline-none border-b border-border focus:border-brand-primary py-0.5"
+              className="w-20 rounded-lg border border-glass-border bg-glass-bg/60 px-2 py-1 text-center text-xs font-black text-primary outline-none focus:border-brand-primary"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') onSaveStat?.();
                 if (e.key === 'Escape') onCancelSaveStat?.();
@@ -367,7 +367,7 @@ function ProfileInfoCard({
   onSave: () => void;
   isSaving: boolean;
 }) {
-  const className = 'relative flex min-h-[64px] flex-col items-center justify-center rounded-xl bg-surface-card border border-border px-1 py-1.5 shadow-sm transition-all';
+  const className = 'relative flex min-h-[64px] flex-col items-center justify-center rounded-xl border border-glass-border bg-glass-bg/60 px-1 py-1.5 shadow-sm transition-all backdrop-blur-sm';
 
   if (isEditing) {
     let placeholder = '';
@@ -388,7 +388,7 @@ function ProfileInfoCard({
           value={editValue}
           onChange={(e) => onEditValueChange(e.target.value)}
           autoFocus
-          className="w-full text-center text-[10px] font-bold text-primary bg-transparent outline-none border-b border-border focus:border-brand-primary py-0.5 px-0.5"
+          className="w-full rounded-lg border border-glass-border bg-glass-bg/60 px-1 py-1 text-center text-[10px] font-bold text-primary outline-none focus:border-brand-primary"
           onKeyDown={(e) => {
             if (e.key === 'Enter') onSave();
             if (e.key === 'Escape') onCancelEdit();
@@ -423,7 +423,7 @@ function ProfileInfoCard({
     <button
       type="button"
       onClick={() => onStartEdit(field)}
-      className={`${className} hover:bg-surface-hover active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary`}
+      className={`${className} hover:bg-glass-bg-hover active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary`}
       aria-label={`${label} 수정`}
       title={`${label} 수정`}
     >
