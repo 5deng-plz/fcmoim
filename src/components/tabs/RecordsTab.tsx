@@ -22,13 +22,13 @@ function SeasonSummaryCard({ summary }: { summary: RecordsSeasonSummary }) {
   ];
 
   return (
-    <div className="card p-4">
+    <div className="rounded-3xl border border-glass-border bg-glass-bg p-4 shadow-glass-shadow backdrop-blur-md">
       <h3 className="mb-3 text-[11px] font-bold uppercase tracking-wider text-secondary">
         시즌 요약
       </h3>
       <div className="grid grid-cols-2 gap-3">
         {stats.map((stat) => (
-          <div key={stat.label} className="flex min-w-0 items-center gap-2.5">
+          <div key={stat.label} className="flex min-w-0 items-center gap-2.5 rounded-2xl border border-glass-border/40 bg-glass-bg/60 p-3 backdrop-blur-sm">
             <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${stat.bg}`}>
               <stat.icon size={16} className={stat.color} />
             </div>
@@ -121,8 +121,8 @@ export default function RecordsTab() {
             </div>
           ) : null}
 
-          <div className="card overflow-hidden">
-            <div className="grid min-h-[40px] grid-cols-[28px_36px_minmax(0,1fr)_70px_36px_46px] items-center border-b border-border bg-surface-bg px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-secondary">
+          <div className="overflow-hidden rounded-3xl border border-glass-border bg-glass-bg shadow-glass-shadow backdrop-blur-md">
+            <div className="grid min-h-[40px] grid-cols-[28px_36px_minmax(0,1fr)_70px_36px_46px] items-center border-b border-glass-border/50 bg-glass-bg/60 px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-secondary">
               <div className="text-center">#</div>
               <div className="text-center text-fcgreen-600">OVR</div>
               <div className="px-2">선수</div>
@@ -133,7 +133,7 @@ export default function RecordsTab() {
             {isLoading ? (
               <div className="px-4 py-10 text-center text-xs font-bold text-tertiary">랭킹을 불러오는 중입니다</div>
             ) : rows.length > 0 ? (
-              <div className="divide-y divide-border">
+              <div className="divide-y divide-glass-border/40">
                 {rows.map((row, index) => (
                   <div
                     key={row.membershipId}
@@ -192,9 +192,9 @@ export default function RecordsTab() {
 }
 
 function RankMark({ rank }: { rank: number }) {
-  if (rank === 1) return <span className="flex items-center justify-center"><Medal size={16} className="text-tier-gold" /></span>;
-  if (rank === 2) return <span className="flex items-center justify-center"><Medal size={16} className="text-tier-silver" /></span>;
-  if (rank === 3) return <span className="flex items-center justify-center"><Medal size={16} className="text-tier-bronze" /></span>;
+  if (rank === 1) return <span className="flex h-7 w-7 items-center justify-center rounded-full border border-tier-gold/30 bg-tier-gold/10 shadow-inner"><Medal size={16} className="text-tier-gold" /></span>;
+  if (rank === 2) return <span className="flex h-7 w-7 items-center justify-center rounded-full border border-tier-silver/30 bg-tier-silver/10 shadow-inner"><Medal size={16} className="text-tier-silver" /></span>;
+  if (rank === 3) return <span className="flex h-7 w-7 items-center justify-center rounded-full border border-tier-bronze/30 bg-tier-bronze/10 shadow-inner"><Medal size={16} className="text-tier-bronze" /></span>;
 
   return <div className="text-center text-xs font-bold text-secondary">{rank}</div>;
 }

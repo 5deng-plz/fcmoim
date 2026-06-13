@@ -1859,6 +1859,11 @@ describe('v1.0 schedule and poll UX', () => {
       expect(screen.queryByText(/MOM/)).not.toBeInTheDocument();
       expect(screen.getAllByText('레드멤버').length).toBeGreaterThan(0);
       expect(screen.getAllByText('블루멤버').length).toBeGreaterThan(0);
+      expect(screen.getByRole('button', { name: '레드멤버 골 증가' })).toHaveClass('h-11', 'w-11', 'border-glass-border');
+      const redModalName = screen.getAllByText('레드멤버').find((element) => element.tagName.toLowerCase() === 'p');
+      const blueModalName = screen.getAllByText('블루멤버').find((element) => element.tagName.toLowerCase() === 'p');
+      expect(redModalName?.closest('.grid')).toHaveClass('bg-red-team/5', 'ring-red-team/10');
+      expect(blueModalName?.closest('.grid')).toHaveClass('bg-blue-team/5', 'ring-blue-team/10');
 
       await user.clear(screen.getByLabelText('Red'));
       await user.type(screen.getByLabelText('Red'), '2');
@@ -3596,8 +3601,12 @@ describe('records and header polish UI', () => {
     const winRateCell = screen.getByText((_, element) => element?.textContent === '75%');
     expect(winRateCell).toHaveClass('text-fcgreen-600');
     expect(screen.getAllByText('구피원').length).toBeGreaterThan(1);
-    const summaryCard = screen.getByText('시즌 요약').closest('.card');
+    const rankingCard = screen.getByText('승점').closest('.rounded-3xl');
+    expect(rankingCard).toHaveClass('border-glass-border', 'bg-glass-bg', 'backdrop-blur-md');
+    const summaryCard = screen.getByText('시즌 요약').closest('.rounded-3xl');
     expect(summaryCard).not.toBeNull();
+    expect(summaryCard).toHaveClass('border-glass-border', 'bg-glass-bg', 'backdrop-blur-md');
+    expect(within(summaryCard as HTMLElement).getByText('총 경기수').closest('.rounded-2xl')).toHaveClass('bg-glass-bg/60', 'border-glass-border/40');
     expect(within(summaryCard as HTMLElement).queryByText('시즌 전체')).not.toBeInTheDocument();
     expect(within(summaryCard as HTMLElement).queryByText((_, element) => element?.textContent === '4경기')).not.toBeInTheDocument();
     expect(
@@ -3616,6 +3625,9 @@ describe('records and header polish UI', () => {
     expect(container.querySelector('.text-tier-gold')).toBeInTheDocument();
     expect(container.querySelector('.text-tier-silver')).toBeInTheDocument();
     expect(container.querySelector('.text-tier-bronze')).toBeInTheDocument();
+    expect(container.querySelector('.bg-tier-gold\\/10')).toBeInTheDocument();
+    expect(container.querySelector('.bg-tier-silver\\/10')).toBeInTheDocument();
+    expect(container.querySelector('.bg-tier-bronze\\/10')).toBeInTheDocument();
     expect(screen.getByAltText('구피원 썸네일')).toHaveClass('h-6', 'w-6');
     expect(screen.getByAltText('구피투 썸네일')).toHaveAttribute('src', '/icons/svgrepo-soccer-player.svg');
   });

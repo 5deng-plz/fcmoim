@@ -113,7 +113,7 @@ export default function MatchResultInputModal({
   return (
     <Modal title="경기 결과 입력" isOpen={isOpen} onClose={onClose} presentation="dialog">
       <div className="space-y-4">
-        <div className="rounded-2xl border border-border bg-surface-bg p-4">
+        <div className="rounded-2xl border border-glass-border bg-glass-bg/60 p-4 backdrop-blur-sm">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
             <ScoreInput
               label="Red"
@@ -131,8 +131,8 @@ export default function MatchResultInputModal({
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-border bg-surface-card">
-          <div className="grid min-h-[40px] grid-cols-[42px_minmax(0,1fr)_70px_70px] items-center border-b border-border bg-surface-bg px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-secondary">
+        <div className="overflow-hidden rounded-2xl border border-glass-border bg-glass-bg shadow-glass-shadow backdrop-blur-md">
+          <div className="grid min-h-[44px] grid-cols-[36px_minmax(0,1fr)_116px_116px] items-center border-b border-glass-border/50 bg-glass-bg/60 px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-secondary">
             <div className="text-center">OVR</div>
             <div className="px-2">선수</div>
             <div className="text-center">골</div>
@@ -143,11 +143,14 @@ export default function MatchResultInputModal({
               {orderedLineup.map((player) => {
                 const record = records[player.membershipId] ?? { goals: 0, assists: 0 };
                 const teamClass = player.teamNumber === 1 ? 'text-red-team' : 'text-blue-team';
+                const teamRowClass = player.teamNumber === 1
+                  ? 'bg-red-team/5 ring-1 ring-inset ring-red-team/10'
+                  : 'bg-blue-team/5 ring-1 ring-inset ring-blue-team/10';
 
                 return (
                   <div
                     key={player.membershipId}
-                    className="grid h-[54px] min-h-[54px] grid-cols-[42px_minmax(0,1fr)_70px_70px] items-center px-2 py-0 text-sm"
+                    className={`grid min-h-[68px] grid-cols-[36px_minmax(0,1fr)_116px_116px] items-center px-2 py-2 text-sm ${teamRowClass}`}
                   >
                     <div className={`text-center font-extrabold ${teamClass}`}>{player.playerOvr}</div>
                     <div className="min-w-0 px-1">
@@ -287,20 +290,20 @@ function Stepper({
         type="button"
         onClick={onMinus}
         disabled={value <= 0}
-        className="flex h-6 w-6 items-center justify-center rounded-lg border border-border bg-surface-bg text-secondary transition-all hover:bg-surface-hover active:scale-95 disabled:opacity-40"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-glass-border bg-surface-bg text-secondary transition-transform hover:bg-surface-hover active:scale-90 disabled:opacity-40"
         aria-label={`${label} 감소`}
       >
-        <Minus size={12} aria-hidden="true" />
+        <Minus size={16} aria-hidden="true" />
       </button>
-      <span className="w-5 text-center text-xs font-black text-primary">{value}</span>
+      <span className="w-5 text-center text-sm font-black text-primary">{value}</span>
       <button
         type="button"
         onClick={onPlus}
         disabled={value >= 99}
-        className="flex h-6 w-6 items-center justify-center rounded-lg border border-border bg-surface-bg text-secondary transition-all hover:bg-surface-hover active:scale-95 disabled:opacity-40"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-glass-border bg-surface-bg text-secondary transition-transform hover:bg-surface-hover active:scale-90 disabled:opacity-40"
         aria-label={`${label} 증가`}
       >
-        <Plus size={12} aria-hidden="true" />
+        <Plus size={16} aria-hidden="true" />
       </button>
     </div>
   );

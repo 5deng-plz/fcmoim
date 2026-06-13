@@ -1,46 +1,38 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 78,
-  "updatedAt": "2026-06-13T15:05:48+09:00",
+  "updateVersion": 79,
+  "updatedAt": "2026-06-13T15:10:03+09:00",
   "updatedBy": "orchestrator",
-  "currentPhase": "ux-area-07-guest-onboarding",
+  "currentPhase": "ux-area-05-records-result",
   "activeWork": {
-    "taskId": "ux-area-07-guest-onboarding",
+    "taskId": "ux-area-05-records-result",
     "status": "ready",
-    "baselineCommit": "01805b6e15c516f950a27d67ca9d9d6263bce338",
+    "baselineCommit": "db773129ec4455b96034c5a4201e7553d7929e1a",
     "changedFiles": [
-      "src/components/features/JoinRequestForm.tsx",
-      "src/components/features/GuestDashboard.tsx",
-      "src/types/index.ts",
-      "src/types/domain.ts",
-      "src/stores/membershipClient.ts",
-      "supabase/migrations/20260613070000_add_gk_position.sql",
+      "src/components/features/MatchResultInputModal.tsx",
+      "src/components/tabs/RecordsTab.tsx",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
-    "changedSurfaces": ["ui", "domain", "data", "tests", "docs"],
+    "changedSurfaces": ["ui", "tests", "docs"],
     "allowedPaths": [
-      "src/components/features/JoinRequestForm.tsx",
-      "src/components/features/GuestDashboard.tsx",
-      "src/types/index.ts",
-      "src/types/domain.ts",
-      "src/stores/membershipClient.ts",
-      "supabase/migrations/20260613070000_add_gk_position.sql",
+      "src/components/features/MatchResultInputModal.tsx",
+      "src/components/tabs/RecordsTab.tsx",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
       "docs/project-context.json"
     ],
     "evidence": {
       "scopeSync": {
         "status": "passed",
-        "summary": "Scoped active work to 영역 07 guest onboarding: JoinRequestForm segmented controls/mobile focus handling, GuestDashboard glass cards and sticky join CTA, plus GK position persistence support."
+        "summary": "Scoped active work to 영역 05 records/result UX: MatchResultInputModal 44px steppers and team-tinted glass rows, RecordsTab glass ranking/summary cards, tier-token medal badges, and deterministic UI tests."
       },
       "targetedTest": {
         "status": "passed",
         "provider": "Vitest",
         "target": "tests/frontend-auth-and-schedule-ui.test.tsx",
         "command": "npm run test -- tests/frontend-auth-and-schedule-ui.test.tsx --run",
-        "summary": "70 tests passed, including guest dashboard glass cards/sticky CTA and join request name input glass focus behavior plus preferred-foot and GK position segmented controls."
+        "summary": "70 tests passed, including result modal 44px glass steppers/team row tinting and RecordsTab glass ranking, summary segments, and tier-token medal badge classes."
       },
       "lint": {
         "status": "passed",
@@ -52,7 +44,7 @@
         "status": "passed",
         "provider": "TypeScript",
         "command": "npm run verify:baseline",
-        "summary": "TypeScript passed after adding GK to the shared position domain and membership normalization."
+        "summary": "TypeScript passed for MatchResultInputModal, RecordsTab, and UI test changes."
       },
       "baseline": {
         "status": "passed",
@@ -60,33 +52,19 @@
         "command": "npm run verify:baseline",
         "summary": "Harness validation, lint, typecheck, and full Vitest suite passed: 19 test files passed, 1 skipped; 230 tests passed, 15 skipped."
       },
-      "database": {
-        "status": "passed",
-        "type": "database",
-        "provider": "tracked SQL, Local Supabase CLI",
-        "command": "npm run db:check; npm run verify:db:local",
-        "summary": "Non-mock database evidence: Supabase contract check passed for 19 SQL files; local Supabase db reset applied 20260613070000_add_gk_position.sql before an unrelated QA auth seed permission error stopped the broader local API suite."
-      },
       "build": {
         "status": "passed",
         "provider": "Next.js",
         "command": "APP_PROFILE=prod NEXT_PUBLIC_APP_PROFILE=prod NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=placeholder npm run build",
         "summary": "Production build passed with build-time public Supabase env."
-      },
-      "browserRuntime": {
-        "status": "passed",
-        "type": "runtime",
-        "provider": "npm run dev, in-app browser, server terminal log",
-        "command": "npm run dev; curl -I http://127.0.0.1:3000/; in-app Browser open http://127.0.0.1:3000/",
-        "summary": "Runtime smoke passed: dev server reported Ready on port 3000, curl returned HTTP 200, in-app Browser loaded title FC moim with document.readyState complete and 0 console errors. After local DB reset the visible app remained on auth-loading text, but no startup/runtime error was observed."
       }
     },
     "retrospective": {
-      "issuesObserved": "The PRD requested a GK position segment, but the existing app domain and Supabase enum only allowed FW/MF/DF; UI-only implementation would have produced a submit-time persistence failure.",
-      "missedEvidence": "Manual mobile browser visual QA was not run for the sticky CTA; deterministic class tests cover BottomNav offset and CTA sizing.",
-      "harnessImprovementProposal": "Consider a small onboarding form fixture so future segmented-control and viewport-scroll behavior can be tested without rendering the full HomePage path.",
+      "issuesObserved": "The existing result modal used 24px stepper buttons, so applying the PRD literally required widening the stats columns to avoid cramped 44px targets.",
+      "missedEvidence": "Manual mobile visual QA for tap accuracy and light-mode contrast was not run; deterministic tests cover the 44px class contract and glass/tier token usage.",
+      "harnessImprovementProposal": "Consider extracting the result input modal into a focused fixture test so touch-target regressions are not verified only through the large ScheduleTab integration path.",
       "promotionRecommendation": "defer",
-      "reason": "The onboarding changes are section-specific and covered by deterministic tests; no durable harness rule promotion is needed."
+      "reason": "The records/result changes are section-specific UI styling and touch-target work covered by deterministic tests; no durable harness rule promotion is needed."
     },
     "reviewStatus": "ready",
     "loopCounters": {
