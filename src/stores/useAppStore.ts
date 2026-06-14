@@ -42,6 +42,9 @@ interface AppState {
   setShowCommunity: (show: boolean) => void;
   showNotifications: boolean;
   setShowNotifications: (show: boolean) => void;
+  unreadNotificationCount: number;
+  setUnreadNotificationCount: (count: number) => void;
+  incrementUnreadNotificationCount: () => void;
   settlementNotification: SettlementNotification | null;
   setSettlementNotification: (notification: SettlementNotification | null) => void;
   showJoinForm: boolean;
@@ -104,6 +107,11 @@ export const useAppStore = create<AppState>((set) => ({
   setShowCommunity: (show) => set({ showCommunity: show, showMyPage: false, showJoinForm: false, showTeamBrowse: false }),
   showNotifications: false,
   setShowNotifications: (show) => set({ showNotifications: show }),
+  unreadNotificationCount: 0,
+  setUnreadNotificationCount: (count) => set({ unreadNotificationCount: Math.max(0, count) }),
+  incrementUnreadNotificationCount: () => set((state) => ({
+    unreadNotificationCount: state.unreadNotificationCount + 1,
+  })),
   settlementNotification: null,
   setSettlementNotification: (notification) => set({ settlementNotification: notification }),
   showJoinForm: false,

@@ -1777,6 +1777,68 @@ describe('v1.0 schedule and poll UX', () => {
     }
   });
 
+  it('renders DB notifications, updates the badge, and opens the target tab', async () => {
+    useAppStore.setState({
+      activeClubId: 'club-test',
+      isAuthenticated: true,
+      userStatus: 'approved',
+      showNotifications: false,
+      unreadNotificationCount: 0,
+      activeTab: 'home',
+    });
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.startsWith('/api/notifications') && (!init || init.method !== 'PATCH')) {
+        return new Response(JSON.stringify({
+          notifications: [{
+            id: 'notification-1',
+            membershipId: 'membership-1',
+            type: 'MATCH_CREATED',
+            title: '새 일정이 등록됐어요',
+            body: '참석 여부를 알려주세요',
+            isRead: false,
+            targetUrl: '/?tab=schedule',
+            metadata: { matchId: 'match-1' },
+            createdAt: '2026-06-13T12:00:00.000Z',
+            updatedAt: '2026-06-13T12:00:00.000Z',
+          }],
+        }), { status: 200 });
+      }
+      if (url.startsWith('/api/notifications') && init?.method === 'PATCH') {
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      return new Response(JSON.stringify({}), { status: 200 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <>
+        <Header />
+        <NotificationPanel />
+      </>,
+    );
+
+    act(() => {
+      useAppStore.getState().setUnreadNotificationCount(1);
+    });
+
+    expect(screen.getByText('1')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: '알림 열기' }));
+    expect(await screen.findByText('새 일정이 등록됐어요')).toBeInTheDocument();
+    expect(screen.getByText('참석 여부를 알려주세요')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /새 일정이 등록됐어요/ }));
+
+    await waitFor(() => {
+      expect(useAppStore.getState().activeTab).toBe('schedule');
+    });
+    expect(useAppStore.getState().unreadNotificationCount).toBe(0);
+    expect(fetchMock).toHaveBeenCalledWith('/api/notifications', expect.objectContaining({
+      method: 'PATCH',
+    }));
+  });
+
   it('positions toast above the bottom nav and keeps it readable for at least five seconds', () => {
     vi.useFakeTimers({ shouldAdvanceTime: false });
 

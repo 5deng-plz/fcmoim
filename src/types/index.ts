@@ -168,10 +168,13 @@ export interface Announcement {
 export interface Notification {
   id: string;
   userId: string;
+  membershipId?: string;
   type: string;
   title: string;
   body: string;
   isRead: boolean;
+  targetUrl?: string | null;
+  metadata?: Record<string, unknown>;
   createdAt: DateTime;
   updatedAt: DateTime;
 }

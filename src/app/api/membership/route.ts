@@ -1,5 +1,6 @@
 import { appErrorResponse } from '../../../types/api';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../lib/supabase-server';
+import { fireAndForgetPush, sendPushToClubOperators } from '../../../lib/push-sender';
 import { createAccountMembershipService } from '../../../services/account-membership';
 import { createSupabaseAccountMembershipRepositories } from '../../../services/supabase-repositories';
 
@@ -39,9 +40,15 @@ export async function POST(request: Request) {
       profile: body.profile,
     });
 
+    fireAndForgetPush('membership request', () => sendPushToClubOperators(membership.clubId, {
+      type: 'JOIN_REQUESTED',
+      title: '새 입단 신청이 도착했어요',
+      targetUrl: '/?tab=locker_room',
+      metadata: { clubId: membership.clubId, membershipId: membership.id },
+    }, { excludeAccountId: auth.user.id }));
+
     return Response.json(membership, { status: 201 });
   } catch (error) {
     return appErrorResponse(error);
   }
 }
-

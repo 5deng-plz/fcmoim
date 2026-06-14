@@ -110,6 +110,18 @@ async function ensureAccount(accountId: string) {
   }
 }
 
+async function deleteFcmTokens(tokens: string[]) {
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from('fcm_tokens')
+    .delete()
+    .in('token', tokens);
+
+  if (error) {
+    throw new Error(`Failed to clean FCM tokens: ${error.message}`);
+  }
+}
+
 async function deleteClubsBySlugs(slugs: string[]) {
   const admin = createAdminClient();
   const { error } = await admin
@@ -716,6 +728,59 @@ describeLocal('local Supabase API integration', () => {
       }));
     } finally {
       await deleteMembershipForAccountId(newAccountId, clubIds.lynx);
+    }
+  });
+
+  it('allows members to manage only their own FCM tokens', async () => {
+    const memberOneAccountId = await signIn('qa-member1@fcmoim.test');
+    const memberTwoAccountId = await signIn('qa-member2@fcmoim.test');
+    const route = await import('../src/app/api/fcm-tokens/route');
+    const tokenOne = `local-token-${Date.now()}-one`;
+    const tokenTwo = `local-token-${Date.now()}-two`;
+
+    try {
+      await deleteFcmTokens([tokenOne, tokenTwo]);
+      await signIn('qa-member1@fcmoim.test');
+
+      const createResponse = await route.POST(new Request('http://localhost/api/fcm-tokens', {
+        method: 'POST',
+        headers: { 'user-agent': 'Vitest Local API' },
+        body: JSON.stringify({ token: tokenOne, deviceInfo: { platform: 'vitest' } }),
+      }));
+      expect(createResponse.status).toBe(200);
+
+      const admin = createAdminClient();
+      const { error: insertOtherError } = await admin.from('fcm_tokens').upsert({
+        account_id: memberTwoAccountId,
+        token: tokenTwo,
+        device_info: { platform: 'other' },
+      }, { onConflict: 'token' });
+      expect(insertOtherError).toBeNull();
+
+      const { data: visibleTokens, error: visibleTokensError } = await authClient!
+        .from('fcm_tokens')
+        .select('token, account_id')
+        .in('token', [tokenOne, tokenTwo]);
+
+      expect(visibleTokensError).toBeNull();
+      expect(visibleTokens).toEqual([
+        expect.objectContaining({ token: tokenOne, account_id: memberOneAccountId }),
+      ]);
+
+      const deleteResponse = await route.DELETE(new Request('http://localhost/api/fcm-tokens', {
+        method: 'DELETE',
+        body: JSON.stringify({ token: tokenOne }),
+      }));
+      expect(deleteResponse.status).toBe(200);
+
+      const { data: remainingOwnToken, error: remainingError } = await admin
+        .from('fcm_tokens')
+        .select('token')
+        .eq('token', tokenOne);
+      expect(remainingError).toBeNull();
+      expect(remainingOwnToken).toEqual([]);
+    } finally {
+      await deleteFcmTokens([tokenOne, tokenTwo]);
     }
   });
 

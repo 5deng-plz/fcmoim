@@ -23,6 +23,7 @@ export default function Header() {
     setShowJoinForm,
     showNotifications,
     setShowNotifications,
+    unreadNotificationCount,
     teamName,
     teamLogoUrl,
     setActiveTab,
@@ -181,7 +182,11 @@ export default function Header() {
                     aria-label="알림 열기"
                   >
                     <Bell size={22} />
-                    <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-matchst-live rounded-full ring-2 ring-surface-card" />
+                    {unreadNotificationCount > 0 ? (
+                      <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-matchst-live px-1 text-[10px] font-black leading-none text-white ring-2 ring-surface-card">
+                        {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+                      </span>
+                    ) : null}
                   </button>
                 ) : null}
 

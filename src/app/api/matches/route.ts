@@ -1,5 +1,6 @@
 import { appErrorResponse } from '../../../types/api';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../lib/supabase-server';
+import { fireAndForgetPush, sendPushToClubMembers } from '../../../lib/push-sender';
 import { createMatchService } from '../../../services/matches';
 import { createSupabaseMatchRepositories } from '../../../services/supabase-repositories';
 
@@ -48,6 +49,13 @@ export async function POST(request: Request) {
       location: body.location,
       memo: body.memo,
     });
+
+    fireAndForgetPush('match creation', () => sendPushToClubMembers(match.clubId, {
+      type: 'MATCH_CREATED',
+      title: '새 일정이 등록됐어요',
+      targetUrl: '/?tab=schedule',
+      metadata: { clubId: match.clubId, matchId: match.id },
+    }, { excludeAccountId: auth.user.id }));
 
     return Response.json(match, { status: 201 });
   } catch (error) {

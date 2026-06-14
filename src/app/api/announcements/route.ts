@@ -1,5 +1,6 @@
 import { appErrorResponse } from '../../../types/api';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../lib/supabase-server';
+import { fireAndForgetPush, sendPushToClubMembers } from '../../../lib/push-sender';
 import { createAnnouncementService } from '../../../services/announcements';
 import { createSupabaseAnnouncementRepositories } from '../../../services/supabase-repositories';
 
@@ -36,6 +37,13 @@ export async function POST(request: Request) {
       content: body.content,
       isPinned: body.isPinned,
     });
+
+    fireAndForgetPush('announcement creation', () => sendPushToClubMembers(announcement.clubId, {
+      type: 'ANNOUNCEMENT_POSTED',
+      title: '새 공지사항이 등록됐어요',
+      targetUrl: '/?tab=records&section=announcements',
+      metadata: { clubId: announcement.clubId, announcementId: announcement.id },
+    }, { excludeAccountId: auth.user.id }));
 
     return Response.json(announcement, { status: 201 });
   } catch (error) {

@@ -11,6 +11,7 @@ import LockerRoomTab from '@/components/tabs/LockerRoomTab';
 import MyPage from '@/components/tabs/MyPage';
 import CommunityPage from '@/components/tabs/CommunityPage';
 import NotificationPanel from '@/components/features/NotificationPanel';
+import PushPermissionPrompt from '@/components/features/PushPermissionPrompt';
 import MatchCreateModal from '@/components/features/MatchCreateModal';
 import PollCreateModal from '@/components/features/PollCreateModal';
 import AnnouncementCreateModal from '@/components/features/AnnouncementCreateModal';
@@ -82,6 +83,14 @@ function AppShell() {
   const { switchClub } = useAuthStore();
   const mainRef = useRef<HTMLElement | null>(null);
 
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    if (tab === 'home' || tab === 'schedule' || tab === 'records' || tab === 'locker_room' || tab === 'community') {
+      setActiveTab(tab);
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, [setActiveTab]);
+
   const renderContent = () => {
     if (showTeamBrowse && showJoinForm) {
       return (
@@ -142,6 +151,7 @@ function AppShell() {
       <BottomNav />
 
       <NotificationPanel />
+      <PushPermissionPrompt />
       <MatchCreateModal />
       <PollCreateModal />
       <AnnouncementCreateModal />

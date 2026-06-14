@@ -27,12 +27,18 @@ messaging.onBackgroundMessage((payload) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const targetUrl = event.notification.data?.targetUrl || '/';
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      const absoluteTargetUrl = new URL(targetUrl, self.location.origin).href;
       if (clientList.length > 0) {
-        return clientList[0].focus();
+        const matchingClient = clientList.find((client) => client.url === absoluteTargetUrl);
+        if (matchingClient) {
+          return matchingClient.focus();
+        }
+        return clientList[0].navigate(absoluteTargetUrl).then((client) => client?.focus());
       }
-      return clients.openWindow('/');
+      return clients.openWindow(absoluteTargetUrl);
     }),
   );
 });

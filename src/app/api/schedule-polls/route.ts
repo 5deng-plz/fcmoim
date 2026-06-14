@@ -1,5 +1,6 @@
 import { appErrorResponse } from '../../../types/api';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../lib/supabase-server';
+import { fireAndForgetPush, sendPushToClubMembers } from '../../../lib/push-sender';
 import { createSchedulePollService } from '../../../services/schedule-polls';
 import { createSupabaseSchedulePollRepositories } from '../../../services/supabase-repositories';
 
@@ -40,6 +41,13 @@ export async function POST(request: Request) {
       closesAt: body.closesAt,
       optionDates: body.optionDates,
     });
+
+    fireAndForgetPush('schedule poll creation', () => sendPushToClubMembers(poll.clubId, {
+      type: 'SCHEDULE_POLL_CREATED',
+      title: '새 일정 투표가 시작됐어요',
+      targetUrl: '/?tab=schedule',
+      metadata: { clubId: poll.clubId, pollId: poll.id },
+    }, { excludeAccountId: auth.user.id }));
 
     return Response.json(poll, { status: 201 });
   } catch (error) {

@@ -14,6 +14,11 @@ export const NOTIFICATION_TEMPLATES = {
   STAT_UPDATE: '경기 스탯이 업데이트되었어요! 내 능력치를 확인해보세요 📊',
   SETTLEMENT_REQUEST: '구장비 정산 부탁드려요~ 💰',
   SETTLEMENT_REMIND: '아직 정산이 안 됐어요~ 확인 부탁드립니다! 🙏',
+  JOIN_REQUESTED: '새로운 입단 신청이 있어요!',
+  JOIN_APPROVED: '입단이 승인되었습니다!',
+  JOIN_REJECTED: '입단 신청이 반려되었습니다.',
+  SCHEDULE_POLL_CREATED: '새로운 일정 투표가 시작됐어요!',
+  ANNOUNCEMENT_POSTED: '새 공지사항이 등록됐어요!',
 } as const;
 
 export type NotificationType = keyof typeof NOTIFICATION_TEMPLATES;
@@ -41,19 +46,53 @@ export async function requestFCMToken(): Promise<string | null> {
   }
 }
 
+export async function deleteCurrentFCMToken(): Promise<void> {
+  if (typeof window === 'undefined' || !('Notification' in window) || Notification.permission !== 'granted') {
+    return;
+  }
+
+  const token = await requestFCMToken();
+  if (!token) {
+    return;
+  }
+
+  await fetch('/api/fcm-tokens', {
+    method: 'DELETE',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ token }),
+  });
+}
+
 // ─── FCM 포그라운드 메시지 리스너 ───
-export function onForegroundMessage(callback: (payload: { title: string; body: string }) => void): void {
+export function onForegroundMessage(
+  callback: (payload: { title: string; body: string; targetUrl?: string }) => void,
+): () => void {
+  let unsubscribe: (() => void) | null = null;
+  let cancelled = false;
+
   import('firebase/messaging').then(({ getMessaging, onMessage }) => {
     import('./firebase').then(({ app }) => {
+      if (cancelled) {
+        return;
+      }
       const messaging = getMessaging(app);
-      onMessage(messaging, (payload) => {
+      unsubscribe = onMessage(messaging, (payload) => {
         callback({
           title: payload.notification?.title || '',
           body: payload.notification?.body || '',
+          targetUrl: payload.data?.targetUrl,
         });
       });
     });
   });
+
+  return () => {
+    cancelled = true;
+    unsubscribe?.();
+  };
 }
 
 // ─── 알림 권한 요청 ───

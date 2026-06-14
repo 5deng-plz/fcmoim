@@ -12,6 +12,7 @@ import {
   signInWithKakao,
   type AuthUser,
 } from '@/lib/auth';
+import { deleteCurrentFCMToken } from '@/lib/fcm';
 import { useAppStore } from './useAppStore';
 import {
   fetchClubMemberships,
@@ -242,6 +243,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   // ─── 로그아웃 ───
   signOut: async () => {
+    await deleteCurrentFCMToken().catch((error) => {
+      console.error('[FC Moim] FCM token cleanup failed:', error);
+    });
+    window.localStorage.removeItem('fcmoim.pushPrompt.registered');
     await logout();
     set({
       authUser: null,
