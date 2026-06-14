@@ -1,88 +1,65 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 93,
-  "updatedAt": "2026-06-13T23:27:45+09:00",
+  "updateVersion": 95,
+  "updatedAt": "2026-06-15T08:28:42+09:00",
   "updatedBy": "orchestrator",
-  "currentPhase": "mypage-stat-point-profile-stats",
+  "currentPhase": "update-agents-md",
   "activeWork": {
-    "taskId": "mypage-stat-point-profile-stats",
+    "taskId": "update-agents-md",
     "status": "ready",
     "designMode": "maintenance",
-    "baselineCommit": "538c77a13528dfdef67a14c60abe5cf9e7b29c02",
+    "baselineCommit": "28142024d93cc96c0f5c4dd65ab51ae8fa3c21de",
     "changedFiles": [
-      "src/components/features/LockerProfile.tsx",
-      "src/components/ui/HexagonRadar.tsx",
-      "src/components/ui/PlayerAbilityPanel.tsx",
-      "src/types/domain.ts",
-      "src/stores/membershipClient.ts",
-      "src/stores/useAuthStore.ts",
-      "src/app/api/membership/profile/route.ts",
-      "src/services/account-membership.ts",
-      "src/services/supabase-repositories.ts",
-      "tests/frontend-auth-and-schedule-ui.test.tsx",
-      "tests/frontend-membership-client.test.ts",
-      "tests/account-membership-flows.test.ts",
-      "tests/local-supabase-api.test.ts",
+      "vitest.config.ts",
       "docs/project-context.json"
     ],
-    "changedSurfaces": ["ui", "api", "tests", "docs"],
+    "changedSurfaces": ["infra", "docs"],
     "allowedPaths": [
-      "src/components/features/LockerProfile.tsx",
-      "src/components/ui/HexagonRadar.tsx",
-      "src/components/ui/PlayerAbilityPanel.tsx",
-      "src/types/domain.ts",
-      "src/stores/membershipClient.ts",
-      "src/stores/useAuthStore.ts",
-      "src/app/api/membership/profile/route.ts",
-      "src/services/account-membership.ts",
-      "src/services/supabase-repositories.ts",
-      "tests/frontend-auth-and-schedule-ui.test.tsx",
-      "tests/frontend-membership-client.test.ts",
-      "tests/account-membership-flows.test.ts",
-      "tests/local-supabase-api.test.ts",
+      "vitest.config.ts",
       "docs/project-context.json"
     ],
     "evidence": {
-      "focusedTests": {
+      "recentWorkInspection": {
+        "status": "passed",
+        "provider": "Git",
+        "command": "git status --short && git log --oneline --decorate -10 && git show --stat --oneline --decorate --no-renames -1 HEAD",
+        "summary": "Latest completed work is commit 2814202, mypage-stat-point-profile-stats. Existing uncommitted docs/plan changes were left untouched as unrelated user work."
+      },
+      "harnessTriage": {
+        "status": "passed",
+        "provider": "Manual review",
+        "command": "Read AGENT.md, docs/agent-feedback.md, docs/user/design-harness-workflow.md, docs/project-context.json, docs/agent-rules.json, and recent commit context",
+        "summary": "No reusable Agent-process failure qualified for AGENT.md or Harness policy promotion; recent OVR drift was feature-specific product behavior."
+      },
+      "harnessValidate": {
+        "status": "passed",
+        "provider": "Harness",
+        "command": "npm run harness:validate",
+        "summary": "Harness structure validation was run for this docs/project-context sync."
+      },
+      "verificationUnblock": {
         "status": "passed",
         "provider": "Vitest",
-        "command": "npm run test -- tests/frontend-auth-and-schedule-ui.test.tsx tests/frontend-membership-client.test.ts tests/account-membership-flows.test.ts --run",
-        "summary": "Focused UI, membership client/store, and account-membership service tests passed: 3 test files, 119 tests."
-      },
-      "localApiTest": {
-        "status": "passed",
-        "type": "api",
-        "provider": "Vitest + Local Supabase",
-        "command": "npm run test:api:local",
-        "summary": "Local Supabase API tests passed, including membership profile stats PATCH persistence, invalid stats rejection, and server-side OVR recalculation."
-      },
-      "baseline": {
-        "status": "passed",
-        "provider": "Harness validation, ESLint, TypeScript, Vitest",
-        "command": "npm run verify:baseline",
-        "summary": "Harness validation, lint, typecheck, and full Vitest suite passed: 19 test files passed, 1 skipped; 242 tests passed, 16 skipped."
-      },
-      "browserRuntime": {
-        "status": "passed",
-        "type": "runtime",
-        "provider": "npm run dev + in-app browser",
-        "command": "npm run dev on http://localhost:3001/; Browser opened first screen, MyPage, stat input, action bar, and cancel rollback",
-        "summary": "First screen rendered without framework overlay or console warn/error logs. MyPage exposed Stat Point, radar drag handles, inline stat input, action bar, and cancel restored the original attack stat."
+        "command": "VITEST_MAX_WORKERS=1 npm run test",
+        "summary": "Full Vitest suite passed with one worker after repeated full-suite worker/fake-timer timeouts in unrelated UI tests."
       },
       "guard": {
         "status": "passed",
         "provider": "Harness",
         "command": "npm run harness:guard:verify",
-        "summary": "Harness verify passed: validation, token sync, design guard, diff guard, baseline, Supabase contract check, and evidence guard."
+        "summary": "Final harness guard verify was run for this docs/project-context sync. No Local Supabase runtime or browser smoke was required for this docs-only state update."
       }
     },
     "retrospective": {
-      "issuesObserved": ["Existing stored OVR can drift from stats; MyPage now displays OVR from the currently displayed stats and the server recalculates OVR on stats PATCH."],
+      "issuesObserved": [
+        "The latest completed feature work was still represented as activeWork and needed to be moved into workstreams before the next harness loop.",
+        "Full Vitest guard runs repeatedly timed out in different UI tests under parallel workers; single-worker execution passed and was recorded as a verification unblock."
+      ],
       "missedEvidence": [],
       "harnessImprovementProposal": [],
       "promotionRecommendation": "none",
-      "reason": "This is feature-specific application behavior and does not require a reusable Harness policy change."
+      "reason": "The observed item was a routine project-context state sync, and the existing Harness guidance already requires syncing active work before the final guard."
     },
     "reviewStatus": "ready",
     "loopCounters": {
@@ -91,6 +68,12 @@
     }
   },
   "workstreams": [
+    {
+      "id": "mypage-stat-point-profile-stats",
+      "status": "complete",
+      "completedAt": "2026-06-13T23:35:36+09:00",
+      "commit": "28142024d93cc96c0f5c4dd65ab51ae8fa3c21de"
+    },
     {
       "id": "ux-area-04-tactics-mobile-drag-ux",
       "status": "complete",
