@@ -53,6 +53,7 @@ type MembershipDbRow = {
   ovr: number;
   stats: unknown;
   match_points: number;
+  selected_trait_id: string | null;
   preferred_foot: TeamMembershipRow['preferredFoot'];
 };
 
@@ -443,6 +444,19 @@ export function createSupabaseAccountMembershipRepositories(
         }
 
         return mapMembership(data);
+      },
+      async listUnlockedTraitIds(membershipId) {
+        const { data, error } = await supabase
+          .from('unlocked_traits')
+          .select('trait_id')
+          .eq('membership_id', membershipId)
+          .returns<Array<{ trait_id: string }>>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch unlocked traits.', { cause: error });
+        }
+
+        return (data ?? []).map((row) => row.trait_id);
       },
     },
   };
@@ -1855,7 +1869,7 @@ function isMissingColumnError(error: { code?: string; message?: string } | null,
 }
 
 const MEMBERSHIP_SELECT =
-  'id, account_id, club_id, role, status, profile_name, main_position, height, weight, birth, residence, photo_url, ovr, stats, match_points, preferred_foot';
+  'id, account_id, club_id, role, status, profile_name, main_position, height, weight, birth, residence, photo_url, ovr, stats, match_points, selected_trait_id, preferred_foot';
 
 const SCHEDULE_POLL_SELECT =
   'id, club_id, season_id, title, status, common_time, location, memo, closes_at, created_by, cancellation_reason, cancelled_at, promoted_match_id, schedule_poll_options(id, poll_id, option_date, sort_order), schedule_poll_votes(id, poll_id, option_id, membership_id, is_available)';
@@ -1894,6 +1908,7 @@ function mapMembership(row: MembershipDbRow): TeamMembershipRow {
     ovr: row.ovr,
     stats: normalizeStats(row.stats),
     matchPoints: row.match_points,
+    selectedTraitId: row.selected_trait_id,
     preferredFoot: row.preferred_foot,
   };
 }

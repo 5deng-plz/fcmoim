@@ -639,6 +639,8 @@ function MemberProfileAccordion({
         stats={member.stats}
         ovr={member.ovr}
         preferredFoot={member.preferredFoot}
+        position={member.position === 'FW' || member.position === 'MF' || member.position === 'DF' || member.position === 'GK' ? member.position : undefined}
+        selectedTraitId={member.selectedTraitId}
         birthDate={member.birthDate}
         heightCm={member.heightCm}
         weightKg={member.weightKg}

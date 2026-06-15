@@ -62,6 +62,8 @@ export interface User {
   ovr: number;
   stats: UserStats;
   matchPoints: number;
+  selectedTraitId?: string | null;
+  unlockedTraitIds?: string[];
   photoUrl: string | null;
   role: UserRole;
   status: UserStatus;

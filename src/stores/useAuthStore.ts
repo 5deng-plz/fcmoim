@@ -21,6 +21,8 @@ import {
   membershipStateToUserStatus,
   patchMembershipPhoto,
   patchMembershipProfile,
+  purchaseTraitRequest,
+  equipTraitRequest,
 } from './membershipClient';
 
 let unsubscribeAuthListener: (() => void) | null = null;
@@ -47,6 +49,8 @@ interface AuthState {
     stats?: UserStats | null;
     ovr?: number | null;
   }) => Promise<void>;
+  purchaseTrait: (clubId: string, traitId: string) => Promise<void>;
+  equipTrait: (clubId: string, traitId: string | null) => Promise<void>;
   switchClub: (clubId: string) => Promise<void>;
   approveUser: (userId: string) => Promise<void>;
 }
@@ -297,6 +301,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             residence: membership.residence,
             stats: membership.stats,
             ovr: membership.ovr,
+          }
+        : state.memberProfile,
+    }));
+  },
+
+  purchaseTrait: async (clubId, traitId) => {
+    const result = await purchaseTraitRequest(clubId, traitId);
+    set((state) => ({
+      memberProfile: state.memberProfile
+        ? {
+            ...state.memberProfile,
+            matchPoints: result.membership.matchPoints,
+            selectedTraitId: result.membership.selectedTraitId,
+            unlockedTraitIds: result.unlockedTraitIds,
+          }
+        : state.memberProfile,
+    }));
+  },
+
+  equipTrait: async (clubId, traitId) => {
+    const result = await equipTraitRequest(clubId, traitId);
+    set((state) => ({
+      memberProfile: state.memberProfile
+        ? {
+            ...state.memberProfile,
+            selectedTraitId: result.membership.selectedTraitId,
+            unlockedTraitIds: result.unlockedTraitIds,
           }
         : state.memberProfile,
     }));

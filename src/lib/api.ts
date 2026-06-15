@@ -34,6 +34,7 @@ type TeamMembershipDbRow = {
   ovr: number;
   stats: unknown;
   match_points: number;
+  selected_trait_id?: string | null;
   photo_url: string | null;
   role: UserRole;
   status: DbMembershipStatus;
@@ -392,6 +393,8 @@ function mapTeamMembershipToUser(row: TeamMembershipDbRow): User {
     ovr: row.ovr,
     stats: normalizeStats(row.stats),
     matchPoints: row.match_points,
+    selectedTraitId: row.selected_trait_id ?? null,
+    unlockedTraitIds: [],
     photoUrl: row.photo_url,
     role: row.role,
     status: row.status,

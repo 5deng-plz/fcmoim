@@ -207,7 +207,7 @@ async function getMembershipByAccount(accountId: string, clubId: string) {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from('team_memberships')
-    .select('id, ovr, stats, match_points')
+    .select('id, ovr, stats, match_points, selected_trait_id')
     .eq('account_id', accountId)
     .eq('club_id', clubId)
     .single<{
@@ -215,6 +215,7 @@ async function getMembershipByAccount(accountId: string, clubId: string) {
       ovr: number;
       stats: { attack: number; defense: number; stamina: number; mentality: number; speed: number; manner: number };
       match_points: number;
+      selected_trait_id: string | null;
     }>();
 
   if (error) {
@@ -299,16 +300,34 @@ async function deleteMatchResultFixture(matchId: string) {
   await admin.from('matches').delete().eq('id', matchId);
 }
 
-async function restoreMembershipSnapshot(snapshot: { id: string; ovr: number; match_points: number }) {
+async function restoreMembershipSnapshot(snapshot: { id: string; ovr: number; match_points: number; selected_trait_id?: string | null }) {
   const admin = createAdminClient();
   const { error } = await admin
     .from('team_memberships')
-    .update({ ovr: snapshot.ovr, match_points: snapshot.match_points })
+    .update({
+      ovr: snapshot.ovr,
+      match_points: snapshot.match_points,
+      selected_trait_id: snapshot.selected_trait_id ?? null,
+    })
     .eq('id', snapshot.id);
 
   if (error) {
     throw new Error(`Failed to restore membership ${snapshot.id}: ${error.message}`);
   }
+}
+
+async function cleanTraitShopState(membershipId: string, traitIds: string[]) {
+  const admin = createAdminClient();
+  await admin
+    .from('point_ledger')
+    .delete()
+    .eq('membership_id', membershipId)
+    .eq('source_type', 'trait_shop');
+  await admin
+    .from('unlocked_traits')
+    .delete()
+    .eq('membership_id', membershipId)
+    .in('trait_id', traitIds);
 }
 
 describeLocal('local Supabase API integration', () => {
@@ -1101,6 +1120,93 @@ describeLocal('local Supabase API integration', () => {
     } finally {
       await deleteMatchResultFixture(matchId);
       await restoreMembershipSnapshot(operatorSnapshot);
+      await restoreMembershipSnapshot(memberSnapshot);
+    }
+  });
+
+  it('purchases and equips locker room traits through authenticated API routes', async () => {
+    const memberAccountId = await signIn('qa-member1@fcmoim.test');
+    const purchaseRoute = await import('../src/app/api/membership/traits/purchase/route');
+    const equipRoute = await import('../src/app/api/membership/traits/equip/route');
+    const memberMembership = await getMembershipByAccount(memberAccountId, clubIds.guppy);
+    const memberSnapshot = { ...memberMembership };
+    const admin = createAdminClient();
+    const traitId = 'dummy-runner';
+
+    try {
+      await cleanTraitShopState(memberMembership.id, [traitId, 'line-breaker']);
+      const { error: prepError } = await admin
+        .from('team_memberships')
+        .update({ match_points: 200, selected_trait_id: null })
+        .eq('id', memberMembership.id);
+      if (prepError) throw new Error(`Failed to prepare trait shop fixture: ${prepError.message}`);
+
+      const purchaseResponse = await purchaseRoute.POST(new Request('http://localhost/api/membership/traits/purchase', {
+        method: 'POST',
+        body: JSON.stringify({
+          clubId: clubIds.guppy,
+          traitId,
+        }),
+      }));
+      const purchaseBody = await purchaseResponse.json();
+
+      expect(purchaseResponse.status).toBe(200);
+      expect(purchaseBody.membership).toEqual(expect.objectContaining({
+        id: memberMembership.id,
+        matchPoints: 50,
+        selectedTraitId: null,
+      }));
+      expect(purchaseBody.unlockedTraitIds).toContain(traitId);
+
+      const duplicateResponse = await purchaseRoute.POST(new Request('http://localhost/api/membership/traits/purchase', {
+        method: 'POST',
+        body: JSON.stringify({
+          clubId: clubIds.guppy,
+          traitId,
+        }),
+      }));
+      const duplicateBody = await duplicateResponse.json();
+
+      expect(duplicateResponse.status).toBe(200);
+      expect(duplicateBody.membership.matchPoints).toBe(50);
+
+      const equipResponse = await equipRoute.PATCH(new Request('http://localhost/api/membership/traits/equip', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          clubId: clubIds.guppy,
+          traitId,
+        }),
+      }));
+      const equipBody = await equipResponse.json();
+
+      expect(equipResponse.status).toBe(200);
+      expect(equipBody.membership.selectedTraitId).toBe(traitId);
+
+      const lockedResponse = await equipRoute.PATCH(new Request('http://localhost/api/membership/traits/equip', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          clubId: clubIds.guppy,
+          traitId: 'line-breaker',
+        }),
+      }));
+
+      expect(lockedResponse.status).toBe(403);
+
+      const { data: ledger } = await admin
+        .from('point_ledger')
+        .select('membership_id, amount, reason, source_type')
+        .eq('membership_id', memberMembership.id)
+        .eq('source_type', 'trait_shop');
+      expect(ledger).toEqual([
+        {
+          membership_id: memberMembership.id,
+          amount: -150,
+          reason: 'shop_purchase',
+          source_type: 'trait_shop',
+        },
+      ]);
+    } finally {
+      await cleanTraitShopState(memberMembership.id, [traitId, 'line-breaker']);
       await restoreMembershipSnapshot(memberSnapshot);
     }
   });

@@ -109,6 +109,7 @@ type MembershipRepository = {
   updateRole: ReturnType<typeof vi.fn>;
   updatePhoto: ReturnType<typeof vi.fn>;
   updateProfile: ReturnType<typeof vi.fn>;
+  listUnlockedTraitIds: ReturnType<typeof vi.fn>;
 };
 
 function createMembershipRow(overrides: Partial<MembershipRow> = {}): MembershipRow {
@@ -225,6 +226,7 @@ function createRepositories(options?: {
       status: 'approved',
       ...profile,
     })),
+    listUnlockedTraitIds: vi.fn(async () => []),
   };
 
   return { accounts, memberships };

@@ -56,6 +56,7 @@ type MembershipRepository = {
     membershipId: string;
     profile: MembershipProfilePatch;
   }): Promise<TeamMembershipRow>;
+  listUnlockedTraitIds(membershipId: string): Promise<string[]>;
 };
 
 export type AccountMembershipRepositories = {
@@ -116,11 +117,17 @@ export function createAccountMembershipService(repositories: AccountMembershipRe
         input.auth.user.id,
         input.clubId,
       );
+      const membershipWithTraits = membership
+        ? {
+            ...membership,
+            unlockedTraitIds: await repositories.memberships.listUnlockedTraitIds(membership.id),
+          }
+        : null;
 
       return {
         account,
-        membership,
-        membershipState: membership?.status ?? 'new',
+        membership: membershipWithTraits,
+        membershipState: membershipWithTraits?.status ?? 'new',
       };
     },
 

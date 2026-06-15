@@ -306,6 +306,8 @@ export default function LockerProfile() {
           stats={stats}
           ovr={ovr}
           preferredFoot={preferredFoot}
+          position={memberProfile?.mainPosition}
+          selectedTraitId={memberProfile?.selectedTraitId}
           surface="flat"
           birthDate={memberProfile?.birth}
           residence={memberProfile?.residence}

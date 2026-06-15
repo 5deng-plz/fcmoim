@@ -1,8 +1,40 @@
-import { Cake, Gauge, MapPin, Ruler, Check, X } from 'lucide-react';
+import {
+  Anchor,
+  Badge,
+  Bolt,
+  Brain,
+  Cake,
+  Check,
+  Crown,
+  Flame,
+  Gauge,
+  Goal,
+  Layers,
+  Map,
+  MapPin,
+  MoveDiagonal,
+  Radar,
+  Rocket,
+  Ruler,
+  Shield,
+  Sparkles,
+  Swords,
+  Target,
+  Users,
+  X,
+} from 'lucide-react';
 import type { ReactNode } from 'react';
 import HexagonRadar from '@/components/ui/HexagonRadar';
-import type { UserStats } from '@/types';
+import type { Position, UserStats } from '@/types';
 import { calculateStatsOvr } from '@/utils/stats';
+import {
+  findTraitById,
+  getDefaultTraitForProfile,
+  getTraitGradeClasses,
+  getTraitGradeLabel,
+  type TraitIconName,
+} from '@/lib/traitCatalog';
+import PreferredFootIcon from '@/components/ui/PreferredFootIcon';
 
 export type ProfileField = 'height' | 'weight' | 'birth' | 'residence';
 
@@ -10,6 +42,8 @@ interface PlayerAbilityPanelProps {
   stats: UserStats;
   ovr?: number | null;
   preferredFoot?: string | null;
+  position?: Position;
+  selectedTraitId?: string | null;
   birthDate?: string | Date | null;
   residence?: string | null;
   heightCm?: number | null;
@@ -52,89 +86,46 @@ function formatMeasure(value: number | null | undefined, suffix: string) {
   return value ? `${value}${suffix}` : '-';
 }
 
-import PreferredFootIcon from '@/components/ui/PreferredFootIcon';
-import { STAT_KEYS } from '@/types';
-
-function getWittyPlaystyle(stats: UserStats): string {
-  const statKeys = STAT_KEYS;
-  
-  // Find lowest stat first to check if there is any < 80
-  let lowestKey = statKeys[0];
-  let lowestVal = stats[lowestKey];
-  for (const key of statKeys) {
-    if (stats[key] < lowestVal) {
-      lowestVal = stats[key];
-      lowestKey = key;
-    }
-  }
-
-  if (lowestVal < 80) {
-    switch (lowestKey) {
-      case 'stamina': return '저질 체력';
-      case 'mentality': return '유리 멘탈';
-      case 'speed': return '메슬렁';
-      case 'manner': return '카드 수집가';
-      case 'defense': return '자동문';
-      case 'attack': return '홈런 유망주';
-      default: return '유리 멘탈';
-    }
-  }
-
-  // All stats are >= 80, find highest stat
-  let highestKey = statKeys[0];
-  let highestVal = stats[highestKey];
-  for (const key of statKeys) {
-    if (stats[key] > highestVal) {
-      highestVal = stats[key];
-      highestKey = key;
-    }
-  }
-
-  switch (highestKey) {
-    case 'stamina': return '인간 산소탱크';
-    case 'mentality': return '강철 멘탈';
-    case 'speed': return '부스터 온';
-    case 'manner': return '부처님';
-    case 'defense': return '방패막이';
-    case 'attack': return '대포알 슈터';
-    default: return '강철 멘탈';
-  }
-}
-
-function getPlaystyleInfo(playstyle: string) {
-  switch (playstyle) {
-    // Positive
-    case '인간 산소탱크': return { cardClass: 'playstyle-pos-card', emoji: '🫁' };
-    case '강철 멘탈': return { cardClass: 'playstyle-pos-card', emoji: '🛡️' };
-    case '부스터 온': return { cardClass: 'playstyle-pos-card', emoji: '🚀' };
-    case '부처님': return { cardClass: 'playstyle-pos-card', emoji: '🧘' };
-    case '방패막이': return { cardClass: 'playstyle-pos-card', emoji: '🧱' };
-    case '대포알 슈터': return { cardClass: 'playstyle-pos-card', emoji: '☄️' };
-    // Negative
-    case '저질 체력': return { cardClass: 'playstyle-neg-card', emoji: '🪫' };
-    case '유리 멘탈': return { cardClass: 'playstyle-neg-card', emoji: '🩹' };
-    case '메슬렁': return { cardClass: 'playstyle-neg-card', emoji: '🦥' };
-    case '카드 수집가': return { cardClass: 'playstyle-neg-card', emoji: '🃏' };
-    case '자동문': return { cardClass: 'playstyle-neg-card', emoji: '🚪' };
-    case '홈런 유망주': return { cardClass: 'playstyle-neg-card', emoji: '🛸' };
-    // Fallback
-    default: return { cardClass: 'playstyle-pos-card', emoji: '✨' };
-  }
-}
+const traitIconMap: Record<TraitIconName, typeof Shield> = {
+  anchor: Anchor,
+  badge: Badge,
+  bolt: Bolt,
+  brain: Brain,
+  crown: Crown,
+  flame: Flame,
+  gauge: Gauge,
+  goal: Goal,
+  layers: Layers,
+  map: Map,
+  moveDiagonal: MoveDiagonal,
+  radar: Radar,
+  rocket: Rocket,
+  shield: Shield,
+  sparkles: Sparkles,
+  swords: Swords,
+  target: Target,
+  users: Users,
+};
 
 function PlayerOvrStyleCard({
   ovr,
   preferredFoot,
   stats,
+  position = 'MF',
+  selectedTraitId,
   onPreferredFootClick,
 }: {
   ovr: number;
   preferredFoot?: string | null;
   stats: UserStats;
+  position?: Position;
+  selectedTraitId?: string | null;
   onPreferredFootClick?: () => void;
 }) {
-  const playstyle = getWittyPlaystyle(stats);
-  const styleInfo = getPlaystyleInfo(playstyle);
+  const equippedTrait = findTraitById(selectedTraitId);
+  const trait = equippedTrait ?? getDefaultTraitForProfile(position, stats);
+  const TraitIcon = traitIconMap[trait.icon];
+  const traitClasses = equippedTrait ? getTraitGradeClasses(trait.grade) : 'playstyle-pos-card';
 
   return (
     <div
@@ -163,15 +154,16 @@ function PlayerOvrStyleCard({
 
       {/* Trait Section: Styled like the Profile Cards below (square card format) */}
       <div
-        className={`flex h-[88px] w-full flex-col items-center justify-center rounded-xl border px-1 py-1.5 shadow-inner ${styleInfo.cardClass}`}
+        className={`flex h-[88px] w-full flex-col items-center justify-center rounded-xl border px-1 py-1.5 shadow-inner ${traitClasses}`}
         data-testid="player-trait-card"
       >
-        <span className="text-3xl filter drop-shadow-sm leading-none select-none mb-1 shrink-0">
-          {styleInfo.emoji}
-        </span>
+        <TraitIcon size={28} strokeWidth={2.4} className="mb-1 shrink-0 drop-shadow-sm" aria-hidden="true" />
 
         <span className="w-full truncate text-[10px] font-black tracking-tight leading-tight opacity-90">
-          {playstyle}
+          {trait.name}
+        </span>
+        <span className="mt-0.5 w-full truncate text-[8px] font-black leading-none opacity-70">
+          {getTraitGradeLabel(trait.grade)}
         </span>
       </div>
     </div>
@@ -182,6 +174,8 @@ export default function PlayerAbilityPanel({
   stats,
   ovr: ovrProp,
   preferredFoot,
+  position = 'MF',
+  selectedTraitId,
   birthDate,
   residence,
   heightCm,
@@ -237,6 +231,8 @@ export default function PlayerAbilityPanel({
               ovr={ovr}
               preferredFoot={preferredFoot}
               stats={stats}
+              position={position}
+              selectedTraitId={selectedTraitId}
               onPreferredFootClick={onPreferredFootClick}
             />
           </div>

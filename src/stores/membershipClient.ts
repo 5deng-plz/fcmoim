@@ -32,6 +32,8 @@ export type ApiMembership = {
   ovr: number;
   stats: UserStats;
   matchPoints: number;
+  selectedTraitId?: string | null;
+  unlockedTraitIds?: string[];
   preferredFoot: PreferredFootCode;
 };
 
@@ -146,6 +148,11 @@ export type MatchPointLedgerEntry = {
   sourceType: string;
   sourceId: string | null;
   createdAt: string;
+};
+
+export type TraitMutationResponse = {
+  membership: ApiMembership;
+  unlockedTraitIds: string[];
 };
 
 export type MembershipProfilePatchRequest = {
@@ -367,6 +374,40 @@ export async function patchMembershipProfile(input: MembershipProfilePatchReques
   return response.json() as Promise<ApiMembership>;
 }
 
+export async function purchaseTraitRequest(clubId: string, traitId: string) {
+  const response = await fetch('/api/membership/traits/purchase', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ clubId, traitId }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getApiErrorMessage(response, '특성 카드를 구매하지 못했습니다.'));
+  }
+
+  return response.json() as Promise<TraitMutationResponse>;
+}
+
+export async function equipTraitRequest(clubId: string, traitId: string | null) {
+  const response = await fetch('/api/membership/traits/equip', {
+    method: 'PATCH',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ clubId, traitId }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getApiErrorMessage(response, '특성 카드를 장착하지 못했습니다.'));
+  }
+
+  return response.json() as Promise<TraitMutationResponse>;
+}
+
 export async function patchClubSettings(input: { clubId: string; description: string | null; isPublic: boolean }) {
   const response = await fetch('/api/clubs/settings', {
     method: 'PATCH',
@@ -535,6 +576,8 @@ export function mapMembershipSnapshotToUser(
     ovr: membership.ovr,
     stats: membership.stats ?? DEFAULT_STATS,
     matchPoints: membership.matchPoints,
+    selectedTraitId: membership.selectedTraitId ?? null,
+    unlockedTraitIds: membership.unlockedTraitIds ?? [],
     photoUrl: membership.photoUrl ?? snapshot.account.avatarUrl ?? null,
     role: membership.role,
     status: membership.status,

@@ -95,6 +95,8 @@ export type TeamMembershipRow = {
   ovr: number;
   stats: MembershipStats;
   matchPoints: number;
+  selectedTraitId: string | null;
+  unlockedTraitIds?: string[];
   preferredFoot: PreferredFootCode;
 };
 

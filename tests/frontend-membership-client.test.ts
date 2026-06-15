@@ -6,6 +6,8 @@ import {
   membershipStateToUserStatus,
   patchMembershipProfile,
   patchMembershipPhoto,
+  purchaseTraitRequest,
+  equipTraitRequest,
   shouldShowJoinRequest,
   submitJoinRequest,
   type MembershipSnapshot,
@@ -54,6 +56,8 @@ describe('frontend membership state mapping', () => {
         ovr: 74,
         stats: DEFAULT_STATS,
         matchPoints: 1280,
+        selectedTraitId: 'line-breaker',
+        unlockedTraitIds: ['line-breaker'],
         preferredFoot: 'both',
       },
     };
@@ -70,6 +74,8 @@ describe('frontend membership state mapping', () => {
       residence: null,
       ovr: 74,
       matchPoints: 1280,
+      selectedTraitId: 'line-breaker',
+      unlockedTraitIds: ['line-breaker'],
       preferredFoot: '양발',
     });
 
@@ -106,6 +112,8 @@ describe('frontend membership state mapping', () => {
         ovr: 60,
         stats: DEFAULT_STATS,
         matchPoints: 100,
+        selectedTraitId: null,
+        unlockedTraitIds: [],
         preferredFoot: 'right',
       },
     };
@@ -303,6 +311,61 @@ describe('frontend join request payload', () => {
       stats: nextStats,
       ovr: 62,
     });
+  });
+
+  it('posts trait purchases without a client-provided price', async () => {
+    const fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
+      void input;
+      void init;
+      return new Response(JSON.stringify({
+      membership: {
+        id: 'membership-1',
+        matchPoints: 1750,
+        selectedTraitId: null,
+      },
+      unlockedTraitIds: ['line-breaker'],
+    }), { status: 200 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await purchaseTraitRequest('club-1', 'line-breaker');
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/membership/traits/purchase', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({
+        clubId: 'club-1',
+        traitId: 'line-breaker',
+      }),
+    }));
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).not.toHaveProperty('price');
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).not.toHaveProperty('authUid');
+  });
+
+  it('patches equipped traits without client authUid', async () => {
+    const fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
+      void input;
+      void init;
+      return new Response(JSON.stringify({
+      membership: {
+        id: 'membership-1',
+        matchPoints: 1750,
+        selectedTraitId: 'line-breaker',
+      },
+      unlockedTraitIds: ['line-breaker'],
+    }), { status: 200 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await equipTraitRequest('club-1', 'line-breaker');
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/membership/traits/equip', expect.objectContaining({
+      method: 'PATCH',
+      body: JSON.stringify({
+        clubId: 'club-1',
+        traitId: 'line-breaker',
+      }),
+    }));
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).not.toHaveProperty('authUid');
   });
 
   it('posts membership approval without client authUid', async () => {

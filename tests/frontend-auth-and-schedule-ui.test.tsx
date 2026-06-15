@@ -3352,7 +3352,7 @@ describe('locker room team management UI', () => {
     expect(screen.getByRole('button', { name: /운영진 권한 부여/ })).toHaveClass('bg-brand-primary');
     expect(screen.getByRole('button', { name: /탈퇴 처리/ })).toHaveClass('bg-feedback-error');
     expect(screen.getAllByTestId('player-badge-slot')).toHaveLength(4);
-    expect(screen.getByText('경기 Point')).toBeInTheDocument();
+    expect(screen.getAllByText('경기 Point').length).toBeGreaterThan(0);
     expect(screen.getByText('2,000').closest('span')).toHaveClass('rounded-full');
     expect(screen.getAllByLabelText('컨디션 보통').length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByLabelText('컨디션 최상')).not.toBeInTheDocument();
@@ -3425,13 +3425,19 @@ describe('locker room team management UI', () => {
     expect(screen.getAllByText('-').length).toBeGreaterThanOrEqual(4);
     expect(screen.queryByText('미입력')).not.toBeInTheDocument();
     expect(screen.getByText('라커룸 상점')).toBeInTheDocument();
-    expect(screen.getByText('영업 준비중입니다')).toBeInTheDocument();
+    expect(screen.queryByText('영업 준비중입니다')).not.toBeInTheDocument();
+    expect(screen.getByTestId('locker-shop')).toBeInTheDocument();
+    expect(screen.getByTestId('locker-shop-preview')).toHaveTextContent('미끼 공격수');
     expect(screen.getByText('경기 Point')).toBeInTheDocument();
     expect(screen.getByText('2,000')).toBeInTheDocument();
+    expect(screen.queryByText('구매')).not.toBeInTheDocument();
+    expect(screen.queryByText('150 P')).not.toBeInTheDocument();
+    expect(screen.queryByText('세미프로')).not.toBeInTheDocument();
     expect(within(screen.getByTestId('player-ovr-style-card')).getByText('60')).toBeInTheDocument();
     expect(screen.getByTestId('player-ability-panel')).toHaveClass('border-glass-border', 'bg-glass-bg', 'backdrop-blur-md');
     expect(screen.getByTestId('player-ovr-style-card')).toHaveClass('w-[104px]', 'border-glass-border', 'bg-glass-bg', 'backdrop-blur-sm', 'shadow-glass-shadow');
-    expect(screen.getByTestId('player-trait-card')).toHaveClass('playstyle-neg-card');
+    expect(screen.getByTestId('player-trait-card')).toHaveClass('playstyle-pos-card');
+    expect(screen.getByTestId('player-trait-card')).toHaveTextContent('클래식 No. 10');
     expect(screen.getByTestId('player-preferred-foot-area')).toHaveClass('col-span-2');
     expect(screen.getByTestId('hexagon-radar')).toHaveClass('max-w-[190px]');
     expect(screen.getByTestId('hexagon-radar')).toHaveAttribute('aria-label', expect.stringContaining('공격 60'));
@@ -3450,6 +3456,7 @@ describe('locker room team management UI', () => {
       expect(screen.queryByText(label)).not.toBeInTheDocument();
     });
     expect(screen.getByRole('button', { name: /로그아웃/ })).toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalledWith('/api/membership/traits/purchase', expect.anything());
   });
 
   it('keeps pending clubs out of the my page club switcher', () => {
