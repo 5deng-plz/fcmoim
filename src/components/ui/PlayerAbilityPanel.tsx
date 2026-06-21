@@ -23,10 +23,12 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import Image from 'next/image';
 import type { ReactNode } from 'react';
 import HexagonRadar from '@/components/ui/HexagonRadar';
 import type { Position, UserStats } from '@/types';
 import { calculateStatsOvr } from '@/utils/stats';
+import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import {
   findTraitById,
   getDefaultTraitForProfile,
@@ -48,8 +50,18 @@ interface PlayerAbilityPanelProps {
   residence?: string | null;
   heightCm?: number | null;
   weightKg?: number | null;
+  playerName?: string | null;
+  photoUrl?: string | null;
+  seasonRecord?: {
+    appearances?: number;
+    goals?: number;
+    assists?: number;
+    momCount?: number;
+    avgRating?: number | null;
+  } | null;
+  topBadges?: Array<{ code: string; name: string }>;
   className?: string;
-  layout?: 'full' | 'stats-only' | 'radar-only' | 'profile-only';
+  layout?: 'full' | 'stats-only' | 'radar-only' | 'profile-only' | 'fut-card';
   surface?: 'card' | 'flat';
   onProfileItemClick?: (field: ProfileField) => void;
   editingField?: ProfileField | null;
@@ -114,6 +126,11 @@ function PlayerOvrStyleCard({
   position = 'MF',
   selectedTraitId,
   onPreferredFootClick,
+  size = 'compact',
+  playerName,
+  photoUrl,
+  seasonRecord,
+  topBadges = [],
 }: {
   ovr: number;
   preferredFoot?: string | null;
@@ -121,11 +138,98 @@ function PlayerOvrStyleCard({
   position?: Position;
   selectedTraitId?: string | null;
   onPreferredFootClick?: () => void;
+  size?: 'compact' | 'full';
+  playerName?: string | null;
+  photoUrl?: string | null;
+  seasonRecord?: PlayerAbilityPanelProps['seasonRecord'];
+  topBadges?: Array<{ code: string; name: string }>;
 }) {
   const equippedTrait = findTraitById(selectedTraitId);
   const trait = equippedTrait ?? getDefaultTraitForProfile(position, stats);
   const TraitIcon = traitIconMap[trait.icon];
   const traitClasses = equippedTrait ? getTraitGradeClasses(trait.grade) : 'playstyle-pos-card';
+  const tier = getOvrTierClasses(ovr);
+
+  if (size === 'full') {
+    const displayName = playerName?.trim() || 'FC Moim Player';
+    const statRows = [
+      ['ATK', stats.attack],
+      ['DEF', stats.defense],
+      ['STA', stats.stamina],
+      ['MEN', stats.mentality],
+      ['SPD', stats.speed],
+      ['MAN', stats.manner],
+    ] as const;
+
+    return (
+      <div
+        className={`relative mx-auto flex aspect-[5/7] w-full max-w-[320px] flex-col overflow-hidden rounded-3xl border bg-glass-bg p-5 text-primary shadow-glass-shadow backdrop-blur-md ${tier.border} ${tier.shadow}`}
+        data-testid="player-fut-card"
+      >
+        <div className={`pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b ${tier.gradient}`} aria-hidden="true" />
+        <div className="relative z-10 flex items-start justify-between">
+          <div className="rounded-2xl border border-glass-border bg-surface-elevated/90 px-3 py-2 text-center shadow-sm">
+            <p className={`text-4xl font-black leading-none ${tier.text}`}>{ovr}</p>
+            <p className="mt-1 text-xs font-black text-secondary">{position}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onPreferredFootClick}
+            disabled={!onPreferredFootClick}
+            className={`flex h-12 w-12 items-center justify-center rounded-2xl border border-glass-border bg-surface-elevated/90 shadow-sm ${onPreferredFootClick ? 'transition-transform hover:scale-105 active:scale-95' : 'pointer-events-none'}`}
+            data-testid="player-fut-foot"
+            aria-label="주발 토글"
+          >
+            <PreferredFootIcon preferredFoot={preferredFoot} className="h-8 w-auto" />
+          </button>
+        </div>
+
+        <div className="relative z-10 mt-2 flex flex-1 flex-col items-center justify-center">
+          <div className="relative h-28 w-28 overflow-hidden rounded-full border-4 border-surface-elevated bg-surface-card shadow-lg">
+            <Image
+              src={photoUrl || getFallbackAvatar(displayName)}
+              alt={displayName}
+              fill
+              sizes="112px"
+              className="object-cover"
+              unoptimized
+            />
+          </div>
+          <h3 className="mt-4 max-w-full truncate text-center text-2xl font-black text-primary">{displayName}</h3>
+          <div className={`mt-2 flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-black ${traitClasses}`}>
+            <TraitIcon size={14} aria-hidden="true" />
+            <span className="max-w-[170px] truncate">{trait.name}</span>
+          </div>
+        </div>
+
+        <div className="relative z-10 grid grid-cols-3 gap-2">
+          {statRows.map(([label, value]) => (
+            <div key={label} className="rounded-xl border border-glass-border bg-glass-bg/70 px-2 py-2 text-center">
+              <p className="text-[10px] font-black text-tertiary">{label}</p>
+              <p className="text-lg font-black text-primary">{value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="relative z-10 mt-3 grid grid-cols-4 gap-2 text-center">
+          <FutRecordCell label="출장" value={seasonRecord?.appearances ?? 0} />
+          <FutRecordCell label="골" value={seasonRecord?.goals ?? 0} />
+          <FutRecordCell label="도움" value={seasonRecord?.assists ?? 0} />
+          <FutRecordCell label="MVP" value={seasonRecord?.momCount ?? 0} />
+        </div>
+
+        {topBadges.length > 0 ? (
+          <div className="relative z-10 mt-3 flex justify-center gap-1.5">
+            {topBadges.slice(0, 3).map((badge) => (
+              <span key={badge.code} className="rounded-full border border-award-mvp/30 bg-award-mvp/10 px-2 py-1 text-[10px] font-black text-award-mvp">
+                {badge.name}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -170,6 +274,48 @@ function PlayerOvrStyleCard({
   );
 }
 
+function FutRecordCell({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="rounded-xl border border-border bg-surface-card px-2 py-2">
+      <p className="text-[10px] font-black text-tertiary">{label}</p>
+      <p className="mt-0.5 text-sm font-black text-primary">{value}</p>
+    </div>
+  );
+}
+
+function getOvrTierClasses(ovr: number) {
+  if (ovr >= 85) {
+    return {
+      border: 'border-tier-special',
+      text: 'text-tier-special',
+      shadow: 'shadow-glass-shadow',
+      gradient: 'from-tier-special/40 via-tier-special-bg/20 to-transparent',
+    };
+  }
+  if (ovr >= 75) {
+    return {
+      border: 'border-tier-gold-border',
+      text: 'text-tier-gold-text',
+      shadow: 'shadow-tier-gold-shadow',
+      gradient: 'from-tier-gold-from/40 via-tier-gold-via/20 to-transparent',
+    };
+  }
+  if (ovr >= 61) {
+    return {
+      border: 'border-tier-silver-border',
+      text: 'text-tier-silver-text',
+      shadow: 'shadow-tier-silver-shadow',
+      gradient: 'from-tier-silver-from/40 via-tier-silver-via/20 to-transparent',
+    };
+  }
+  return {
+    border: 'border-tier-bronze-border',
+    text: 'text-tier-bronze-text',
+    shadow: 'shadow-tier-bronze-shadow',
+    gradient: 'from-tier-bronze-from/40 via-tier-bronze-via/20 to-transparent',
+  };
+}
+
 export default function PlayerAbilityPanel({
   stats,
   ovr: ovrProp,
@@ -180,6 +326,10 @@ export default function PlayerAbilityPanel({
   residence,
   heightCm,
   weightKg,
+  playerName,
+  photoUrl,
+  seasonRecord,
+  topBadges = [],
   className = '',
   layout = 'full',
   surface = 'card',
@@ -212,6 +362,27 @@ export default function PlayerAbilityPanel({
     { field: 'birth' as const, label: '생년월일', value: formatDate(birthDate), icon: Cake, color: 'text-pos-fw' },
     { field: 'residence' as const, label: '거주지', value: residence?.trim() || '-', icon: MapPin, color: 'text-pos-mf' },
   ];
+
+  if (layout === 'fut-card') {
+    return (
+      <section className={className} data-testid="player-ability-panel">
+        <PlayerOvrStyleCard
+          ovr={ovr}
+          preferredFoot={preferredFoot}
+          stats={stats}
+          position={position}
+          selectedTraitId={selectedTraitId}
+          onPreferredFootClick={onPreferredFootClick}
+          size="full"
+          playerName={playerName}
+          photoUrl={photoUrl}
+          seasonRecord={seasonRecord}
+          topBadges={topBadges}
+        />
+        {children ? <div className="mt-3">{children}</div> : null}
+      </section>
+    );
+  }
 
   return (
     <section

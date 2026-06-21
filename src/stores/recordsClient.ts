@@ -1,11 +1,16 @@
 'use client';
 
 import { appConfig } from '@/config/app.config';
+import type { Position, UserStats } from '@/types';
 
 export type RecordsRankingRow = {
   membershipId: string;
   nickname: string;
   photoUrl: string | null;
+  position: Position | string | null;
+  preferredFoot: 'left' | 'right' | 'both';
+  selectedTraitId: string | null;
+  stats: UserStats;
   ovr: number;
   wins: number;
   draws: number;

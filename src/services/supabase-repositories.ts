@@ -1140,10 +1140,19 @@ export function createSupabaseRecordsRepositories(
       async listApproved(clubId) {
         const { data, error } = await supabase
           .from('team_memberships')
-          .select('id, profile_name, photo_url, ovr')
+          .select('id, profile_name, photo_url, main_position, preferred_foot, selected_trait_id, stats, ovr')
           .eq('club_id', clubId)
           .eq('status', 'approved')
-          .returns<Array<{ id: string; profile_name: string; photo_url: string | null; ovr: number }>>();
+          .returns<Array<{
+            id: string;
+            profile_name: string;
+            photo_url: string | null;
+            main_position: TeamMembershipRow['position'];
+            preferred_foot: TeamMembershipRow['preferredFoot'];
+            selected_trait_id: string | null;
+            stats: unknown;
+            ovr: number;
+          }>>();
 
         if (error) {
           throw new AppError('internal_error', 'Failed to fetch records memberships.', { cause: error });
@@ -1153,6 +1162,10 @@ export function createSupabaseRecordsRepositories(
           id: member.id,
           nickname: member.profile_name,
           photoUrl: member.photo_url,
+          position: member.main_position,
+          preferredFoot: member.preferred_foot,
+          selectedTraitId: member.selected_trait_id,
+          stats: normalizeStats(member.stats),
           ovr: member.ovr,
         }));
       },

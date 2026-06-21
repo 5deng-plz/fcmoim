@@ -3800,6 +3800,10 @@ describe('records and header polish UI', () => {
             membershipId: 'member-1',
             nickname: '구피원',
             photoUrl: '/avatars/member-1.png',
+            position: 'MF',
+            preferredFoot: 'right',
+            selectedTraitId: null,
+            stats: DEFAULT_STATS,
             ovr: 70,
             wins: 3,
             draws: 1,
@@ -3815,6 +3819,10 @@ describe('records and header polish UI', () => {
             membershipId: 'member-2',
             nickname: '구피투',
             photoUrl: null,
+            position: 'FW',
+            preferredFoot: 'left',
+            selectedTraitId: null,
+            stats: DEFAULT_STATS,
             ovr: 68,
             wins: 2,
             draws: 1,
@@ -3830,6 +3838,10 @@ describe('records and header polish UI', () => {
             membershipId: 'member-3',
             nickname: '구피삼',
             photoUrl: null,
+            position: 'DF',
+            preferredFoot: 'both',
+            selectedTraitId: null,
+            stats: DEFAULT_STATS,
             ovr: 66,
             wins: 1,
             draws: 1,
@@ -3894,6 +3906,17 @@ describe('records and header polish UI', () => {
     expect(container.querySelector('.bg-tier-bronze\\/10')).toBeInTheDocument();
     expect(screen.getByAltText('구피원 썸네일')).toHaveClass('h-6', 'w-6');
     expect(screen.getByAltText('구피투 썸네일')).toHaveAttribute('src', '/icons/svgrepo-soccer-player.svg');
+  });
+
+  it('opens a FUT card from the records ranking row', async () => {
+    render(<RecordsTab />);
+
+    await userEvent.click(screen.getByRole('button', { name: '구피원 카드 보기' }));
+
+    const dialog = screen.getByRole('dialog', { name: '구피원' });
+    expect(within(dialog).getByTestId('player-fut-card')).toBeInTheDocument();
+    expect(within(dialog).getByText('70')).toBeInTheDocument();
+    expect(within(dialog).getByText('공유')).toBeInTheDocument();
   });
 
   it('navigates home from the FC Guppy logo and shows subpage back icons', async () => {

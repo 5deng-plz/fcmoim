@@ -1,6 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { RecordsRepositories } from '../src/services/records';
 
+const DEFAULT_STATS = {
+  attack: 60,
+  defense: 60,
+  stamina: 60,
+  mentality: 60,
+  speed: 60,
+  manner: 60,
+};
+
 async function loadService(repositories: RecordsRepositories) {
   const { createRecordsService } = await import('../src/services/records');
 
@@ -18,9 +27,9 @@ describe('records season summary service', () => {
           status: 'approved' as const,
         })),
         listApproved: vi.fn(async () => [
-          { id: 'member-1', nickname: '가가', photoUrl: '/avatars/ga.png', ovr: 70 },
-          { id: 'member-2', nickname: '나나', photoUrl: null, ovr: 68 },
-          { id: 'member-3', nickname: '다다', photoUrl: '/avatars/da.png', ovr: 66 },
+          { id: 'member-1', nickname: '가가', photoUrl: '/avatars/ga.png', position: 'MF' as const, preferredFoot: 'right' as const, selectedTraitId: null, stats: DEFAULT_STATS, ovr: 70 },
+          { id: 'member-2', nickname: '나나', photoUrl: null, position: 'FW' as const, preferredFoot: 'left' as const, selectedTraitId: null, stats: DEFAULT_STATS, ovr: 68 },
+          { id: 'member-3', nickname: '다다', photoUrl: '/avatars/da.png', position: 'DF' as const, preferredFoot: 'both' as const, selectedTraitId: null, stats: DEFAULT_STATS, ovr: 66 },
         ]),
       },
       seasons: {

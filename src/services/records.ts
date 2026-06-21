@@ -11,6 +11,10 @@ type RecordsApprovedMember = {
   id: string;
   nickname: string;
   photoUrl: string | null;
+  position: TeamMembershipRow['position'];
+  preferredFoot: TeamMembershipRow['preferredFoot'];
+  selectedTraitId: string | null;
+  stats: TeamMembershipRow['stats'];
   ovr: number;
 };
 
@@ -167,6 +171,10 @@ function createRankingRow(member: RecordsApprovedMember): RecordsRankingRow {
     membershipId: member.id,
     nickname: member.nickname,
     photoUrl: member.photoUrl,
+    position: member.position,
+    preferredFoot: member.preferredFoot,
+    selectedTraitId: member.selectedTraitId,
+    stats: member.stats,
     ovr: member.ovr,
     wins: 0,
     draws: 0,

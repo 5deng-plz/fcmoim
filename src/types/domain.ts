@@ -221,6 +221,10 @@ export type RecordsRankingRow = {
   membershipId: string;
   nickname: string;
   photoUrl: string | null;
+  position: PositionCode | string | null;
+  preferredFoot: PreferredFootCode;
+  selectedTraitId: string | null;
+  stats: MembershipStats;
   ovr: number;
   wins: number;
   draws: number;
