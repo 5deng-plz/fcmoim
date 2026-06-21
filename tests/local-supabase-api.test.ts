@@ -190,6 +190,19 @@ async function deleteCommentsByTargetIds(targetIds: string[]) {
   }
 }
 
+async function deleteFeedPostsByIds(postIds: string[]) {
+  if (postIds.length === 0) return;
+
+  const admin = createAdminClient();
+  await admin.from('feed_reactions').delete().in('post_id', postIds);
+  await admin.from('comments').delete().in('target_id', postIds);
+  const { error } = await admin.from('feed_posts').delete().in('id', postIds);
+
+  if (error) {
+    throw new Error(`Failed to clean feed posts: ${error.message}`);
+  }
+}
+
 async function deleteAnnouncementsByTitles(clubId: string, titles: string[]) {
   const admin = createAdminClient();
   const { error } = await admin
@@ -677,7 +690,7 @@ describeLocal('local Supabase API integration', () => {
       }));
       const created = await createResponse.json();
 
-      expect(createResponse.status).toBe(201);
+      expect(createResponse.status, JSON.stringify(created)).toBe(201);
       expect(created).toEqual(expect.objectContaining({
         clubId: clubIds.lynx,
         status: 'pending',
@@ -909,6 +922,124 @@ describeLocal('local Supabase API integration', () => {
 
     await deleteCommentsByTargetIds([firstOptionId]);
     await deleteSchedulePollsByOptionDates(clubIds.guppy, schedulePollOptionDates);
+  });
+
+  it('enforces feed media storage bucket policies for club members', async () => {
+    await signIn('qa-member1@fcmoim.test');
+    const admin = createAdminClient();
+    const { data: bucket, error: bucketError } = await admin.storage.getBucket('feed-media');
+
+    expect(bucketError).toBeNull();
+    expect(bucket).toEqual(expect.objectContaining({ id: 'feed-media', public: false }));
+
+    if (!authClient) {
+      throw new Error('Expected authenticated Supabase client.');
+    }
+
+    const ownedPath = `${clubIds.guppy}/local-api-${crypto.randomUUID()}.png`;
+    const deniedPath = `${clubIds.lynx}/local-api-${crypto.randomUUID()}.png`;
+
+    try {
+      const upload = await authClient.storage
+        .from('feed-media')
+        .upload(ownedPath, new Uint8Array([137, 80, 78, 71]), {
+          contentType: 'image/png',
+          upsert: false,
+        });
+
+      expect(upload.error).toBeNull();
+
+      const download = await authClient.storage.from('feed-media').download(ownedPath);
+      expect(download.error).toBeNull();
+
+      const deniedUpload = await authClient.storage
+        .from('feed-media')
+        .upload(deniedPath, new Uint8Array([137, 80, 78, 71]), {
+          contentType: 'image/png',
+          upsert: false,
+        });
+
+      expect(deniedUpload.error).not.toBeNull();
+    } finally {
+      await admin.storage.from('feed-media').remove([ownedPath, deniedPath]);
+    }
+  });
+
+  it('creates feed posts with reactions and shared comments through API routes', async () => {
+    await signIn('qa-member1@fcmoim.test');
+    const feedRoute = await import('../src/app/api/feed-posts/route');
+    const reactionRoute = await import('../src/app/api/feed-posts/[id]/react/route');
+    const commentsRoute = await import('../src/app/api/comments/route');
+    const createdPostIds: string[] = [];
+
+    try {
+      const createResponse = await feedRoute.POST(new Request('http://localhost/api/feed-posts', {
+        method: 'POST',
+        body: JSON.stringify({
+          clubId: clubIds.guppy,
+          contentType: 'text',
+          textContent: 'local feed post smoke',
+        }),
+      }));
+      const created = await createResponse.json();
+
+      expect(createResponse.status, JSON.stringify(created)).toBe(201);
+      expect(typeof created.id).toBe('string');
+      createdPostIds.push(created.id);
+      expect(created).toEqual(expect.objectContaining({
+        clubId: clubIds.guppy,
+        contentType: 'text',
+        textContent: 'local feed post smoke',
+      }));
+
+      const reactionResponse = await reactionRoute.POST(new Request(`http://localhost/api/feed-posts/${created.id}/react`, {
+        method: 'POST',
+        body: JSON.stringify({
+          clubId: clubIds.guppy,
+          reactionType: 'clap',
+        }),
+      }), { params: Promise.resolve({ id: created.id }) });
+
+      expect(reactionResponse.status).toBe(200);
+      expect(await reactionResponse.json()).toEqual(expect.objectContaining({
+        postId: created.id,
+        toggled: true,
+      }));
+
+      const createCommentResponse = await commentsRoute.POST(new Request('http://localhost/api/comments', {
+        method: 'POST',
+        body: JSON.stringify({
+          clubId: clubIds.guppy,
+          targetType: 'feed_post',
+          targetId: created.id,
+          content: 'feed post comment smoke',
+        }),
+      }));
+      const createdComment = await createCommentResponse.json();
+
+      expect(createCommentResponse.status).toBe(201);
+      expect(createdComment).toEqual(expect.objectContaining({
+        targetType: 'feed_post',
+        targetId: created.id,
+        content: 'feed post comment smoke',
+      }));
+
+      const listResponse = await feedRoute.GET(
+        new Request(`http://localhost/api/feed-posts?clubId=${clubIds.guppy}`),
+      );
+      const posts = await listResponse.json();
+
+      expect(listResponse.status).toBe(200);
+      expect(posts).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          id: created.id,
+          reactionCounts: expect.objectContaining({ clap: 1 }),
+          commentCount: 1,
+        }),
+      ]));
+    } finally {
+      await deleteFeedPostsByIds(createdPostIds);
+    }
   });
 
   it('serves rich local demo announcements and records through API routes', async () => {

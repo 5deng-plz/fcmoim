@@ -92,7 +92,7 @@ function assertApprovedMember(membership: CommentMembership | null): asserts mem
 }
 
 function normalizeTargetType(value: string): EventCommentTargetType {
-  if (value === 'match' || value === 'schedule_poll_option') {
+  if (value === 'match' || value === 'schedule_poll_option' || value === 'feed_post') {
     return value;
   }
 

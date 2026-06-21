@@ -1,12 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { ChevronDown, ChevronUp, Megaphone, Pin, MessageSquare, Image as ImageIcon, Pencil, Trash2, X } from 'lucide-react';
+import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
+import { ChevronDown, ChevronUp, Megaphone, Pin, MessageSquare, Image as ImageIcon, Pencil, Trash2, X, Plus, Flame, Laugh, Crown, ThumbsUp, MessageCircle } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import { useAnnouncementStore } from '@/stores/useAnnouncementStore';
 import type { Announcement } from '@/stores/announcementClient';
 import { useAppStore } from '@/stores/useAppStore';
 import { useToastStore } from '@/stores/useToastStore';
+import EventComments from '@/components/features/EventComments';
+import {
+  createFeedPost,
+  deleteFeedPost,
+  fetchFeedPosts,
+  toggleFeedReaction,
+  type FeedContentType,
+  type FeedPost,
+  type FeedReactionType,
+} from '@/stores/feedClient';
 
 const communityTabs = [
   { key: 'announcements', label: '공지사항' },
@@ -46,6 +56,14 @@ export default function CommunityPage({
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [feedPosts, setFeedPosts] = useState<FeedPost[]>([]);
+  const [feedStatus, setFeedStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [isComposeOpen, setIsComposeOpen] = useState(false);
+  const [composeType, setComposeType] = useState<FeedContentType>('text');
+  const [composeText, setComposeText] = useState('');
+  const [composeMediaUrl, setComposeMediaUrl] = useState('');
+  const [isPosting, setIsPosting] = useState(false);
+  const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const canManageAnnouncements = userRole === 'admin' || userRole === 'operator';
 
   const openEditModal = (announcement: Announcement) => {
@@ -113,6 +131,68 @@ export default function CommunityPage({
     });
   }, [activeClubId, announcementsStatus, loadAnnouncements, showToast]);
 
+  const loadFeed = async () => {
+    setFeedStatus('loading');
+    try {
+      const contentType = activeTab === 'gallery' ? null : null;
+      const posts = await fetchFeedPosts({ clubId: activeClubId, contentType });
+      setFeedPosts(activeTab === 'gallery'
+        ? posts.filter((post) => post.contentType === 'image' || post.contentType === 'video')
+        : posts);
+      setFeedStatus('ready');
+    } catch (error) {
+      setFeedStatus('error');
+      showToast(error instanceof Error ? error.message : '피드를 불러오지 못했어요.');
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab !== 'board' && activeTab !== 'gallery') return;
+    void loadFeed();
+  }, [activeClubId, activeTab]);
+
+  const handleCreatePost = async () => {
+    if (isPosting) return;
+    setIsPosting(true);
+    try {
+      await createFeedPost({
+        clubId: activeClubId,
+        contentType: composeType,
+        textContent: composeText,
+        mediaUrl: composeMediaUrl,
+      });
+      setComposeText('');
+      setComposeMediaUrl('');
+      setComposeType('text');
+      setIsComposeOpen(false);
+      await loadFeed();
+      showToast('피드를 등록했어요.');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '피드를 등록하지 못했어요.');
+    } finally {
+      setIsPosting(false);
+    }
+  };
+
+  const handleReaction = async (post: FeedPost, reactionType: FeedReactionType) => {
+    try {
+      await toggleFeedReaction({ clubId: activeClubId, postId: post.id, reactionType });
+      await loadFeed();
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '리액션을 저장하지 못했어요.');
+    }
+  };
+
+  const handleDeletePost = async (post: FeedPost) => {
+    try {
+      await deleteFeedPost({ clubId: activeClubId, postId: post.id });
+      setFeedPosts((posts) => posts.filter((candidate) => candidate.id !== post.id));
+      showToast('피드를 삭제했어요.');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '피드를 삭제하지 못했어요.');
+    }
+  };
+
   return (
     <div className={`space-y-4 animate-fadeIn pb-20 ${hideHeaderTabs ? '' : '-mx-4 -mt-4'}`}>
       {!hideHeaderTabs && (
@@ -140,20 +220,32 @@ export default function CommunityPage({
       )}
 
       <main className={hideHeaderTabs ? 'space-y-2' : 'px-4 space-y-2'}>
-        {activeTab !== 'announcements' ? (
-          <div className="rounded-xl border border-highlight-purple/20 bg-highlight-purple-bg p-4 flex items-center gap-3">
-            <div className="w-10 h-10 bg-highlight-purple/10 rounded-full flex items-center justify-center shrink-0 text-highlight-purple">
-              {activeTab === 'board' ? <MessageSquare size={18} /> : <ImageIcon size={18} />}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-primary">
-                {activeTab === 'board' ? '게시판은' : '갤러리는'} 준비 중입니다
-              </p>
-              <p className="text-[11px] text-tertiary mt-0.5">
-                공지사항은 바로 확인할 수 있어요.
-              </p>
-            </div>
-          </div>
+        {activeTab === 'board' ? (
+          <FeedTimeline
+            posts={feedPosts}
+            status={feedStatus}
+            onCompose={() => setIsComposeOpen(true)}
+            onReaction={handleReaction}
+            onDelete={handleDeletePost}
+            commentsPostId={commentsPostId}
+            setCommentsPostId={setCommentsPostId}
+            clubId={activeClubId}
+          />
+        ) : null}
+
+        {activeTab === 'gallery' ? (
+          <FeedGallery
+            posts={feedPosts}
+            status={feedStatus}
+            onCompose={() => {
+              setComposeType('image');
+              setIsComposeOpen(true);
+            }}
+            onReaction={handleReaction}
+            commentsPostId={commentsPostId}
+            setCommentsPostId={setCommentsPostId}
+            clubId={activeClubId}
+          />
         ) : null}
 
         {activeTab === 'announcements' && announcementsStatus === 'loading' ? (
@@ -296,6 +388,277 @@ export default function CommunityPage({
           </button>
         </div>
       </Modal>
+      <Modal title="피드 작성" isOpen={isComposeOpen} onClose={() => setIsComposeOpen(false)}>
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-2">
+            {(['text', 'image', 'video'] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setComposeType(type)}
+                className={`rounded-xl border px-3 py-2 text-xs font-black transition-all ${
+                  composeType === type
+                    ? 'border-social-like bg-social-like/10 text-social-like'
+                    : 'border-border bg-surface-bg text-secondary'
+                }`}
+              >
+                {type === 'text' ? '글' : type === 'image' ? '사진' : '영상'}
+              </button>
+            ))}
+          </div>
+          <label className="block">
+            <span className="mb-1 block text-xs font-bold text-secondary">내용</span>
+            <textarea
+              value={composeText}
+              onChange={(event) => setComposeText(event.target.value)}
+              rows={4}
+              maxLength={500}
+              className="w-full resize-none rounded-xl border border-border bg-surface-bg px-3 py-2.5 text-sm text-primary transition-colors focus:border-brand-primary focus:outline-none"
+            />
+          </label>
+          {composeType !== 'text' ? (
+            <label className="block">
+              <span className="mb-1 block text-xs font-bold text-secondary">미디어 URL</span>
+              <input
+                value={composeMediaUrl}
+                onChange={(event) => setComposeMediaUrl(event.target.value)}
+                placeholder="https:// 또는 /storage/v1/object/..."
+                className="w-full rounded-xl border border-border bg-surface-bg px-3 py-2.5 text-sm text-primary transition-colors focus:border-brand-primary focus:outline-none"
+              />
+            </label>
+          ) : null}
+          <button
+            type="button"
+            disabled={isPosting}
+            onClick={() => void handleCreatePost()}
+            className="w-full rounded-xl bg-action-primary px-4 py-3 text-sm font-black text-white transition-all hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-tertiary"
+          >
+            {isPosting ? '등록 중' : '등록'}
+          </button>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+const FEED_REACTIONS: Array<{ type: FeedReactionType; label: string; Icon: ComponentType<{ size?: number; 'aria-hidden'?: boolean }> }> = [
+  { type: 'fire', label: '열정', Icon: Flame },
+  { type: 'laugh', label: '웃김', Icon: Laugh },
+  { type: 'goat', label: 'GOAT', Icon: Crown },
+  { type: 'clap', label: '박수', Icon: ThumbsUp },
+];
+
+function FeedTimeline({
+  posts,
+  status,
+  onCompose,
+  onReaction,
+  onDelete,
+  commentsPostId,
+  setCommentsPostId,
+  clubId,
+}: {
+  posts: FeedPost[];
+  status: 'idle' | 'loading' | 'ready' | 'error';
+  onCompose: () => void;
+  onReaction: (post: FeedPost, reactionType: FeedReactionType) => void;
+  onDelete: (post: FeedPost) => void;
+  commentsPostId: string | null;
+  setCommentsPostId: (postId: string | null) => void;
+  clubId: string;
+}) {
+  return (
+    <section className="space-y-3">
+      <FeedHeader title="게시판" icon={<MessageSquare size={18} />} onCompose={onCompose} />
+      {status === 'loading' ? <FeedStatus label="피드를 불러오는 중입니다" /> : null}
+      {status === 'error' ? <FeedStatus label="피드를 불러오지 못했어요" /> : null}
+      {status === 'ready' && posts.length === 0 ? <FeedStatus label="아직 피드가 없어요" /> : null}
+      {posts.map((post) => (
+        <FeedPostCard
+          key={post.id}
+          post={post}
+          onReaction={onReaction}
+          onDelete={onDelete}
+          commentsOpen={commentsPostId === post.id}
+          setCommentsOpen={(open) => setCommentsPostId(open ? post.id : null)}
+          clubId={clubId}
+        />
+      ))}
+    </section>
+  );
+}
+
+function FeedGallery({
+  posts,
+  status,
+  onCompose,
+  onReaction,
+  commentsPostId,
+  setCommentsPostId,
+  clubId,
+}: {
+  posts: FeedPost[];
+  status: 'idle' | 'loading' | 'ready' | 'error';
+  onCompose: () => void;
+  onReaction: (post: FeedPost, reactionType: FeedReactionType) => void;
+  commentsPostId: string | null;
+  setCommentsPostId: (postId: string | null) => void;
+  clubId: string;
+}) {
+  return (
+    <section className="space-y-3">
+      <FeedHeader title="갤러리" icon={<ImageIcon size={18} />} onCompose={onCompose} />
+      {status === 'loading' ? <FeedStatus label="갤러리를 불러오는 중입니다" /> : null}
+      {status === 'error' ? <FeedStatus label="갤러리를 불러오지 못했어요" /> : null}
+      {status === 'ready' && posts.length === 0 ? <FeedStatus label="아직 미디어 피드가 없어요" /> : null}
+      <div className="grid grid-cols-2 gap-2">
+        {posts.map((post) => (
+          <div key={post.id} className="overflow-hidden rounded-xl border border-border bg-surface-card">
+            <FeedMedia post={post} compact />
+            <div className="p-2">
+              <FeedReactions post={post} onReaction={onReaction} />
+              <button
+                type="button"
+                onClick={() => setCommentsPostId(commentsPostId === post.id ? null : post.id)}
+                className="mt-2 inline-flex items-center gap-1 text-[11px] font-black text-secondary"
+              >
+                <MessageCircle size={13} aria-hidden="true" />
+                {post.commentCount}
+              </button>
+              {commentsPostId === post.id ? (
+                <EventComments clubId={clubId} targetType="feed_post" targetId={post.id} showPhase={false} embedded />
+              ) : null}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function FeedHeader({ title, icon, onCompose }: { title: string; icon: ReactNode; onCompose: () => void }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-card px-4 py-3">
+      <h2 className="flex items-center gap-2 text-sm font-black text-primary">
+        <span className="text-social-like">{icon}</span>
+        {title}
+      </h2>
+      <button
+        type="button"
+        onClick={onCompose}
+        className="flex h-9 w-9 items-center justify-center rounded-xl bg-action-primary text-white transition-all hover:brightness-110 active:scale-95"
+        aria-label={`${title} 작성`}
+      >
+        <Plus size={17} aria-hidden="true" />
+      </button>
+    </div>
+  );
+}
+
+function FeedPostCard({
+  post,
+  onReaction,
+  onDelete,
+  commentsOpen,
+  setCommentsOpen,
+  clubId,
+}: {
+  post: FeedPost;
+  onReaction: (post: FeedPost, reactionType: FeedReactionType) => void;
+  onDelete: (post: FeedPost) => void;
+  commentsOpen: boolean;
+  setCommentsOpen: (open: boolean) => void;
+  clubId: string;
+}) {
+  return (
+    <article className="rounded-xl border border-border bg-surface-card p-4 shadow-sm">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-black text-primary">{post.authorName}</p>
+          <p className="text-[11px] font-bold text-tertiary">{formatRelativeDate(post.createdAt)}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => onDelete(post)}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-feedback-error-border bg-feedback-error-bg text-feedback-error"
+          aria-label="피드 삭제"
+        >
+          <Trash2 size={14} aria-hidden="true" />
+        </button>
+      </div>
+      {post.textContent ? <p className="mb-3 whitespace-pre-wrap text-sm font-medium leading-relaxed text-primary">{post.textContent}</p> : null}
+      <FeedMedia post={post} />
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <FeedReactions post={post} onReaction={onReaction} />
+        <button
+          type="button"
+          onClick={() => setCommentsOpen(!commentsOpen)}
+          className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-bg px-2 py-1 text-[11px] font-black text-secondary"
+        >
+          <MessageCircle size={13} aria-hidden="true" />
+          {post.commentCount}
+        </button>
+      </div>
+      {commentsOpen ? (
+        <EventComments clubId={clubId} targetType="feed_post" targetId={post.id} showPhase={false} embedded />
+      ) : null}
+    </article>
+  );
+}
+
+function FeedMedia({ post, compact = false }: { post: FeedPost; compact?: boolean }) {
+  if (!post.mediaUrl) return null;
+  if (post.contentType === 'video') {
+    return (
+      <video
+        src={post.mediaUrl}
+        muted
+        playsInline
+        loop
+        controls
+        className={`${compact ? 'aspect-square' : 'max-h-[320px]'} w-full rounded-xl bg-black object-cover`}
+      />
+    );
+  }
+  return (
+    <img
+      src={post.mediaUrl}
+      alt=""
+      className={`${compact ? 'aspect-square' : 'max-h-[320px]'} w-full rounded-xl bg-surface-bg object-cover`}
+    />
+  );
+}
+
+function FeedReactions({ post, onReaction }: { post: FeedPost; onReaction: (post: FeedPost, reactionType: FeedReactionType) => void }) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {FEED_REACTIONS.map(({ type, label, Icon }) => {
+        const selected = post.myReactions.includes(type);
+        return (
+          <button
+            key={type}
+            type="button"
+            onClick={() => onReaction(post, type)}
+            className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-black transition-all ${
+              selected
+                ? 'border-social-like bg-social-like/10 text-social-like'
+                : 'border-border bg-surface-bg text-secondary'
+            }`}
+            aria-label={label}
+          >
+            <Icon size={12} />
+            {post.reactionCounts[type]}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function FeedStatus({ label }: { label: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-surface-card p-4 text-center text-xs font-bold text-secondary">
+      {label}
     </div>
   );
 }

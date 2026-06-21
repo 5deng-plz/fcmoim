@@ -94,6 +94,32 @@ describe('event comment service', () => {
     });
   });
 
+  it('creates feed post comments through the shared comment service', async () => {
+    const repositories = createRepositories();
+    const service = await loadService(repositories);
+
+    await expect(
+      service.createComment({
+        auth: { user: { id: 'operator-auth-user', email: 'operator@example.com' } },
+        clubId: 'club-1',
+        targetType: 'feed_post',
+        targetId: 'post-1',
+        content: '  사진 좋다  ',
+      }),
+    ).resolves.toMatchObject({
+      targetType: 'feed_post',
+      targetId: 'post-1',
+      content: '사진 좋다',
+    });
+
+    expect(repositories.comments.create).toHaveBeenCalledWith({
+      targetType: 'feed_post',
+      targetId: 'post-1',
+      membershipId: 'operator-membership',
+      content: '사진 좋다',
+    });
+  });
+
   it('rejects targets outside the active club', async () => {
     const repositories = createRepositories({ targetClubId: 'club-2' });
     const service = await loadService(repositories);

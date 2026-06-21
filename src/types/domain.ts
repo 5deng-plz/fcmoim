@@ -193,7 +193,7 @@ export type MatchAttendeeRow = {
   matchPoints: number;
 };
 
-export type EventCommentTargetType = 'match' | 'schedule_poll_option';
+export type EventCommentTargetType = 'match' | 'schedule_poll_option' | 'feed_post';
 
 export type EventCommentRow = {
   id: string;
