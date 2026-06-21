@@ -119,6 +119,9 @@ const traitIconMap: Record<TraitIconName, typeof Shield> = {
   users: Users,
 };
 
+const COMPACT_TRAIT_CARD_CLASSES = 'flex h-[88px] w-full flex-col items-center justify-center rounded-xl border px-1 py-1.5 text-center shadow-inner';
+const COMPACT_TRAIT_ICON_CLASSES = 'mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-card text-secondary';
+
 function PlayerOvrStyleCard({
   ovr,
   preferredFoot,
@@ -258,10 +261,12 @@ function PlayerOvrStyleCard({
 
       {/* Trait Section: Styled like the Profile Cards below (square card format) */}
       <div
-        className={`flex h-[88px] w-full flex-col items-center justify-center rounded-xl border px-1 py-1.5 shadow-inner ${traitClasses}`}
+        className={`${COMPACT_TRAIT_CARD_CLASSES} ${traitClasses}`}
         data-testid="player-trait-card"
       >
-        <TraitIcon size={28} strokeWidth={2.4} className="mb-1 shrink-0 drop-shadow-sm" aria-hidden="true" />
+        <span className={COMPACT_TRAIT_ICON_CLASSES}>
+          <TraitIcon size={18} strokeWidth={2.4} aria-hidden="true" />
+        </span>
 
         <span className="w-full truncate text-[10px] font-black tracking-tight leading-tight opacity-90">
           {trait.name}

@@ -127,7 +127,7 @@ export default function RecordsTab() {
           ) : null}
 
           <div className="overflow-hidden rounded-3xl border border-glass-border bg-glass-bg shadow-glass-shadow backdrop-blur-md">
-            <div className="grid min-h-[40px] grid-cols-[28px_36px_minmax(0,1fr)_70px_36px_46px] items-center border-b border-glass-border/50 bg-glass-bg/60 px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-secondary">
+            <div className="grid min-h-[40px] grid-cols-[24px_34px_minmax(72px,1fr)_58px_32px_42px] items-center border-b border-glass-border/50 bg-glass-bg/60 px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-secondary">
               <div className="text-center">#</div>
               <div className="text-center text-fcgreen-600">OVR</div>
               <div className="px-2">선수</div>
@@ -144,7 +144,7 @@ export default function RecordsTab() {
                     type="button"
                     key={row.membershipId}
                     onClick={() => setCardRow(row)}
-                    className="grid h-[50px] min-h-[50px] grid-cols-[28px_36px_minmax(0,1fr)_70px_36px_46px] items-center px-2 py-0 text-sm"
+                    className="grid h-[50px] min-h-[50px] grid-cols-[24px_34px_minmax(72px,1fr)_58px_32px_42px] items-center px-2 py-0 text-sm"
                     aria-label={`${row.nickname} 카드 보기`}
                   >
                     <RankMark rank={index + 1} />
@@ -163,13 +163,13 @@ export default function RecordsTab() {
                         <p className="truncate font-bold text-primary">{row.nickname}</p>
                       </div>
                     </div>
-                    <div className="inline-flex items-center justify-center gap-1">
+                    <div className="flex min-w-0 items-center justify-center gap-0.5 tabular-nums">
                       <RecordCell icon={Trophy} value={row.wins} className="text-result-win" />
                       <RecordCell icon={MinusCircle} value={row.draws} className="text-result-draw" />
                       <RecordCell icon={XCircle} value={row.losses} className="text-result-loss" />
                     </div>
-                    <div className="text-center font-bold text-primary">{row.leaguePoints}</div>
-                    <div className="text-center font-extrabold text-fcgreen-600">
+                    <div className="text-center font-bold tabular-nums text-primary">{row.leaguePoints}</div>
+                    <div className="text-center font-extrabold tabular-nums text-fcgreen-600">
                       <span className="text-sm">{row.winRate}</span>
                       <span className="text-[10px]">%</span>
                     </div>
@@ -283,8 +283,8 @@ function RankMark({ rank }: { rank: number }) {
 
 function RecordCell({ icon: Icon, value, className }: { icon: typeof Trophy; value: number; className: string }) {
   return (
-    <span className="inline-flex items-center justify-center gap-0.5 text-[11px] font-bold text-secondary">
-      <Icon size={12} className={className} />
+    <span className="inline-flex min-w-0 items-center justify-center gap-px text-[10px] font-bold leading-none text-secondary">
+      <Icon size={11} className={`shrink-0 ${className}`} />
       {value}
     </span>
   );

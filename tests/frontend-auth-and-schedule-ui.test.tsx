@@ -3428,15 +3428,18 @@ describe('locker room team management UI', () => {
     expect(screen.queryByText('영업 준비중입니다')).not.toBeInTheDocument();
     expect(screen.getByTestId('locker-shop')).toBeInTheDocument();
     expect(screen.getByTestId('locker-shop-preview')).toHaveTextContent('미끼 공격수');
+    expect(screen.getByTestId('locker-shop-preview')).toHaveTextContent('현재 카드:');
+    expect(screen.getByTestId('locker-shop-carousel')).toHaveClass('flex', 'snap-x', 'snap-mandatory');
+    expect(screen.getByTestId('locker-shop-carousel')).toHaveStyle({ overflowX: 'auto' });
     expect(screen.getByText('경기 Point')).toBeInTheDocument();
     expect(screen.getByText('2,000')).toBeInTheDocument();
     expect(screen.queryByText('구매')).not.toBeInTheDocument();
     expect(screen.queryByText('150 P')).not.toBeInTheDocument();
-    expect(screen.queryByText('세미프로')).not.toBeInTheDocument();
     expect(within(screen.getByTestId('player-ovr-style-card')).getByText('60')).toBeInTheDocument();
     expect(screen.getByTestId('player-ability-panel')).toHaveClass('border-glass-border', 'bg-glass-bg', 'backdrop-blur-md');
     expect(screen.getByTestId('player-ovr-style-card')).toHaveClass('w-[104px]', 'border-glass-border', 'bg-glass-bg', 'backdrop-blur-sm', 'shadow-glass-shadow');
-    expect(screen.getByTestId('player-trait-card')).toHaveClass('playstyle-pos-card');
+    expect(screen.getByTestId('player-trait-card')).toHaveClass('h-[88px]', 'rounded-xl', 'border', 'shadow-inner', 'playstyle-pos-card');
+    expect(screen.getAllByTestId('locker-shop-trait-card')[0]).toHaveClass('h-[88px]', 'w-[104px]', 'shrink-0', 'snap-start', 'rounded-xl', 'border', 'shadow-inner');
     expect(screen.getByTestId('player-trait-card')).toHaveTextContent('클래식 No. 10');
     expect(screen.getByTestId('player-preferred-foot-area')).toHaveClass('col-span-2');
     expect(screen.getByTestId('hexagon-radar')).toHaveClass('max-w-[190px]');
@@ -3871,8 +3874,12 @@ describe('records and header polish UI', () => {
 
     expect(container.querySelector('.min-h-\\[40px\\]')).toBeInTheDocument();
     expect(container.querySelector('.h-\\[50px\\].min-h-\\[50px\\]')).toBeInTheDocument();
+    expect(screen.getByText('승무패').parentElement).toHaveClass('grid-cols-[24px_34px_minmax(72px,1fr)_58px_32px_42px]');
     expect(screen.getByText('승점')).not.toHaveClass('text-green-600');
     expect(screen.getByText('승률')).toHaveClass('text-fcgreen-600');
+    const firstRankingRow = screen.getByRole('button', { name: '구피원 카드 보기' });
+    expect(firstRankingRow).toHaveClass('grid-cols-[24px_34px_minmax(72px,1fr)_58px_32px_42px]');
+    expect(firstRankingRow.querySelector('.tabular-nums')).toBeInTheDocument();
     expect(screen.getByText('10')).toHaveClass('text-primary');
     const winRateCell = screen.getByText((_, element) => element?.textContent === '75%');
     expect(winRateCell).toHaveClass('text-fcgreen-600');

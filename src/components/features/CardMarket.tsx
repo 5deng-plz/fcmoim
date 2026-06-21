@@ -27,6 +27,8 @@ import {
   PURCHASABLE_TRAITS,
   findTraitById,
   getDefaultTraitForProfile,
+  getTraitGradeClasses,
+  getTraitGradeLabel,
   type TraitCard,
   type TraitIconName,
 } from '@/lib/traitCatalog';
@@ -54,6 +56,9 @@ const traitIconMap: Record<TraitIconName, LucideIcon> = {
   users: Users,
 };
 
+const COMPACT_TRAIT_CARD_CLASSES = 'flex h-[88px] w-[104px] shrink-0 snap-start flex-col items-center justify-center rounded-xl border px-1 py-1.5 text-center shadow-inner';
+const COMPACT_TRAIT_ICON_CLASSES = 'mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-card text-secondary';
+
 export default function CardMarket() {
   const memberProfile = useAuthStore((state) => state.memberProfile);
   const [selectedTraitId, setSelectedTraitId] = useState(PURCHASABLE_TRAITS[0]?.id ?? '');
@@ -77,26 +82,20 @@ export default function CardMarket() {
       <div className="mb-3 rounded-2xl border border-glass-border bg-glass-bg p-3 shadow-glass-shadow backdrop-blur-md" data-testid="locker-shop">
         <TraitPreviewCard trait={previewTrait} equippedTrait={selectedEquippedTrait ?? fallbackTrait} />
 
-        <div className="mt-3 grid grid-cols-2 gap-2">
+        <div
+          className="mt-3 flex gap-2 snap-x snap-mandatory pb-1"
+          style={{ overflowX: 'auto' }}
+          data-testid="locker-shop-carousel"
+        >
           {sortedTraits.map((trait) => {
             const isSelected = trait.id === selectedTrait?.id;
             return (
-              <button
+              <TraitShopCard
                 key={trait.id}
-                type="button"
+                trait={trait}
+                isSelected={isSelected}
                 onClick={() => setSelectedTraitId(trait.id)}
-                className={`flex h-[88px] flex-col items-center justify-center gap-2 rounded-xl border px-2 py-2 text-center transition-all active:scale-[0.98] ${
-                  isSelected
-                    ? 'border-brand-primary bg-glass-bg-hover ring-2 ring-brand-primary/20'
-                    : 'border-glass-border bg-glass-bg hover:bg-glass-bg-hover'
-                }`}
-                aria-pressed={isSelected}
-              >
-                <TraitCardIcon trait={trait} />
-                <span className="w-full truncate text-[10px] font-black leading-tight text-primary">
-                  {trait.name}
-                </span>
-              </button>
+              />
             );
           })}
         </div>
@@ -108,27 +107,45 @@ export default function CardMarket() {
 function TraitPreviewCard({ trait, equippedTrait }: { trait: TraitCard; equippedTrait: TraitCard }) {
   const TraitIcon = traitIconMap[trait.icon];
   return (
-    <div className="rounded-2xl border border-border bg-surface-card px-3 py-3 shadow-sm" data-testid="locker-shop-preview">
+    <div className="rounded-xl border border-border bg-surface-card px-3 py-2.5 shadow-sm" data-testid="locker-shop-preview">
       <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-bg text-secondary">
-          <TraitIcon size={26} strokeWidth={2.4} aria-hidden="true" />
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-bg text-secondary">
+          <TraitIcon size={22} strokeWidth={2.4} aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-lg font-black leading-tight text-primary">{trait.name}</p>
+          <p className="truncate text-base font-black leading-tight text-primary">{trait.name}</p>
           <p className="mt-1 truncate text-[11px] font-bold text-secondary">{trait.category}</p>
         </div>
       </div>
-      <p className="mt-3 line-clamp-2 text-xs font-bold leading-relaxed text-secondary">{trait.description}</p>
-      <p className="mt-2 truncate text-[10px] font-black text-tertiary">현재 카드: {equippedTrait.name}</p>
+      <p className="mt-2 line-clamp-1 text-[11px] font-bold leading-relaxed text-secondary">{trait.description}</p>
+      <p className="mt-1 truncate text-[10px] font-black text-tertiary">현재 카드: {equippedTrait.name}</p>
     </div>
   );
 }
 
-function TraitCardIcon({ trait }: { trait: TraitCard }) {
+function TraitShopCard({ trait, isSelected, onClick }: { trait: TraitCard; isSelected: boolean; onClick: () => void }) {
   const TraitIcon = traitIconMap[trait.icon];
+  const traitClasses = getTraitGradeClasses(trait.grade);
+
   return (
-    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-card text-secondary">
-      <TraitIcon size={18} strokeWidth={2.4} aria-hidden="true" />
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`${COMPACT_TRAIT_CARD_CLASSES} ${traitClasses} transition-all active:scale-[0.98] ${
+        isSelected ? 'border-brand-primary ring-2 ring-brand-primary/30' : 'hover:bg-glass-bg-hover'
+      }`}
+      aria-pressed={isSelected}
+      data-testid="locker-shop-trait-card"
+    >
+      <span className={COMPACT_TRAIT_ICON_CLASSES}>
+        <TraitIcon size={18} strokeWidth={2.4} aria-hidden="true" />
+      </span>
+      <span className="w-full truncate text-[10px] font-black leading-tight opacity-90">
+        {trait.name}
+      </span>
+      <span className="mt-0.5 w-full truncate text-[8px] font-black leading-none opacity-70">
+        {getTraitGradeLabel(trait.grade)}
+      </span>
+    </button>
   );
 }
