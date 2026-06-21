@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type PointerEvent } from 'react';
 import Image from 'next/image';
 import CalendarView from '@/components/features/CalendarView';
-import { Ban, CalendarCheck2, CalendarX2, Check, Clock3, MapPin, NotebookPen, Vote, X } from 'lucide-react';
+import { Ban, CalendarCheck2, CalendarX2, Check, Clock3, MapPin, NotebookPen, Star, Trophy, Users, Vote, X } from 'lucide-react';
 import { buildMatchCalendarEvents, buildPollCalendarEvents } from '@/components/features/calendarEventUtils';
 import TacticsDragBuilder, { TacticsPlayerAvatar, type Player } from '@/components/features/TacticsDragBuilder';
 import EventComments from '@/components/features/EventComments';
@@ -11,7 +11,17 @@ import MatchResultInputModal from '@/components/features/MatchResultInputModal';
 import NaverMapLink from '@/components/features/NaverMapLink';
 import SoccerPitch from '@/components/features/SoccerPitch';
 import { getScheduleEventTheme } from '@/components/features/scheduleEventTheme';
-import { fetchMatchAttendees, fetchMatchLineup, type MatchAttendee, type MatchLineupEntry, type UpcomingMatch } from '@/stores/matchClient';
+import {
+  fetchMatchAttendees,
+  fetchMatchFeedback,
+  fetchMatchLineup,
+  submitMatchPeerRatings,
+  voteMatchMvp,
+  type MatchAttendee,
+  type MatchFeedbackResponse,
+  type MatchLineupEntry,
+  type UpcomingMatch,
+} from '@/stores/matchClient';
 import { useScheduleStore } from '@/stores/useScheduleStore';
 import { useAppStore } from '@/stores/useAppStore';
 import { useModalStore } from '@/stores/useModalStore';
@@ -486,6 +496,7 @@ export default function ScheduleTab() {
             match={selectedMatch}
             matches={selectedMatches}
             clubId={activeClubId}
+            currentMembershipId={currentMembershipId}
             players={selectedMatchDetail?.players ?? []}
             lineup={selectedMatchDetail?.lineup ?? []}
             detailStatus={selectedMatchDetailStatus}
@@ -629,6 +640,7 @@ function SelectedMatchPanel({
   match,
   matches,
   clubId,
+  currentMembershipId,
   players,
   lineup,
   detailStatus,
@@ -645,6 +657,7 @@ function SelectedMatchPanel({
   match: UpcomingMatch | null;
   matches: UpcomingMatch[];
   clubId: string;
+  currentMembershipId: string | null;
   players: Player[];
   lineup: MatchLineupEntry[];
   detailStatus: 'idle' | 'loading' | 'ready' | 'error';
@@ -818,6 +831,7 @@ function SelectedMatchPanel({
               match={match}
               lineup={lineup}
               clubId={clubId}
+              currentMembershipId={currentMembershipId}
             />
           ) : null}
         </>
@@ -951,10 +965,12 @@ function MatchResultPanel({
   match,
   lineup,
   clubId,
+  currentMembershipId,
 }: {
   match: UpcomingMatch;
   lineup: MatchLineupEntry[];
   clubId: string;
+  currentMembershipId: string | null;
 }) {
   const redScore = match.ourScore ?? 0;
   const blueScore = match.oppScore ?? 0;
@@ -1007,6 +1023,12 @@ function MatchResultPanel({
             </div>
           </SoccerPitch>
 
+          <MatchFeedbackPanel
+            match={match}
+            clubId={clubId}
+            currentMembershipId={currentMembershipId}
+          />
+
           <div className="mt-3">
             <EventComments
               clubId={clubId}
@@ -1019,6 +1041,264 @@ function MatchResultPanel({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+const MATCH_FEEDBACK_BADGES = [
+  { id: 'steel_stamina', label: '강철체력' },
+  { id: 'pass_master', label: '패스마스터' },
+  { id: 'wall_defender', label: '통곡의벽' },
+  { id: 'speed_runner', label: '질풍가도' },
+  { id: 'clean_tackle', label: '깔끔한태클' },
+  { id: 'tactician', label: '전술가' },
+  { id: 'fighting_spirit', label: '투혼' },
+  { id: 'team_player', label: '팀플레이어' },
+] as const;
+
+function MatchFeedbackPanel({
+  match,
+  clubId,
+  currentMembershipId,
+}: {
+  match: UpcomingMatch;
+  clubId: string;
+  currentMembershipId: string | null;
+}) {
+  const { showToast } = useToastStore();
+  const [feedback, setFeedback] = useState<MatchFeedbackResponse | null>(null);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [selectedMvpId, setSelectedMvpId] = useState('');
+  const [ratings, setRatings] = useState<Record<string, number>>({});
+  const [badges, setBadges] = useState<Record<string, string[]>>({});
+  const [isSaving, setIsSaving] = useState(false);
+
+  const loadFeedback = async () => {
+    setStatus('loading');
+    try {
+      const nextFeedback = await fetchMatchFeedback({ clubId, matchId: match.id });
+      setFeedback(nextFeedback);
+      setSelectedMvpId(nextFeedback.myVote ?? '');
+      setRatings((previous) => {
+        const next = { ...previous };
+        for (const participant of nextFeedback.participants) {
+          if (participant.membershipId !== currentMembershipId && next[participant.membershipId] == null) {
+            next[participant.membershipId] = 7;
+          }
+        }
+        return next;
+      });
+      setStatus('ready');
+    } catch {
+      setStatus('error');
+    }
+  };
+
+  useEffect(() => {
+    let ignore = false;
+    setStatus('loading');
+    fetchMatchFeedback({ clubId, matchId: match.id })
+      .then((nextFeedback) => {
+        if (ignore) return;
+        setFeedback(nextFeedback);
+        setSelectedMvpId(nextFeedback.myVote ?? '');
+        setRatings(Object.fromEntries(
+          nextFeedback.participants
+            .filter((participant) => participant.membershipId !== currentMembershipId)
+            .map((participant) => [participant.membershipId, 7]),
+        ));
+        setStatus('ready');
+      })
+      .catch(() => {
+        if (!ignore) setStatus('error');
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [clubId, currentMembershipId, match.id]);
+
+  const saveFeedback = async () => {
+    if (!feedback || !selectedMvpId) {
+      showToast('MVP를 선택해주세요.');
+      return;
+    }
+
+    const ratingTargets = feedback.participants.filter((participant) => participant.membershipId !== currentMembershipId);
+    setIsSaving(true);
+    try {
+      await voteMatchMvp({
+        clubId,
+        matchId: match.id,
+        candidateMembershipId: selectedMvpId,
+      });
+      await submitMatchPeerRatings({
+        clubId,
+        matchId: match.id,
+        ratings: ratingTargets.map((participant) => ({
+          rateeMembershipId: participant.membershipId,
+          rating: ratings[participant.membershipId] ?? 7,
+          badges: badges[participant.membershipId] ?? [],
+        })),
+      });
+      await loadFeedback();
+      setIsSheetOpen(false);
+      showToast('매치 피드백을 저장했어요.');
+    } catch (error) {
+      showToast(getSchedulePollErrorMessage(error, '매치 피드백을 저장하지 못했어요.'));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const toggleBadge = (membershipId: string, badgeId: string) => {
+    setBadges((previous) => {
+      const current = previous[membershipId] ?? [];
+      const next = current.includes(badgeId)
+        ? current.filter((candidate) => candidate !== badgeId)
+        : [...current, badgeId].slice(0, 2);
+      return { ...previous, [membershipId]: next };
+    });
+  };
+
+  const mvpName = feedback?.participants.find((participant) => participant.membershipId === feedback.results?.mvpMembershipId)?.playerName ?? null;
+  const isOpen = feedback?.status === 'open';
+
+  return (
+    <div className="rounded-2xl border border-feedback-warning-border bg-feedback-warning-bg p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h4 className="flex items-center gap-1.5 text-[11px] font-black text-feedback-warning">
+            <Trophy size={14} aria-hidden="true" />
+            매치 피드백
+          </h4>
+          <p className="mt-1 text-xs font-bold text-secondary">
+            {status === 'loading' ? '피드백 상태를 불러오는 중입니다' : null}
+            {status === 'error' ? '피드백 상태를 불러오지 못했어요' : null}
+            {status === 'ready' && feedback?.status === 'not_open' ? '아직 피드백 기간이 열리지 않았어요' : null}
+            {status === 'ready' && feedback?.status === 'open' ? `${feedback.voteCount}명이 MVP 투표에 참여했어요` : null}
+            {status === 'ready' && feedback?.status === 'closed' ? (mvpName ? `MVP ${mvpName}` : '피드백이 마감됐어요') : null}
+          </p>
+        </div>
+        {isOpen ? (
+          <button
+            type="button"
+            onClick={() => setIsSheetOpen(true)}
+            className="shrink-0 rounded-xl bg-action-primary px-3 py-2 text-xs font-black text-white transition-all hover:brightness-110 active:scale-95"
+          >
+            {feedback?.myVote ? '수정' : '참여'}
+          </button>
+        ) : null}
+      </div>
+
+      {feedback?.status === 'closed' && feedback.results ? (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {feedback.results.ratingAverages.slice(0, 4).map((rating) => {
+            const participant = feedback.participants.find((candidate) => candidate.membershipId === rating.membershipId);
+            return (
+              <div key={rating.membershipId} className="rounded-xl border border-border bg-surface-card px-3 py-2">
+                <p className="truncate text-xs font-black text-primary">{participant?.playerName ?? '선수'}</p>
+                <p className="mt-0.5 text-[11px] font-bold text-secondary">평점 {rating.averageRating.toFixed(1)}</p>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+
+      <Modal
+        title="매치 피드백"
+        isOpen={isSheetOpen}
+        onClose={() => setIsSheetOpen(false)}
+      >
+        {feedback ? (
+          <div className="space-y-5">
+            <section>
+              <h3 className="mb-2 flex items-center gap-1.5 text-xs font-black text-primary">
+                <Star size={14} aria-hidden="true" />
+                MVP
+              </h3>
+              <div className="grid grid-cols-2 gap-2">
+                {feedback.participants.map((participant) => (
+                  <button
+                    key={participant.membershipId}
+                    type="button"
+                    onClick={() => setSelectedMvpId(participant.membershipId)}
+                    className={`rounded-xl border px-3 py-2 text-left transition-all ${
+                      selectedMvpId === participant.membershipId
+                        ? 'border-award-mvp bg-award-mvp/10 text-award-mvp'
+                        : 'border-border bg-surface-bg text-primary'
+                    }`}
+                  >
+                    <span className="block truncate text-xs font-black">{participant.playerName}</span>
+                    <span className="mt-0.5 block text-[11px] font-bold text-secondary">OVR {participant.playerOvr}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section>
+              <h3 className="mb-2 flex items-center gap-1.5 text-xs font-black text-primary">
+                <Users size={14} aria-hidden="true" />
+                동료 평점
+              </h3>
+              <div className="space-y-3">
+                {feedback.participants
+                  .filter((participant) => participant.membershipId !== currentMembershipId)
+                  .map((participant) => (
+                    <div key={participant.membershipId} className="rounded-xl border border-border bg-surface-bg p-3">
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <p className="truncate text-xs font-black text-primary">{participant.playerName}</p>
+                        <span className="text-xs font-black text-award-mvp">{(ratings[participant.membershipId] ?? 7).toFixed(1)}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="1"
+                        max="10"
+                        step="0.5"
+                        value={ratings[participant.membershipId] ?? 7}
+                        onChange={(event) => setRatings((previous) => ({
+                          ...previous,
+                          [participant.membershipId]: Number(event.target.value),
+                        }))}
+                        className="w-full accent-action-primary"
+                        aria-label={`${participant.playerName} 평점`}
+                      />
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {MATCH_FEEDBACK_BADGES.map((badge) => {
+                          const selected = (badges[participant.membershipId] ?? []).includes(badge.id);
+                          return (
+                            <button
+                              key={badge.id}
+                              type="button"
+                              onClick={() => toggleBadge(participant.membershipId, badge.id)}
+                              className={`rounded-full border px-2 py-1 text-[10px] font-black transition-all ${
+                                selected
+                                  ? 'border-social-like bg-social-like/10 text-social-like'
+                                  : 'border-border bg-surface-card text-secondary'
+                              }`}
+                            >
+                              {badge.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </section>
+
+            <button
+              type="button"
+              disabled={isSaving}
+              onClick={() => void saveFeedback()}
+              className="w-full rounded-xl bg-action-primary px-4 py-3 text-sm font-black text-white transition-all hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-tertiary"
+            >
+              {isSaving ? '저장 중...' : '피드백 저장'}
+            </button>
+          </div>
+        ) : null}
+      </Modal>
     </div>
   );
 }

@@ -31,6 +31,7 @@ import type { AnnouncementRepositories } from './announcements';
 import type { AccountMembershipRepositories } from './account-membership';
 import type { ClubAdminRepositories } from './club-admin';
 import type { CommentRepositories } from './comments';
+import type { MatchFeedbackRepositories } from './match-feedback';
 import type { MatchResultRepositories } from './match-results';
 import type { MatchRepositories } from './matches';
 import type { PublicClubRepositories } from './public-clubs';
@@ -232,6 +233,7 @@ type MatchDbRow = {
   created_by: string | null;
   cancellation_reason: string | null;
   cancelled_at: string | null;
+  feedback_deadline: string | null;
   updated_at: string;
 };
 
@@ -262,6 +264,18 @@ type MatchAttendeeDbRow = {
     ovr: number;
     match_points: number;
   } | null;
+};
+
+type MatchFeedbackVoteDbRow = {
+  voter_membership_id: string;
+  candidate_membership_id: string;
+};
+
+type MatchPeerRatingDbRow = {
+  rater_membership_id: string;
+  ratee_membership_id: string;
+  rating: number;
+  badges: string[];
 };
 
 type EventCommentDbRow = {
@@ -1561,6 +1575,273 @@ export function createSupabaseMatchRepositories(
   };
 }
 
+export function createSupabaseMatchFeedbackRepositories(
+  supabase: SupabaseClient,
+  getPrivilegedClient: () => SupabaseClient = createPrivilegedSupabaseClient,
+): MatchFeedbackRepositories {
+  return {
+    memberships: {
+      async findByAccountAndClub(accountId, clubId) {
+        const { data, error } = await supabase
+          .from('team_memberships')
+          .select('id, club_id, role, status')
+          .eq('account_id', accountId)
+          .eq('club_id', clubId)
+          .maybeSingle<MatchMembershipDbRow>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch feedback membership.', { cause: error });
+        }
+
+        return data
+          ? {
+              id: data.id,
+              clubId: data.club_id,
+              role: data.role,
+              status: data.status,
+            }
+          : null;
+      },
+    },
+    matches: {
+      async findById(matchId) {
+        const { data, error } = await supabase
+          .from('matches')
+          .select(MATCH_SELECT)
+          .eq('id', matchId)
+          .maybeSingle<MatchDbRow>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch feedback match.', { cause: error });
+        }
+
+        return data ? mapFeedbackMatch(data) : null;
+      },
+    },
+    participants: {
+      async listForMatch(matchId) {
+        const lineup = await fetchMatchLineupByMatchId(supabase, matchId);
+        if (lineup.length > 0) {
+          return lineup.map((entry) => ({
+            membershipId: entry.membershipId,
+            playerName: entry.playerName,
+            playerPhotoUrl: entry.playerPhotoUrl,
+            playerOvr: entry.playerOvr,
+          }));
+        }
+
+        const attendees = await fetchMatchAttendeesByMatchId(supabase, matchId);
+        return attendees.map((attendee) => ({
+          membershipId: attendee.membershipId,
+          playerName: attendee.playerName,
+          playerPhotoUrl: attendee.playerPhotoUrl,
+          playerOvr: attendee.playerOvr,
+        }));
+      },
+    },
+    feedback: {
+      async listMvpVotes(matchId) {
+        const { data, error } = await supabase
+          .from('match_mvp_votes')
+          .select('voter_membership_id, candidate_membership_id')
+          .eq('match_id', matchId)
+          .returns<MatchFeedbackVoteDbRow[]>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch MVP votes.', { cause: error });
+        }
+
+        return (data ?? []).map((vote) => ({
+          voterMembershipId: vote.voter_membership_id,
+          candidateMembershipId: vote.candidate_membership_id,
+        }));
+      },
+
+      async listPeerRatings(matchId) {
+        const { data, error } = await supabase
+          .from('match_peer_ratings')
+          .select('rater_membership_id, ratee_membership_id, rating, badges')
+          .eq('match_id', matchId)
+          .returns<MatchPeerRatingDbRow[]>();
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to fetch peer ratings.', { cause: error });
+        }
+
+        return (data ?? []).map((rating) => ({
+          raterMembershipId: rating.rater_membership_id,
+          rateeMembershipId: rating.ratee_membership_id,
+          rating: Number(rating.rating),
+          badges: Array.isArray(rating.badges) ? rating.badges : [],
+        }));
+      },
+
+      async upsertMvpVote(input) {
+        const { error } = await supabase
+          .from('match_mvp_votes')
+          .upsert({
+            match_id: input.matchId,
+            voter_membership_id: input.voterMembershipId,
+            candidate_membership_id: input.candidateMembershipId,
+            created_at: new Date().toISOString(),
+          }, { onConflict: 'match_id,voter_membership_id' });
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to save MVP vote.', { cause: error });
+        }
+      },
+
+      async upsertPeerRatings(input) {
+        const { error } = await supabase
+          .from('match_peer_ratings')
+          .upsert(input.ratings.map((rating) => ({
+            match_id: input.matchId,
+            rater_membership_id: input.raterMembershipId,
+            ratee_membership_id: rating.rateeMembershipId,
+            rating: rating.rating,
+            badges: rating.badges,
+            created_at: new Date().toISOString(),
+          })), { onConflict: 'match_id,rater_membership_id,ratee_membership_id' });
+
+        if (error) {
+          throw new AppError('internal_error', 'Failed to save peer ratings.', { cause: error });
+        }
+      },
+
+      async settle(input) {
+        const privilegedSupabase = getPrivilegedClient();
+        const ratingByMembershipId = new Map(input.ratingAverages.map((rating) => [
+          rating.membershipId,
+          rating.averageRating,
+        ]));
+        const affectedMembershipIds = [...new Set([
+          ...ratingByMembershipId.keys(),
+          ...(input.winnerMembershipId ? [input.winnerMembershipId] : []),
+        ])];
+
+        if (affectedMembershipIds.length > 0) {
+          const { data: existingStats, error: statsError } = await privilegedSupabase
+            .from('player_stats')
+            .select('membership_id, goals, assists')
+            .eq('match_id', input.matchId)
+            .in('membership_id', affectedMembershipIds)
+            .returns<Array<{ membership_id: string; goals: number; assists: number }>>();
+
+          if (statsError) {
+            throw new AppError('internal_error', 'Failed to fetch settled player stats.', { cause: statsError });
+          }
+
+          const baseByMembershipId = new Map((existingStats ?? []).map((stat) => [stat.membership_id, stat]));
+          const { error: upsertError } = await privilegedSupabase
+            .from('player_stats')
+            .upsert(affectedMembershipIds.map((membershipId) => {
+              const existing = baseByMembershipId.get(membershipId);
+              return {
+                match_id: input.matchId,
+                membership_id: membershipId,
+                goals: existing?.goals ?? 0,
+                assists: existing?.assists ?? 0,
+                is_mom: input.winnerMembershipId === membershipId,
+                ai_rating: ratingByMembershipId.get(membershipId) ?? null,
+              };
+            }), { onConflict: 'match_id,membership_id' });
+
+          if (upsertError) {
+            throw new AppError('internal_error', 'Failed to settle player feedback stats.', { cause: upsertError });
+          }
+        }
+
+        const pointRows = [
+          ...(input.winnerMembershipId
+            ? [{
+                membership_id: input.winnerMembershipId,
+                amount: 50,
+                reason: 'mvp_award',
+                source_type: 'mvp_award',
+                source_id: input.matchId,
+              }]
+            : []),
+          ...input.participationMembershipIds.map((membershipId) => ({
+            membership_id: membershipId,
+            amount: 30,
+            reason: 'feedback_participation',
+            source_type: 'feedback_participation',
+            source_id: input.matchId,
+          })),
+        ];
+        const { data: existingLedger, error: existingLedgerError } = await privilegedSupabase
+          .from('point_ledger')
+          .select('membership_id, amount')
+          .eq('source_id', input.matchId)
+          .in('source_type', ['mvp_award', 'feedback_participation'])
+          .returns<Array<{ membership_id: string; amount: number }>>();
+
+        if (existingLedgerError) {
+          throw new AppError('internal_error', 'Failed to fetch feedback point ledger.', { cause: existingLedgerError });
+        }
+
+        const pointAdjustments = new Map<string, number>();
+        for (const row of existingLedger ?? []) {
+          pointAdjustments.set(row.membership_id, (pointAdjustments.get(row.membership_id) ?? 0) - row.amount);
+        }
+        for (const row of pointRows) {
+          pointAdjustments.set(row.membership_id, (pointAdjustments.get(row.membership_id) ?? 0) + row.amount);
+        }
+
+        const { error: clearLedgerError } = await privilegedSupabase
+          .from('point_ledger')
+          .delete()
+          .eq('source_id', input.matchId)
+          .in('source_type', ['mvp_award', 'feedback_participation']);
+
+        if (clearLedgerError) {
+          throw new AppError('internal_error', 'Failed to clear feedback point ledger.', { cause: clearLedgerError });
+        }
+
+        if (pointRows.length > 0) {
+          const { error: ledgerError } = await privilegedSupabase
+            .from('point_ledger')
+            .insert(pointRows);
+
+          if (ledgerError) {
+            throw new AppError('internal_error', 'Failed to settle feedback points.', { cause: ledgerError });
+          }
+        }
+
+        const adjustedMembershipIds = [...pointAdjustments.entries()]
+          .filter(([, delta]) => delta !== 0)
+          .map(([membershipId]) => membershipId);
+        if (adjustedMembershipIds.length > 0) {
+          const { data: memberships, error: membershipError } = await privilegedSupabase
+            .from('team_memberships')
+            .select('id, match_points')
+            .in('id', adjustedMembershipIds)
+            .returns<Array<{ id: string; match_points: number }>>();
+
+          if (membershipError) {
+            throw new AppError('internal_error', 'Failed to fetch feedback point memberships.', { cause: membershipError });
+          }
+
+          for (const membership of memberships ?? []) {
+            const delta = pointAdjustments.get(membership.id) ?? 0;
+            const { error: updateError } = await privilegedSupabase
+              .from('team_memberships')
+              .update({
+                match_points: Math.max(0, membership.match_points + delta),
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', membership.id);
+
+            if (updateError) {
+              throw new AppError('internal_error', 'Failed to update feedback match points.', { cause: updateError });
+            }
+          }
+        }
+      },
+    },
+  };
+}
+
 export function createSupabaseCommentRepositories(
   supabase: SupabaseClient,
 ): CommentRepositories {
@@ -1878,7 +2159,7 @@ const ANNOUNCEMENT_SELECT =
   'id, club_id, season_id, title, content, author_membership_id, is_pinned, created_at, updated_at';
 
 const MATCH_SELECT =
-  'id, club_id, season_id, round, title, date, location, type, status, our_score, opp_score, tactics_completed, red_leader_confirmed, blue_leader_confirmed, memo, created_by, cancellation_reason, cancelled_at, updated_at';
+  'id, club_id, season_id, round, title, date, location, type, status, our_score, opp_score, tactics_completed, red_leader_confirmed, blue_leader_confirmed, memo, created_by, cancellation_reason, cancelled_at, feedback_deadline, updated_at';
 
 const MATCH_LINEUP_SELECT =
   'id, match_id, membership_id, team_number, is_leader, position, formation_slot, team_memberships(profile_name, main_position, photo_url, ovr, match_points)';
@@ -2066,6 +2347,13 @@ function mapMatch(row: MatchDbRow): MatchRow {
     cancellationReason: row.cancellation_reason ?? null,
     cancelledAt: row.cancelled_at ?? null,
     updatedAt: row.updated_at,
+  };
+}
+
+function mapFeedbackMatch(row: MatchDbRow): MatchRow & { feedbackDeadline: string | null } {
+  return {
+    ...mapMatch(row),
+    feedbackDeadline: row.feedback_deadline,
   };
 }
 

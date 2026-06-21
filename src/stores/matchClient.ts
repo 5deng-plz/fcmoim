@@ -25,6 +25,7 @@ export type UpcomingMatch = {
   createdByMembershipId: string | null;
   cancellationReason: string | null;
   cancelledAt: string | null;
+  feedbackDeadline?: string | null;
   updatedAt?: string | null;
 };
 
@@ -95,6 +96,33 @@ export type SaveMatchResultRequest = {
     goals: number;
     assists: number;
   }>;
+};
+
+export type MatchFeedbackParticipant = {
+  membershipId: string;
+  playerName: string;
+  playerPhotoUrl: string | null;
+  playerOvr: number;
+};
+
+export type MatchFeedbackResponse = {
+  matchId: string;
+  status: 'not_open' | 'open' | 'closed';
+  feedbackDeadline: string | null;
+  participants: MatchFeedbackParticipant[];
+  myVote: string | null;
+  myRatedMembershipIds: string[];
+  voteCount: number;
+  ratingCount: number;
+  results: null | {
+    mvpMembershipId: string | null;
+    ratingAverages: Array<{
+      membershipId: string;
+      averageRating: number;
+      ratingCount: number;
+      topBadges: string[];
+    }>;
+  };
 };
 
 type ApiErrorBody = {
@@ -235,6 +263,86 @@ export async function addMatchAttendee(input: {
   }
 
   return response.json() as Promise<MatchAttendee[]>;
+}
+
+export async function fetchMatchFeedback(input: {
+  clubId: string;
+  matchId: string;
+}): Promise<MatchFeedbackResponse> {
+  const params = new URLSearchParams({ clubId: input.clubId });
+  const response = await fetch(`/api/matches/${encodeURIComponent(input.matchId)}/feedback?${params.toString()}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw await buildApiError(response, '매치 피드백을 불러오지 못했어요.');
+  }
+
+  const body = await response.json() as Partial<MatchFeedbackResponse>;
+  return {
+    matchId: body.matchId ?? input.matchId,
+    status: body.status ?? 'not_open',
+    feedbackDeadline: body.feedbackDeadline ?? null,
+    participants: Array.isArray(body.participants) ? body.participants : [],
+    myVote: body.myVote ?? null,
+    myRatedMembershipIds: Array.isArray(body.myRatedMembershipIds) ? body.myRatedMembershipIds : [],
+    voteCount: typeof body.voteCount === 'number' ? body.voteCount : 0,
+    ratingCount: typeof body.ratingCount === 'number' ? body.ratingCount : 0,
+    results: body.results ?? null,
+  };
+}
+
+export async function voteMatchMvp(input: {
+  clubId: string;
+  matchId: string;
+  candidateMembershipId: string;
+}) {
+  const response = await fetch(`/api/matches/${encodeURIComponent(input.matchId)}/vote-mvp`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      clubId: input.clubId,
+      candidateMembershipId: input.candidateMembershipId,
+    }),
+  });
+
+  if (!response.ok) {
+    throw await buildApiError(response, 'MVP 투표를 저장하지 못했어요.');
+  }
+
+  return response.json() as Promise<{ matchId: string; candidateMembershipId: string; saved: true }>;
+}
+
+export async function submitMatchPeerRatings(input: {
+  clubId: string;
+  matchId: string;
+  ratings: Array<{
+    rateeMembershipId: string;
+    rating: number;
+    badges: string[];
+  }>;
+}) {
+  const response = await fetch(`/api/matches/${encodeURIComponent(input.matchId)}/peer-ratings`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      clubId: input.clubId,
+      ratings: input.ratings,
+    }),
+  });
+
+  if (!response.ok) {
+    throw await buildApiError(response, '동료 평점을 저장하지 못했어요.');
+  }
+
+  return response.json() as Promise<{ matchId: string; ratingCount: number; saved: true }>;
 }
 
 export async function pickMatchLineupPlayer(input: {
