@@ -1,30 +1,39 @@
 import {
   Anchor,
+  ArrowUpRight,
   Badge,
   Bolt,
   Brain,
   Cake,
   Check,
+  CornerDownRight,
+  Crosshair,
   Crown,
   Flame,
   Gauge,
   Goal,
+  HandHelping,
   Layers,
+  LockKeyhole,
   Map,
   MapPin,
   MoveDiagonal,
   Radar,
   Rocket,
   Ruler,
+  Route,
+  Send,
   Shield,
+  Shuffle,
   Sparkles,
   Swords,
   Target,
   Users,
+  Wind,
   X,
 } from 'lucide-react';
 import Image from 'next/image';
-import type { ReactNode } from 'react';
+import { createElement, type ReactNode } from 'react';
 import HexagonRadar from '@/components/ui/HexagonRadar';
 import type { Position, UserStats } from '@/types';
 import { calculateStatsOvr } from '@/utils/stats';
@@ -118,20 +127,44 @@ const traitIconMap: Record<TraitIconName, typeof Shield> = {
   users: Users,
 };
 
+const traitIconOverrideMap: Partial<Record<string, typeof Shield>> = {
+  'target-man': HandHelping,
+  'def-fullback': LockKeyhole,
+  'cross-specialist': Send,
+  'fox-in-the-box': Crosshair,
+  'off-fullback': Route,
+  'fb-finisher': CornerDownRight,
+  'prolific-winger': Wind,
+  'hole-player': ArrowUpRight,
+  'roaming-flank': Shuffle,
+};
+
 const COMPACT_TRAIT_CARD_CLASSES = 'flex h-[88px] w-full flex-col items-center justify-center rounded-xl border px-1 py-1.5 text-center shadow-inner';
 const COMPACT_TRAIT_ICON_CLASSES = 'mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-brand-primary/15 bg-surface-card/80 text-secondary';
 
 function getTraitSurfaceClasses(trait: TraitCard) {
   if (trait.positionGroup === 'FW') {
-    return 'border-highlight-amber/30 bg-gradient-to-br from-highlight-amber-bg via-glass-bg to-surface-card text-primary';
+    return 'border-highlight-amber/60 bg-gradient-to-br from-highlight-amber-bg via-highlight-amber-bg to-surface-card text-primary';
   }
   if (trait.positionGroup === 'MF') {
-    return 'border-brand-primary/25 bg-gradient-to-br from-brand-primary-bg via-glass-bg to-surface-card text-primary';
+    return 'border-brand-primary/45 bg-gradient-to-br from-brand-primary-bg via-brand-primary-bg to-surface-card text-primary';
   }
   if (trait.positionGroup === 'DF') {
-    return 'border-blue-team-border bg-gradient-to-br from-blue-team-bg via-glass-bg to-surface-card text-primary';
+    return 'border-blue-team-border bg-gradient-to-br from-blue-team-bg via-blue-team-bg to-surface-card text-primary';
   }
-  return 'border-highlight-purple/25 bg-gradient-to-br from-highlight-purple-bg via-glass-bg to-surface-card text-primary';
+  return 'border-highlight-purple/50 bg-gradient-to-br from-highlight-purple-bg via-highlight-purple-bg to-surface-card text-primary';
+}
+
+function getTraitIcon(trait: TraitCard) {
+  return traitIconOverrideMap[trait.id] ?? traitIconMap[trait.icon];
+}
+
+function renderTraitIcon(trait: TraitCard, size: number) {
+  return createElement(getTraitIcon(trait), {
+    size,
+    strokeWidth: 2.4,
+    'aria-hidden': true,
+  });
 }
 
 function PlayerOvrStyleCard({
@@ -164,7 +197,6 @@ function PlayerOvrStyleCard({
   const trait = resolvedTrait.positionGroup === 'GK'
     ? (findTraitById('build-up-df') ?? resolvedTrait)
     : resolvedTrait;
-  const TraitIcon = traitIconMap[trait.icon];
   const traitPillClasses = 'border-border bg-surface-card text-primary';
   const tier = getOvrTierClasses(ovr);
 
@@ -215,7 +247,7 @@ function PlayerOvrStyleCard({
           </div>
           <h3 className="mt-4 max-w-full truncate text-center text-2xl font-black text-primary">{displayName}</h3>
           <div className={`mt-2 flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-black ${traitPillClasses}`}>
-            <TraitIcon size={14} aria-hidden="true" />
+            {renderTraitIcon(trait, 14)}
             <span className="max-w-[170px] truncate">{trait.name}</span>
           </div>
         </div>
@@ -279,8 +311,8 @@ function PlayerOvrStyleCard({
         className={`${COMPACT_TRAIT_CARD_CLASSES} ${getTraitSurfaceClasses(trait)}`}
         data-testid="player-trait-card"
       >
-        <span className={COMPACT_TRAIT_ICON_CLASSES}>
-          <TraitIcon size={18} strokeWidth={2.4} aria-hidden="true" />
+        <span className={COMPACT_TRAIT_ICON_CLASSES} data-testid={`player-trait-icon-${trait.id}`}>
+          {renderTraitIcon(trait, 18)}
         </span>
 
         <span className="w-full truncate text-[10px] font-black tracking-tight leading-tight opacity-90">

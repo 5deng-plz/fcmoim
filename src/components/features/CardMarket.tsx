@@ -2,27 +2,36 @@
 
 import {
   Anchor,
+  ArrowUpRight,
   Badge,
   Bolt,
   Brain,
+  CornerDownRight,
+  Crosshair,
   Crown,
   Flame,
   Gauge,
   Goal,
+  HandHelping,
   Layers,
+  LockKeyhole,
   Map,
   MoveDiagonal,
   Radar,
   Rocket,
+  Route,
+  Send,
   Shield,
+  Shuffle,
   Sparkles,
   Store,
   Swords,
   Target,
   Users,
+  Wind,
   type LucideIcon,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { createElement, useMemo, useState } from 'react';
 import {
   TRAIT_CATALOG,
   findTraitById,
@@ -54,6 +63,18 @@ const traitIconMap: Record<TraitIconName, LucideIcon> = {
   users: Users,
 };
 
+const traitIconOverrideMap: Partial<Record<string, LucideIcon>> = {
+  'target-man': HandHelping,
+  'def-fullback': LockKeyhole,
+  'cross-specialist': Send,
+  'fox-in-the-box': Crosshair,
+  'off-fullback': Route,
+  'fb-finisher': CornerDownRight,
+  'prolific-winger': Wind,
+  'hole-player': ArrowUpRight,
+  'roaming-flank': Shuffle,
+};
+
 const COMPACT_TRAIT_CARD_CLASSES = 'flex h-[76px] w-[86px] shrink-0 snap-start flex-col items-center justify-center rounded-xl border px-1 py-1.5 text-center shadow-inner';
 const COMPACT_TRAIT_ICON_CLASSES = 'mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-brand-primary/15 bg-surface-card/80 text-secondary';
 const DEFAULT_SELECTED_TRAIT_ID = 'dummy-runner';
@@ -65,15 +86,27 @@ function isFutsalTrait(trait: TraitCard) {
 
 function getTraitSurfaceClasses(trait: TraitCard) {
   if (trait.positionGroup === 'FW') {
-    return 'border-highlight-amber/30 bg-gradient-to-br from-highlight-amber-bg via-glass-bg to-surface-card text-primary';
+    return 'border-highlight-amber/60 bg-gradient-to-br from-highlight-amber-bg via-highlight-amber-bg to-surface-card text-primary';
   }
   if (trait.positionGroup === 'MF') {
-    return 'border-brand-primary/25 bg-gradient-to-br from-brand-primary-bg via-glass-bg to-surface-card text-primary';
+    return 'border-brand-primary/45 bg-gradient-to-br from-brand-primary-bg via-brand-primary-bg to-surface-card text-primary';
   }
   if (trait.positionGroup === 'DF') {
-    return 'border-blue-team-border bg-gradient-to-br from-blue-team-bg via-glass-bg to-surface-card text-primary';
+    return 'border-blue-team-border bg-gradient-to-br from-blue-team-bg via-blue-team-bg to-surface-card text-primary';
   }
-  return 'border-highlight-purple/25 bg-gradient-to-br from-highlight-purple-bg via-glass-bg to-surface-card text-primary';
+  return 'border-highlight-purple/50 bg-gradient-to-br from-highlight-purple-bg via-highlight-purple-bg to-surface-card text-primary';
+}
+
+function getTraitIcon(trait: TraitCard) {
+  return traitIconOverrideMap[trait.id] ?? traitIconMap[trait.icon];
+}
+
+function renderTraitIcon(trait: TraitCard, size: number) {
+  return createElement(getTraitIcon(trait), {
+    size,
+    strokeWidth: 2.4,
+    'aria-hidden': true,
+  });
 }
 
 function getTraitSortGroup(trait: TraitCard) {
@@ -142,12 +175,11 @@ export default function CardMarket() {
 }
 
 function TraitPreviewCard({ trait }: { trait: TraitCard }) {
-  const TraitIcon = traitIconMap[trait.icon];
   return (
     <div className={`${getTraitSurfaceClasses(trait)} rounded-xl border px-3 py-2.5 shadow-sm`} data-testid="locker-shop-preview">
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-primary/15 bg-surface-card/80 text-secondary">
-          <TraitIcon size={22} strokeWidth={2.4} aria-hidden="true" />
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-primary/15 bg-surface-card/80 text-secondary" data-testid={`locker-shop-preview-icon-${trait.id}`}>
+          {renderTraitIcon(trait, 22)}
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-base font-black leading-tight text-primary">{trait.name}</p>
@@ -160,8 +192,6 @@ function TraitPreviewCard({ trait }: { trait: TraitCard }) {
 }
 
 function TraitShopCard({ trait, isSelected, onClick }: { trait: TraitCard; isSelected: boolean; onClick: () => void }) {
-  const TraitIcon = traitIconMap[trait.icon];
-
   return (
     <button
       type="button"
@@ -172,8 +202,8 @@ function TraitShopCard({ trait, isSelected, onClick }: { trait: TraitCard; isSel
       aria-pressed={isSelected}
       data-testid="locker-shop-trait-card"
     >
-      <span className={COMPACT_TRAIT_ICON_CLASSES}>
-        <TraitIcon size={18} strokeWidth={2.4} aria-hidden="true" />
+      <span className={COMPACT_TRAIT_ICON_CLASSES} data-testid={`locker-shop-trait-icon-${trait.id}`}>
+        {renderTraitIcon(trait, 18)}
       </span>
       <span className="w-full truncate text-[10px] font-black leading-tight opacity-90">
         {trait.name}

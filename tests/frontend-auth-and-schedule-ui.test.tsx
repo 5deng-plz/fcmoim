@@ -3429,7 +3429,7 @@ describe('locker room team management UI', () => {
     expect(screen.getByTestId('locker-shop')).toBeInTheDocument();
     expect(screen.getByTestId('locker-shop-preview')).toHaveTextContent('미끼 공격수');
     expect(screen.getByTestId('locker-shop-preview')).not.toHaveTextContent('현재 카드:');
-    expect(screen.getByTestId('locker-shop-preview')).toHaveClass('bg-gradient-to-br', 'from-highlight-amber-bg', 'via-glass-bg', 'to-surface-card');
+    expect(screen.getByTestId('locker-shop-preview')).toHaveClass('bg-gradient-to-br', 'from-highlight-amber-bg', 'via-highlight-amber-bg', 'to-surface-card');
     expect(screen.getByTestId('locker-shop-carousel')).toHaveClass('flex', 'snap-x', 'snap-mandatory');
     expect(screen.getByTestId('locker-shop-carousel')).toHaveStyle({ overflowX: 'auto' });
     expect(screen.getByText('경기 Point')).toBeInTheDocument();
@@ -3448,10 +3448,12 @@ describe('locker room team management UI', () => {
     expect(within(screen.getByTestId('player-ovr-style-card')).getByText('60')).toBeInTheDocument();
     expect(screen.getByTestId('player-ability-panel')).toHaveClass('border-glass-border', 'bg-glass-bg', 'backdrop-blur-md');
     expect(screen.getByTestId('player-ovr-style-card')).toHaveClass('w-[104px]', 'border-glass-border', 'bg-glass-bg', 'backdrop-blur-sm', 'shadow-glass-shadow');
-    expect(screen.getByTestId('player-trait-card')).toHaveClass('h-[88px]', 'rounded-xl', 'border', 'shadow-inner', 'bg-gradient-to-br', 'from-brand-primary-bg', 'via-glass-bg', 'to-surface-card', 'text-primary');
+    expect(screen.getByTestId('player-trait-card')).toHaveClass('h-[88px]', 'rounded-xl', 'border', 'shadow-inner', 'bg-gradient-to-br', 'from-brand-primary-bg', 'via-brand-primary-bg', 'to-surface-card', 'text-primary');
     expect(screen.getAllByTestId('locker-shop-trait-card')[0]).toHaveClass('h-[76px]', 'w-[86px]', 'shrink-0', 'snap-start', 'rounded-xl', 'border', 'shadow-inner', 'bg-gradient-to-br', 'text-primary');
     expect(screen.getAllByTestId('locker-shop-trait-card')[0]).toHaveTextContent('타깃맨');
-    expect(screen.getAllByTestId('locker-shop-trait-card')[0]).toHaveClass('from-highlight-amber-bg');
+    expect(screen.getAllByTestId('locker-shop-trait-card')[0]).toHaveClass('from-highlight-amber-bg', 'via-highlight-amber-bg');
+    expect(screen.getByTestId('locker-shop-trait-icon-target-man').innerHTML).not.toEqual(screen.getByTestId('locker-shop-trait-icon-def-fullback').innerHTML);
+    expect(screen.getByTestId('player-trait-icon-classic-no10')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '미끼 공격수' })).toHaveClass('border-result-loss', 'ring-result-loss/30');
     expect(screen.getByText('타깃맨')).toBeInTheDocument();
     expect(screen.getAllByText('클래식 No. 10').length).toBeGreaterThanOrEqual(2);
