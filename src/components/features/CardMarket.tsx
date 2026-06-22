@@ -54,8 +54,9 @@ const traitIconMap: Record<TraitIconName, LucideIcon> = {
   users: Users,
 };
 
-const COMPACT_TRAIT_CARD_CLASSES = 'flex h-[88px] w-[104px] shrink-0 snap-start flex-col items-center justify-center rounded-xl border px-1 py-1.5 text-center shadow-inner';
-const COMPACT_TRAIT_ICON_CLASSES = 'mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-card text-secondary';
+const COMPACT_TRAIT_CARD_CLASSES = 'flex h-[76px] w-[86px] shrink-0 snap-start flex-col items-center justify-center rounded-xl border px-1 py-1.5 text-center shadow-inner';
+const COMPACT_TRAIT_SURFACE_CLASSES = 'border-brand-primary/25 bg-gradient-to-br from-brand-primary-bg via-glass-bg to-surface-card text-primary';
+const COMPACT_TRAIT_ICON_CLASSES = 'mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-brand-primary/15 bg-surface-card/80 text-secondary';
 const DEFAULT_SELECTED_TRAIT_ID = 'dummy-runner';
 
 export default function CardMarket() {
@@ -106,9 +107,9 @@ export default function CardMarket() {
 function TraitPreviewCard({ trait }: { trait: TraitCard }) {
   const TraitIcon = traitIconMap[trait.icon];
   return (
-    <div className="rounded-xl border border-border bg-surface-card px-3 py-2.5 shadow-sm" data-testid="locker-shop-preview">
+    <div className={`${COMPACT_TRAIT_SURFACE_CLASSES} rounded-xl border px-3 py-2.5 shadow-sm`} data-testid="locker-shop-preview">
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-bg text-secondary">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-primary/15 bg-surface-card/80 text-secondary">
           <TraitIcon size={22} strokeWidth={2.4} aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">
@@ -128,8 +129,8 @@ function TraitShopCard({ trait, isSelected, onClick }: { trait: TraitCard; isSel
     <button
       type="button"
       onClick={onClick}
-      className={`${COMPACT_TRAIT_CARD_CLASSES} border-border bg-surface-card text-primary transition-all active:scale-[0.98] ${
-        isSelected ? 'border-brand-primary bg-glass-bg-hover ring-2 ring-brand-primary/30' : 'hover:bg-glass-bg-hover'
+      className={`${COMPACT_TRAIT_CARD_CLASSES} ${COMPACT_TRAIT_SURFACE_CLASSES} transition-all active:scale-[0.98] ${
+        isSelected ? 'border-brand-primary ring-2 ring-brand-primary/30' : 'hover:border-brand-primary/40'
       }`}
       aria-pressed={isSelected}
       data-testid="locker-shop-trait-card"

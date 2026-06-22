@@ -118,7 +118,8 @@ const traitIconMap: Record<TraitIconName, typeof Shield> = {
 };
 
 const COMPACT_TRAIT_CARD_CLASSES = 'flex h-[88px] w-full flex-col items-center justify-center rounded-xl border px-1 py-1.5 text-center shadow-inner';
-const COMPACT_TRAIT_ICON_CLASSES = 'mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-card text-secondary';
+const COMPACT_TRAIT_SURFACE_CLASSES = 'border-brand-primary/25 bg-gradient-to-br from-brand-primary-bg via-glass-bg to-surface-card text-primary';
+const COMPACT_TRAIT_ICON_CLASSES = 'mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-brand-primary/15 bg-surface-card/80 text-secondary';
 
 function PlayerOvrStyleCard({
   ovr,
@@ -148,7 +149,7 @@ function PlayerOvrStyleCard({
   const equippedTrait = findTraitById(selectedTraitId);
   const trait = equippedTrait ?? getDefaultTraitForProfile(position, stats);
   const TraitIcon = traitIconMap[trait.icon];
-  const traitClasses = 'border-border bg-surface-card text-primary';
+  const traitPillClasses = 'border-border bg-surface-card text-primary';
   const tier = getOvrTierClasses(ovr);
 
   if (size === 'full') {
@@ -197,7 +198,7 @@ function PlayerOvrStyleCard({
             />
           </div>
           <h3 className="mt-4 max-w-full truncate text-center text-2xl font-black text-primary">{displayName}</h3>
-          <div className={`mt-2 flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-black ${traitClasses}`}>
+          <div className={`mt-2 flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-black ${traitPillClasses}`}>
             <TraitIcon size={14} aria-hidden="true" />
             <span className="max-w-[170px] truncate">{trait.name}</span>
           </div>
@@ -259,7 +260,7 @@ function PlayerOvrStyleCard({
 
       {/* Trait Section: Styled like the Profile Cards below (square card format) */}
       <div
-        className={`${COMPACT_TRAIT_CARD_CLASSES} ${traitClasses}`}
+        className={`${COMPACT_TRAIT_CARD_CLASSES} ${COMPACT_TRAIT_SURFACE_CLASSES}`}
         data-testid="player-trait-card"
       >
         <span className={COMPACT_TRAIT_ICON_CLASSES}>
