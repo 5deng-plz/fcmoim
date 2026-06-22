@@ -1,18 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import Image from 'next/image';
-import { Flame, Handshake, Medal, MinusCircle, Share2, Target, Trophy, Users, XCircle } from 'lucide-react';
+import { Flame, Handshake, Medal, MinusCircle, Target, Trophy, Users, XCircle } from 'lucide-react';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import { useAppStore } from '@/stores/useAppStore';
 import { useRecordsStore } from '@/stores/useRecordsStore';
-import type { RecordsLeader, RecordsRankingRow, RecordsSeasonSummary } from '@/stores/recordsClient';
+import type { RecordsLeader, RecordsSeasonSummary } from '@/stores/recordsClient';
 import FootballIcon from '@/components/ui/FootballIcon';
 import StadiumIcon from '@/components/ui/StadiumIcon';
 import CommunityPage from '@/components/tabs/CommunityPage';
-import Modal from '@/components/ui/Modal';
-import PlayerAbilityPanel from '@/components/ui/PlayerAbilityPanel';
-import { useToastStore } from '@/stores/useToastStore';
 
 function SeasonSummaryCard({ summary }: { summary: RecordsSeasonSummary }) {
   const stats: SummaryStat[] = [
@@ -69,7 +66,6 @@ type SummaryStat = {
 
 export default function RecordsTab() {
   const { activeClubId, recordsSubTab, setRecordsSubTab } = useAppStore();
-  const { showToast } = useToastStore();
   const {
     records,
     recordsStatus,
@@ -78,7 +74,6 @@ export default function RecordsTab() {
   } = useRecordsStore();
   const rows = records?.rankingRows ?? [];
   const isLoading = recordsStatus === 'loading' || recordsStatus === 'idle';
-  const [cardRow, setCardRow] = useState<RecordsRankingRow | null>(null);
 
   useEffect(() => {
     if (recordsStatus !== 'idle') return;
@@ -127,7 +122,7 @@ export default function RecordsTab() {
           ) : null}
 
           <div className="overflow-hidden rounded-3xl border border-glass-border bg-glass-bg shadow-glass-shadow backdrop-blur-md">
-            <div className="grid min-h-[40px] grid-cols-[24px_34px_minmax(72px,1fr)_58px_32px_42px] items-center border-b border-glass-border/50 bg-glass-bg/60 px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-secondary">
+            <div className="grid min-h-[40px] grid-cols-[24px_34px_minmax(92px,1fr)_74px_40px_50px] items-center border-b border-glass-border/50 bg-glass-bg/60 px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-secondary">
               <div className="text-center">#</div>
               <div className="text-center text-fcgreen-600">OVR</div>
               <div className="px-2">선수</div>
@@ -140,12 +135,9 @@ export default function RecordsTab() {
             ) : rows.length > 0 ? (
               <div className="divide-y divide-glass-border/40">
                 {rows.map((row, index) => (
-                  <button
-                    type="button"
+                  <div
                     key={row.membershipId}
-                    onClick={() => setCardRow(row)}
-                    className="grid h-[50px] min-h-[50px] grid-cols-[24px_34px_minmax(72px,1fr)_58px_32px_42px] items-center px-2 py-0 text-sm"
-                    aria-label={`${row.nickname} 카드 보기`}
+                    className="grid h-[50px] min-h-[50px] grid-cols-[24px_34px_minmax(92px,1fr)_74px_40px_50px] items-center px-2 py-0 text-sm"
                   >
                     <RankMark rank={index + 1} />
                     <div className="text-center font-extrabold text-fcgreen-600">{row.ovr}</div>
@@ -173,7 +165,7 @@ export default function RecordsTab() {
                       <span className="text-sm">{row.winRate}</span>
                       <span className="text-[10px]">%</span>
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             ) : (
@@ -187,11 +179,6 @@ export default function RecordsTab() {
           </div>
 
           <SeasonSummaryCard summary={records?.seasonSummary ?? createEmptySummary()} />
-          <RecordsPlayerCardModal
-            row={cardRow}
-            onClose={() => setCardRow(null)}
-            onToast={showToast}
-          />
         </div>
       ) : (
         <CommunityPage
@@ -201,75 +188,6 @@ export default function RecordsTab() {
         />
       )}
     </div>
-  );
-}
-
-function RecordsPlayerCardModal({
-  row,
-  onClose,
-  onToast,
-}: {
-  row: RecordsRankingRow | null;
-  onClose: () => void;
-  onToast: (message: string) => void;
-}) {
-  const shareText = row
-    ? `${row.nickname} FUT 카드 · OVR ${row.ovr} · ${row.goals}골 ${row.assists}도움`
-    : '';
-  const handleShare = async () => {
-    if (!row) return;
-    try {
-      if (typeof navigator.share === 'function') {
-        await navigator.share({
-          title: `${row.nickname} FUT 카드`,
-          text: shareText,
-        });
-        return;
-      }
-      await navigator.clipboard?.writeText(shareText);
-      onToast('카드 공유 문구를 복사했어요.');
-    } catch {
-      onToast('카드를 공유하지 못했어요.');
-    }
-  };
-
-  return (
-    <Modal
-      title={row?.nickname ?? '선수 카드'}
-      isOpen={row !== null}
-      onClose={onClose}
-      presentation="dialog"
-    >
-      {row ? (
-        <div className="space-y-3">
-          <PlayerAbilityPanel
-            layout="fut-card"
-            stats={row.stats}
-            ovr={row.ovr}
-            preferredFoot={row.preferredFoot}
-            position={row.position === 'FW' || row.position === 'MF' || row.position === 'DF' || row.position === 'GK' ? row.position : undefined}
-            selectedTraitId={row.selectedTraitId}
-            playerName={row.nickname}
-            photoUrl={row.photoUrl}
-            seasonRecord={{
-              appearances: row.appearances,
-              goals: row.goals,
-              assists: row.assists,
-              momCount: row.momCount,
-              avgRating: null,
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => void handleShare()}
-            className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-action-primary px-4 py-3 text-sm font-black text-white transition-all hover:brightness-110 active:scale-95"
-          >
-            <Share2 size={16} aria-hidden="true" />
-            공유
-          </button>
-        </div>
-      ) : null}
-    </Modal>
   );
 }
 

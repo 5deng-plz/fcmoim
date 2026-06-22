@@ -32,6 +32,7 @@ import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import {
   findTraitById,
   getDefaultTraitForProfile,
+  type TraitCard,
   type TraitIconName,
 } from '@/lib/traitCatalog';
 import PreferredFootIcon from '@/components/ui/PreferredFootIcon';
@@ -118,8 +119,20 @@ const traitIconMap: Record<TraitIconName, typeof Shield> = {
 };
 
 const COMPACT_TRAIT_CARD_CLASSES = 'flex h-[88px] w-full flex-col items-center justify-center rounded-xl border px-1 py-1.5 text-center shadow-inner';
-const COMPACT_TRAIT_SURFACE_CLASSES = 'border-brand-primary/25 bg-gradient-to-br from-brand-primary-bg via-glass-bg to-surface-card text-primary';
 const COMPACT_TRAIT_ICON_CLASSES = 'mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-brand-primary/15 bg-surface-card/80 text-secondary';
+
+function getTraitSurfaceClasses(trait: TraitCard) {
+  if (trait.positionGroup === 'FW') {
+    return 'border-highlight-amber/30 bg-gradient-to-br from-highlight-amber-bg via-glass-bg to-surface-card text-primary';
+  }
+  if (trait.positionGroup === 'MF') {
+    return 'border-brand-primary/25 bg-gradient-to-br from-brand-primary-bg via-glass-bg to-surface-card text-primary';
+  }
+  if (trait.positionGroup === 'DF') {
+    return 'border-blue-team-border bg-gradient-to-br from-blue-team-bg via-glass-bg to-surface-card text-primary';
+  }
+  return 'border-highlight-purple/25 bg-gradient-to-br from-highlight-purple-bg via-glass-bg to-surface-card text-primary';
+}
 
 function PlayerOvrStyleCard({
   ovr,
@@ -147,7 +160,10 @@ function PlayerOvrStyleCard({
   topBadges?: Array<{ code: string; name: string }>;
 }) {
   const equippedTrait = findTraitById(selectedTraitId);
-  const trait = equippedTrait ?? getDefaultTraitForProfile(position, stats);
+  const resolvedTrait = equippedTrait ?? getDefaultTraitForProfile(position, stats);
+  const trait = resolvedTrait.positionGroup === 'GK'
+    ? (findTraitById('build-up-df') ?? resolvedTrait)
+    : resolvedTrait;
   const TraitIcon = traitIconMap[trait.icon];
   const traitPillClasses = 'border-border bg-surface-card text-primary';
   const tier = getOvrTierClasses(ovr);
@@ -260,7 +276,7 @@ function PlayerOvrStyleCard({
 
       {/* Trait Section: Styled like the Profile Cards below (square card format) */}
       <div
-        className={`${COMPACT_TRAIT_CARD_CLASSES} ${COMPACT_TRAIT_SURFACE_CLASSES}`}
+        className={`${COMPACT_TRAIT_CARD_CLASSES} ${getTraitSurfaceClasses(trait)}`}
         data-testid="player-trait-card"
       >
         <span className={COMPACT_TRAIT_ICON_CLASSES}>

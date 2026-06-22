@@ -133,8 +133,8 @@ export default function HexagonRadar({
 
       <polygon
         points={axes.map((axis) => getPoint(axis.value, axis.angle)).join(' ')}
-        fill="var(--viz-primary-fill)"
-        stroke="var(--viz-primary)"
+        fill="var(--viz-danger-fill)"
+        stroke="var(--viz-danger)"
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
@@ -144,15 +144,6 @@ export default function HexagonRadar({
 
         return (
           <g key={`${axis.label}-handle`} className="radar-drag-handle">
-            <circle
-              cx={point.x}
-              cy={point.y}
-              r="4.5"
-              fill="var(--surface-card)"
-              stroke="var(--brand-primary)"
-              strokeWidth="1.5"
-              pointerEvents="none"
-            />
             <circle
               cx={point.x}
               cy={point.y}
@@ -176,7 +167,8 @@ export default function HexagonRadar({
       {axes.map((axis) => {
         const textX = cx + (r + 28) * Math.cos(((axis.angle - 90) * Math.PI) / 180);
         const textY = cy + (r + 28) * Math.sin(((axis.angle - 90) * Math.PI) / 180);
-        const valueY = textY + (axis.angle === 180 ? 14 : axis.angle === 0 ? -14 : axis.angle > 180 ? 14 : -14);
+        const valueY = textY - 8;
+        const labelY = textY + 8;
 
         return (
           <g
@@ -194,7 +186,20 @@ export default function HexagonRadar({
             <circle cx={textX} cy={textY} r="20" fill="transparent" />
             <text
               x={textX}
-              y={textY}
+              y={valueY}
+              className="radar-axis-value"
+              style={showAllValues ? { opacity: 1 } : undefined}
+              fill="var(--viz-danger)"
+              fontSize="11"
+              fontWeight="900"
+              textAnchor="middle"
+              dominantBaseline="middle"
+            >
+              {axis.value}
+            </text>
+            <text
+              x={textX}
+              y={labelY}
               fill="var(--viz-label)"
               fontSize="11"
               fontWeight="800"
@@ -202,19 +207,6 @@ export default function HexagonRadar({
               dominantBaseline="middle"
             >
               {axis.label}
-            </text>
-            <text
-              x={textX}
-              y={valueY}
-              className="radar-axis-value"
-              style={showAllValues ? { opacity: 1 } : undefined}
-              fill="var(--brand-primary)"
-              fontSize="11"
-              fontWeight="900"
-              textAnchor="middle"
-              dominantBaseline="middle"
-            >
-              {axis.value}
             </text>
           </g>
         );

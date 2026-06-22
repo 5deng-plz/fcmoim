@@ -3429,22 +3429,30 @@ describe('locker room team management UI', () => {
     expect(screen.getByTestId('locker-shop')).toBeInTheDocument();
     expect(screen.getByTestId('locker-shop-preview')).toHaveTextContent('미끼 공격수');
     expect(screen.getByTestId('locker-shop-preview')).not.toHaveTextContent('현재 카드:');
-    expect(screen.getByTestId('locker-shop-preview')).toHaveClass('bg-gradient-to-br', 'from-brand-primary-bg', 'via-glass-bg', 'to-surface-card');
+    expect(screen.getByTestId('locker-shop-preview')).toHaveClass('bg-gradient-to-br', 'from-highlight-amber-bg', 'via-glass-bg', 'to-surface-card');
     expect(screen.getByTestId('locker-shop-carousel')).toHaveClass('flex', 'snap-x', 'snap-mandatory');
     expect(screen.getByTestId('locker-shop-carousel')).toHaveStyle({ overflowX: 'auto' });
     expect(screen.getByText('경기 Point')).toBeInTheDocument();
     expect(screen.getByText('2,000')).toBeInTheDocument();
+    expect(screen.queryByTestId('my-page-self-card-view')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('player-fut-card')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '프로필 수정' })).not.toBeInTheDocument();
     expect(screen.queryByText('구매')).not.toBeInTheDocument();
     expect(screen.queryByText('150 P')).not.toBeInTheDocument();
     expect(screen.queryByText('레전드')).not.toBeInTheDocument();
     expect(screen.queryByText('프로')).not.toBeInTheDocument();
     expect(screen.queryByText('세미프로')).not.toBeInTheDocument();
     expect(screen.queryByText('아마추어')).not.toBeInTheDocument();
+    expect(screen.queryByText('공격형 골키퍼')).not.toBeInTheDocument();
+    expect(screen.queryByText('수비형 골키퍼')).not.toBeInTheDocument();
     expect(within(screen.getByTestId('player-ovr-style-card')).getByText('60')).toBeInTheDocument();
     expect(screen.getByTestId('player-ability-panel')).toHaveClass('border-glass-border', 'bg-glass-bg', 'backdrop-blur-md');
     expect(screen.getByTestId('player-ovr-style-card')).toHaveClass('w-[104px]', 'border-glass-border', 'bg-glass-bg', 'backdrop-blur-sm', 'shadow-glass-shadow');
     expect(screen.getByTestId('player-trait-card')).toHaveClass('h-[88px]', 'rounded-xl', 'border', 'shadow-inner', 'bg-gradient-to-br', 'from-brand-primary-bg', 'via-glass-bg', 'to-surface-card', 'text-primary');
-    expect(screen.getAllByTestId('locker-shop-trait-card')[0]).toHaveClass('h-[76px]', 'w-[86px]', 'shrink-0', 'snap-start', 'rounded-xl', 'border', 'shadow-inner', 'bg-gradient-to-br', 'from-brand-primary-bg', 'via-glass-bg', 'to-surface-card', 'text-primary');
+    expect(screen.getAllByTestId('locker-shop-trait-card')[0]).toHaveClass('h-[76px]', 'w-[86px]', 'shrink-0', 'snap-start', 'rounded-xl', 'border', 'shadow-inner', 'bg-gradient-to-br', 'text-primary');
+    expect(screen.getAllByTestId('locker-shop-trait-card')[0]).toHaveTextContent('타깃맨');
+    expect(screen.getAllByTestId('locker-shop-trait-card')[0]).toHaveClass('from-highlight-amber-bg');
+    expect(screen.getByRole('button', { name: '미끼 공격수' })).toHaveClass('border-result-loss', 'ring-result-loss/30');
     expect(screen.getByText('타깃맨')).toBeInTheDocument();
     expect(screen.getAllByText('클래식 No. 10').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('수비형 사이드백')).toBeInTheDocument();
@@ -3882,11 +3890,13 @@ describe('records and header polish UI', () => {
 
     expect(container.querySelector('.min-h-\\[40px\\]')).toBeInTheDocument();
     expect(container.querySelector('.h-\\[50px\\].min-h-\\[50px\\]')).toBeInTheDocument();
-    expect(screen.getByText('승무패').parentElement).toHaveClass('grid-cols-[24px_34px_minmax(72px,1fr)_58px_32px_42px]');
+    expect(screen.getByText('승무패').parentElement).toHaveClass('grid-cols-[24px_34px_minmax(92px,1fr)_74px_40px_50px]');
     expect(screen.getByText('승점')).not.toHaveClass('text-green-600');
     expect(screen.getByText('승률')).toHaveClass('text-fcgreen-600');
-    const firstRankingRow = screen.getByRole('button', { name: '구피원 카드 보기' });
-    expect(firstRankingRow).toHaveClass('grid-cols-[24px_34px_minmax(72px,1fr)_58px_32px_42px]');
+    expect(screen.queryByRole('button', { name: '구피원 카드 보기' })).not.toBeInTheDocument();
+    const firstRankingRow = screen.getAllByText('구피원')[0].closest('.grid');
+    if (!firstRankingRow) throw new Error('Expected first ranking row');
+    expect(firstRankingRow).toHaveClass('grid-cols-[24px_34px_minmax(92px,1fr)_74px_40px_50px]');
     expect(firstRankingRow.querySelector('.tabular-nums')).toBeInTheDocument();
     expect(screen.getByText('10')).toHaveClass('text-primary');
     const winRateCell = screen.getByText((_, element) => element?.textContent === '75%');
@@ -3923,15 +3933,12 @@ describe('records and header polish UI', () => {
     expect(screen.getByAltText('구피투 썸네일')).toHaveAttribute('src', '/icons/svgrepo-soccer-player.svg');
   });
 
-  it('opens a FUT card from the records ranking row', async () => {
+  it('does not open a FUT card from the records ranking row', async () => {
     render(<RecordsTab />);
 
-    await userEvent.click(screen.getByRole('button', { name: '구피원 카드 보기' }));
-
-    const dialog = screen.getByRole('dialog', { name: '구피원' });
-    expect(within(dialog).getByTestId('player-fut-card')).toBeInTheDocument();
-    expect(within(dialog).getByText('70')).toBeInTheDocument();
-    expect(within(dialog).getByText('공유')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '구피원 카드 보기' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: '구피원' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('player-fut-card')).not.toBeInTheDocument();
   });
 
   it('navigates home from the FC Guppy logo and shows subpage back icons', async () => {
