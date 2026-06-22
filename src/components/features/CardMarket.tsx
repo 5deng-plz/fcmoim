@@ -24,11 +24,9 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import {
-  PURCHASABLE_TRAITS,
+  TRAIT_CATALOG,
   findTraitById,
   getDefaultTraitForProfile,
-  getTraitGradeClasses,
-  getTraitGradeLabel,
   type TraitCard,
   type TraitIconName,
 } from '@/lib/traitCatalog';
@@ -58,16 +56,17 @@ const traitIconMap: Record<TraitIconName, LucideIcon> = {
 
 const COMPACT_TRAIT_CARD_CLASSES = 'flex h-[88px] w-[104px] shrink-0 snap-start flex-col items-center justify-center rounded-xl border px-1 py-1.5 text-center shadow-inner';
 const COMPACT_TRAIT_ICON_CLASSES = 'mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-card text-secondary';
+const DEFAULT_SELECTED_TRAIT_ID = 'dummy-runner';
 
 export default function CardMarket() {
   const memberProfile = useAuthStore((state) => state.memberProfile);
-  const [selectedTraitId, setSelectedTraitId] = useState(PURCHASABLE_TRAITS[0]?.id ?? '');
-  const selectedTrait = findTraitById(selectedTraitId) ?? PURCHASABLE_TRAITS[0];
+  const [selectedTraitId, setSelectedTraitId] = useState(DEFAULT_SELECTED_TRAIT_ID);
+  const selectedTrait = findTraitById(selectedTraitId) ?? TRAIT_CATALOG[0];
   const selectedEquippedTrait = findTraitById(memberProfile?.selectedTraitId);
   const fallbackTrait = getDefaultTraitForProfile(memberProfile?.mainPosition ?? 'MF', memberProfile?.stats ?? DEFAULT_STATS);
   const previewTrait = selectedTrait ?? selectedEquippedTrait ?? fallbackTrait;
   const sortedTraits = useMemo(
-    () => [...PURCHASABLE_TRAITS].sort((left, right) => left.price - right.price || left.name.localeCompare(right.name, 'ko')),
+    () => [...TRAIT_CATALOG].sort((left, right) => left.price - right.price || left.name.localeCompare(right.name, 'ko')),
     [],
   );
 
@@ -80,7 +79,7 @@ export default function CardMarket() {
       </div>
 
       <div className="mb-3 rounded-2xl border border-glass-border bg-glass-bg p-3 shadow-glass-shadow backdrop-blur-md" data-testid="locker-shop">
-        <TraitPreviewCard trait={previewTrait} equippedTrait={selectedEquippedTrait ?? fallbackTrait} />
+        <TraitPreviewCard trait={previewTrait} />
 
         <div
           className="mt-3 flex gap-2 snap-x snap-mandatory pb-1"
@@ -104,7 +103,7 @@ export default function CardMarket() {
   );
 }
 
-function TraitPreviewCard({ trait, equippedTrait }: { trait: TraitCard; equippedTrait: TraitCard }) {
+function TraitPreviewCard({ trait }: { trait: TraitCard }) {
   const TraitIcon = traitIconMap[trait.icon];
   return (
     <div className="rounded-xl border border-border bg-surface-card px-3 py-2.5 shadow-sm" data-testid="locker-shop-preview">
@@ -118,21 +117,19 @@ function TraitPreviewCard({ trait, equippedTrait }: { trait: TraitCard; equipped
         </div>
       </div>
       <p className="mt-2 line-clamp-1 text-[11px] font-bold leading-relaxed text-secondary">{trait.description}</p>
-      <p className="mt-1 truncate text-[10px] font-black text-tertiary">현재 카드: {equippedTrait.name}</p>
     </div>
   );
 }
 
 function TraitShopCard({ trait, isSelected, onClick }: { trait: TraitCard; isSelected: boolean; onClick: () => void }) {
   const TraitIcon = traitIconMap[trait.icon];
-  const traitClasses = getTraitGradeClasses(trait.grade);
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`${COMPACT_TRAIT_CARD_CLASSES} ${traitClasses} transition-all active:scale-[0.98] ${
-        isSelected ? 'border-brand-primary ring-2 ring-brand-primary/30' : 'hover:bg-glass-bg-hover'
+      className={`${COMPACT_TRAIT_CARD_CLASSES} border-border bg-surface-card text-primary transition-all active:scale-[0.98] ${
+        isSelected ? 'border-brand-primary bg-glass-bg-hover ring-2 ring-brand-primary/30' : 'hover:bg-glass-bg-hover'
       }`}
       aria-pressed={isSelected}
       data-testid="locker-shop-trait-card"
@@ -142,9 +139,6 @@ function TraitShopCard({ trait, isSelected, onClick }: { trait: TraitCard; isSel
       </span>
       <span className="w-full truncate text-[10px] font-black leading-tight opacity-90">
         {trait.name}
-      </span>
-      <span className="mt-0.5 w-full truncate text-[8px] font-black leading-none opacity-70">
-        {getTraitGradeLabel(trait.grade)}
       </span>
     </button>
   );

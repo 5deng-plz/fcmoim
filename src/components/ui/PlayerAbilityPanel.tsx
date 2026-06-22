@@ -32,8 +32,6 @@ import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import {
   findTraitById,
   getDefaultTraitForProfile,
-  getTraitGradeClasses,
-  getTraitGradeLabel,
   type TraitIconName,
 } from '@/lib/traitCatalog';
 import PreferredFootIcon from '@/components/ui/PreferredFootIcon';
@@ -150,7 +148,7 @@ function PlayerOvrStyleCard({
   const equippedTrait = findTraitById(selectedTraitId);
   const trait = equippedTrait ?? getDefaultTraitForProfile(position, stats);
   const TraitIcon = traitIconMap[trait.icon];
-  const traitClasses = equippedTrait ? getTraitGradeClasses(trait.grade) : 'playstyle-pos-card';
+  const traitClasses = 'border-border bg-surface-card text-primary';
   const tier = getOvrTierClasses(ovr);
 
   if (size === 'full') {
@@ -270,9 +268,6 @@ function PlayerOvrStyleCard({
 
         <span className="w-full truncate text-[10px] font-black tracking-tight leading-tight opacity-90">
           {trait.name}
-        </span>
-        <span className="mt-0.5 w-full truncate text-[8px] font-black leading-none opacity-70">
-          {getTraitGradeLabel(trait.grade)}
         </span>
       </div>
     </div>
