@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Home, CalendarDays, BarChart2, Users, Lock } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
 import { useToastStore } from '@/stores/useToastStore';
@@ -17,8 +18,31 @@ const GUEST_ALLOWED_TABS = new Set(['home']);
 export default function BottomNav() {
   const { activeTab, setActiveTab, showMyPage, showJoinForm, userStatus } = useAppStore();
   const { showToast } = useToastStore();
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
   const isGuest = userStatus === 'guest';
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.visualViewport) return;
+
+    const handleResize = () => {
+      const viewport = window.visualViewport;
+      if (!viewport) return;
+      // If viewport height drops below 85% of screen height, virtual keyboard is likely open
+      const isKeyboardActive = viewport.height < window.innerHeight * 0.85;
+      setIsKeyboardOpen(isKeyboardActive);
+    };
+
+    window.visualViewport.addEventListener('resize', handleResize);
+    window.visualViewport.addEventListener('scroll', handleResize);
+
+    return () => {
+      window.visualViewport?.removeEventListener('resize', handleResize);
+      window.visualViewport?.removeEventListener('scroll', handleResize);
+    };
+  }, []);
+
+  if (isKeyboardOpen) return null;
 
   const handleTabClick = (key: typeof tabs[number]['key']) => {
     if (isGuest && !GUEST_ALLOWED_TABS.has(key)) {

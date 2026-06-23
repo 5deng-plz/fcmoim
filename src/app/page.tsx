@@ -24,6 +24,7 @@ import ScrollPositionRail from '@/components/ui/ScrollPositionRail';
 import { useAppStore } from '@/stores/useAppStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useModalStore } from '@/stores/useModalStore';
+import { useSmartScroll } from '@/hooks/useSmartScroll';
 import { Ban, ShieldAlert } from 'lucide-react';
 
 function PhoneFrame({ children, surface = 'white' }: { children: ReactNode; surface?: 'white' | 'soft' }) {
@@ -84,7 +85,7 @@ function AppShell() {
   const { switchClub } = useAuthStore();
   const mainRef = useRef<HTMLElement | null>(null);
 
-
+  useSmartScroll(mainRef);
 
   const renderContent = () => {
     if (showTeamBrowse && showJoinForm) {
