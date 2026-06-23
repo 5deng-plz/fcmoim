@@ -23,7 +23,7 @@ export function useSmartScroll(ref: React.RefObject<HTMLElement | null>) {
       ) {
         // Wait slightly for the mobile virtual keyboard to overlay and resize the viewport
         setTimeout(() => {
-          if (target) {
+          if (target && typeof target.scrollIntoView === 'function') {
             target.scrollIntoView({
               behavior: 'smooth',
               block: 'center',
