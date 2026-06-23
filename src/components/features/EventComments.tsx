@@ -43,6 +43,12 @@ export default function EventComments({
   }, [onCommentCountChange]);
 
   useEffect(() => {
+    if (status === 'ready') {
+      onCommentCountChangeRef.current?.(comments.length);
+    }
+  }, [comments.length, status]);
+
+  useEffect(() => {
     let ignore = false;
 
     setStatus('loading');
@@ -56,7 +62,6 @@ export default function EventComments({
       .then(([items, lineupEntries]) => {
         if (ignore) return;
         setComments(items);
-        onCommentCountChangeRef.current?.(items.length);
         setLineup(lineupEntries);
         setStatus('ready');
       })
@@ -79,11 +84,7 @@ export default function EventComments({
     setIsSubmitting(true);
     try {
       const comment = await createEventComment({ clubId, targetType, targetId, content });
-      setComments((items) => {
-        const nextItems = [...items, comment];
-        onCommentCountChangeRef.current?.(nextItems.length);
-        return nextItems;
-      });
+      setComments((items) => [...items, comment]);
       setNewComment('');
       setStatus('ready');
     } catch {

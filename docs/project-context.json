@@ -1,8 +1,8 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 102,
-  "updatedAt": "2026-06-23T23:00:45+09:00",
+  "updateVersion": 103,
+  "updatedAt": "2026-06-23T23:06:30+09:00",
   "updatedBy": "codex",
   "currentPhase": "browser-feedback-community-feed-inline-compose",
   "activeWork": {
@@ -99,6 +99,13 @@
         "provider": "Local Supabase CLI",
         "command": "npm run verify:db:local",
         "summary": "Local API smoke tests passed against the reset Local Supabase stack, including feed post comment and reaction endpoint coverage."
+      },
+      "runtimeErrorFollowup": {
+        "status": "passed",
+        "type": "runtime",
+        "provider": "curl + bundle grep + Vitest",
+        "command": "curl -i http://localhost:3000/; curl -s http://localhost:3000/_next/static/chunks/src_components_tabs_01o6m85._.js | rg \"FEED_REACTIONS|Flame|fire|laugh|goat|clap\"; npx vitest run tests/feed-posts-service.test.ts tests/frontend-auth-and-schedule-ui.test.tsx; npm run typecheck",
+        "summary": "GET / returned 200 OK. CommunityPage bundled FEED_REACTIONS uses the new emoji labels; remaining Flame reference is RecordsTab scoring icon usage, not feed reactions. EventComments no longer invokes parent comment-count updates from inside the setComments updater."
       }
     },
     "retrospective": {
@@ -106,7 +113,9 @@
         "Feed compose used a modal, which interrupted the board flow.",
         "Feed post comment count was hydrated only from list responses, so newly submitted embedded comments did not update the parent post count.",
         "Existing feed reaction labels were domain-specific instead of the requested simple emoji set.",
-        "Local Supabase reset invalidated the previous browser session, so browser evidence used the configured local QA email login flow."
+        "Local Supabase reset invalidated the previous browser session, so browser evidence used the configured local QA email login flow.",
+        "A follow-up runtime review found EventComments was calling the parent comment-count callback inside a React state updater, which caused a setState-during-render warning after comment submit.",
+        "The earlier browserRuntime evidence did not include attached terminal log review; this follow-up used GET / and bundle inspection to verify the reported Flame runtime failure was not present in the current CommunityPage bundle."
       ],
       "missedEvidence": [],
       "harnessImprovementProposal": [],
