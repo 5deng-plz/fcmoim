@@ -386,6 +386,12 @@
       --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
       --card-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.32);
 
+      /* ── Soccer Boot Icon (Dark Chzzk Theme) ── */
+      --icon-boot-stud: #25283e;
+      --icon-boot-collar: #090a10;
+      --icon-boot-mark: #00ffa3;
+      --icon-boot-lace: #00e58f;
+
       /* ── 축구 게임 메타포 (다크 모드) ── */
       --condition-best: #ef4444;
       --condition-good: #f97316;
