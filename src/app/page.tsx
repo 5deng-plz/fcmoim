@@ -23,6 +23,7 @@ import Modal from '@/components/ui/Modal';
 import ScrollPositionRail from '@/components/ui/ScrollPositionRail';
 import { useAppStore } from '@/stores/useAppStore';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useModalStore } from '@/stores/useModalStore';
 import { Ban, ShieldAlert } from 'lucide-react';
 
 function PhoneFrame({ children, surface = 'white' }: { children: ReactNode; surface?: 'white' | 'soft' }) {
@@ -83,13 +84,7 @@ function AppShell() {
   const { switchClub } = useAuthStore();
   const mainRef = useRef<HTMLElement | null>(null);
 
-  useEffect(() => {
-    const tab = new URLSearchParams(window.location.search).get('tab');
-    if (tab === 'home' || tab === 'schedule' || tab === 'records' || tab === 'locker_room' || tab === 'community') {
-      setActiveTab(tab);
-      window.history.replaceState(null, '', window.location.pathname);
-    }
-  }, [setActiveTab]);
+
 
   const renderContent = () => {
     if (showTeamBrowse && showJoinForm) {
@@ -180,12 +175,140 @@ function JoinRequestModal() {
 
 // ─── 루트 페이지 ───
 export default function Home() {
-  const { authView, userStatus, isAuthenticated, showJoinForm } = useAppStore();
+  const {
+    authView,
+    userStatus,
+    isAuthenticated,
+    activeTab,
+    showMyPage,
+    showJoinForm,
+    showTeamBrowse,
+    showNotifications,
+    setActiveTab,
+    setShowMyPage,
+    setShowJoinForm,
+    setShowTeamBrowse,
+    setShowNotifications,
+  } = useAppStore();
+  const { activeModal, openModal, closeModal } = useModalStore();
   const { initialize, isLoading } = useAuthStore();
+
+  const isHandlingPopState = useRef(false);
 
   useEffect(() => {
     void initialize();
   }, [initialize]);
+
+  // 1. PopState 리스너 (뒤로가기 가로채기 및 상태 동기화)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      const view = params.get('view');
+      const modal = params.get('modal');
+
+      isHandlingPopState.current = true;
+
+      // Tab sync
+      if (tab === 'home' || tab === 'schedule' || tab === 'records' || tab === 'locker_room' || tab === 'community') {
+        if (useAppStore.getState().activeTab !== tab) {
+          setActiveTab(tab);
+        }
+      }
+
+      // View sync
+      const currentStore = useAppStore.getState();
+      if (view === 'mypage') {
+        if (!currentStore.showMyPage) setShowMyPage(true);
+      } else if (view === 'notifications') {
+        if (!currentStore.showNotifications) setShowNotifications(true);
+      } else if (view === 'join-form-secondary') {
+        if (!currentStore.showTeamBrowse) setShowTeamBrowse(true);
+        if (!currentStore.showJoinForm) setShowJoinForm(true);
+      } else if (view === 'team-browse') {
+        if (!currentStore.showTeamBrowse) setShowTeamBrowse(true);
+        if (currentStore.showJoinForm) setShowJoinForm(false);
+      } else if (view === 'join-form') {
+        if (!currentStore.showJoinForm) setShowJoinForm(true);
+        if (currentStore.showTeamBrowse) setShowTeamBrowse(false);
+      } else {
+        if (currentStore.showMyPage) setShowMyPage(false);
+        if (currentStore.showNotifications) setShowNotifications(false);
+        if (currentStore.showJoinForm) setShowJoinForm(false);
+        if (currentStore.showTeamBrowse) setShowTeamBrowse(false);
+      }
+
+      // Modal sync
+      if (modal === 'matchCreate' || modal === 'pollCreate' || modal === 'announcementCreate') {
+        if (useModalStore.getState().activeModal !== modal) openModal(modal);
+      } else {
+        if (useModalStore.getState().activeModal !== null) closeModal();
+      }
+
+      isHandlingPopState.current = false;
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    
+    // 최초 진입 시 URL 에 따라 스토어 상태 초기 동기화
+    handlePopState();
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [setActiveTab, setShowMyPage, setShowJoinForm, setShowTeamBrowse, setShowNotifications, openModal, closeModal]);
+
+  // 2. Zustand 상태 변화를 URL 파라미터에 동기화
+  useEffect(() => {
+    if (typeof window === 'undefined' || isHandlingPopState.current) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const currentView = params.get('view');
+    const currentModal = params.get('modal');
+
+    let targetView = '';
+    if (showMyPage) targetView = 'mypage';
+    else if (showNotifications) targetView = 'notifications';
+    else if (showTeamBrowse && showJoinForm) targetView = 'join-form-secondary';
+    else if (showTeamBrowse) targetView = 'team-browse';
+    else if (showJoinForm) targetView = 'join-form';
+
+    const targetModal = activeModal || '';
+    const targetTab = activeTab;
+
+    const wasViewOpen = !!currentView;
+    const isViewOpenNow = !!targetView;
+    const wasModalOpen = !!currentModal;
+    const isModalOpenNow = !!targetModal;
+
+    // 만약 사용자가 X 버튼 등으로 수동으로 모달/뷰를 닫았는데 URL 에는 아직 켜져있다면,
+    // 브라우저 뒤로가기를 호출(history.back())해 스택을 뒤로 보낸다.
+    if ((wasViewOpen && !isViewOpenNow) || (wasModalOpen && !isModalOpenNow)) {
+      window.history.back();
+      return;
+    }
+
+    const newParams = new URLSearchParams();
+    newParams.set('tab', targetTab);
+    if (targetView) newParams.set('view', targetView);
+    if (targetModal) newParams.set('modal', targetModal);
+
+    const newSearch = `?${newParams.toString()}`;
+    const currentSearch = window.location.search;
+
+    if (newSearch !== currentSearch) {
+      // 뷰나 모달 오버레이가 새로 열리는 시점에만 pushState,
+      // 그 외 단순 상태 변화(탭 클릭 등)는 replaceState로 처리
+      const isOpening = (!currentView && targetView) || (!currentModal && targetModal);
+      if (isOpening) {
+        window.history.pushState(null, '', newSearch);
+      } else {
+        window.history.replaceState(null, '', newSearch);
+      }
+    }
+  }, [activeTab, showMyPage, showJoinForm, showTeamBrowse, showNotifications, activeModal]);
 
   if (isLoading) {
     return (

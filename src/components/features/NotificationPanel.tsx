@@ -232,7 +232,6 @@ function openTargetUrl(
     if (tab === 'records' && section === 'announcements') {
       actions.setRecordsSubTab('announcements');
     }
-    window.history.replaceState(null, '', window.location.pathname);
     return;
   }
 
