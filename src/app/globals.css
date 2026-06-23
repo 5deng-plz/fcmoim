@@ -1135,8 +1135,10 @@
     -webkit-font-smoothing: subpixel-antialiased; /* 다크모드에서 서체 굵기 유지 */
   }
 
-  /* 네온 그린 텍스트가 번쩍이는 할레이션 방지를 위한 디밍 보정 */
-  .text-brand-primary, .text-fcgreen-500, .text-fcgreen-600 {
-    text-shadow: 0 0 1px rgba(0, 0, 0, 0.5); /* 텍스트 주변 대비 조절 */
+  /* 네온 그린 텍스트가 번쩍이는 할레이션 방지를 위한 디밍 보정 (다크 모드 전용) */
+  :root[data-theme="dark"] .text-brand-primary, 
+  :root[data-theme="dark"] .text-fcgreen-500, 
+  :root[data-theme="dark"] .text-fcgreen-600 {
+    text-shadow: 0 0 1px rgba(0, 0, 0, 0.5); /* 어두운 배경에서만 텍스트 주변 대비 조절 */
   }
 

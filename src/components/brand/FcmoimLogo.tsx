@@ -15,64 +15,95 @@ export default function FcmoimLogo({ size = 120, className, ...props }: FcmoimLo
             {...props}
         >
             <defs>
-                <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#00ffa3" />
-                    <stop offset="100%" stopColor="#007a4d" />
+                <clipPath id="app-icon-clip">
+                    <rect x="10" y="10" width="100" height="100" rx="22" />
+                </clipPath>
+                {/* 그라데이션 및 다크모드 대응 */}
+                <linearGradient id="net-field-light" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#00b872" />
+                    <stop offset="100%" stopColor="#00995e" />
                 </linearGradient>
-                <linearGradient id="logo-shield-bg" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#141624" />
-                    <stop offset="100%" stopColor="#090a10" />
+                <linearGradient id="net-field-dark" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#00ffa3" stopOpacity="0.8" />
+                    <stop offset="100%" stopColor="#00b872" stopOpacity="0.9" />
+                </linearGradient>
+                <linearGradient id="net-post-light" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#497897" />
+                    <stop offset="100%" stopColor="#31556d" />
+                </linearGradient>
+                <linearGradient id="net-post-dark" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#00e58f" />
+                    <stop offset="100%" stopColor="#00ffa3" />
                 </linearGradient>
             </defs>
-            
-            {/* Shield Outline */}
-            <path 
-                d="M 60 10 L 105 25 C 105 75 85 105 60 115 C 35 105 15 75 15 25 Z" 
-                fill="url(#logo-shield-bg)" 
-                stroke="url(#logo-grad)" 
-                strokeWidth="4.5" 
-                strokeLinejoin="round"
+
+            {/* 카드 배경: 라이트모드는 백색, 다크모드는 딥블랙 */}
+            <rect 
+                x="10" y="10" width="100" height="100" rx="22" 
+                className="fill-[#ffffff] dark:fill-[#141624]" 
             />
-            
-            {/* Soccer Field Pitch Lines (Decorative) */}
-            <path 
-                d="M 28 52 C 40 47 80 47 92 52 M 60 50 L 60 92" 
-                stroke="url(#logo-grad)" 
-                strokeWidth="1.5" 
-                opacity="0.25" 
-                strokeLinecap="round" 
+
+            {/* 하단 잔디밭 그물 영역 */}
+            <rect 
+                x="10" y="75" width="100" height="35" 
+                clipPath="url(#app-icon-clip)" 
+                className="fill-[url(#net-field-light)] dark:fill-[url(#net-field-dark)]" 
             />
-            <circle 
-                cx="60" 
-                cy="70" 
-                r="10" 
-                stroke="url(#logo-grad)" 
-                strokeWidth="1.5" 
-                opacity="0.25" 
+
+            {/* 골 그물 격자 무늬 (더 정교한 골네트 감성 추가) */}
+            <g clipPath="url(#app-icon-clip)" opacity="0.15" className="stroke-black dark:stroke-white" strokeWidth="1.5">
+                <path d="M 10 80 L 110 80 M 10 90 L 110 90 M 10 100 L 110 100" />
+                <path d="M 30 75 L 30 110 M 50 75 L 50 110 M 70 75 L 70 110 M 90 75 L 90 110" />
+            </g>
+
+            {/* 골대 지지대 프레임 */}
+            <path 
+                d="M 32 38 L 38 46 V 78" 
                 fill="none" 
-            />
-            
-            {/* Dynamic F and C Letterforms */}
-            {/* F Letter */}
-            <path 
-                d="M 42 38 L 68 38 M 42 38 L 42 82 M 42 56 L 62 56" 
-                stroke="#ffffff" 
-                strokeWidth="6" 
-                strokeLinecap="round" 
+                className="stroke-[#1b2a36] dark:stroke-[#00ffa3]" 
+                strokeWidth="2.5" 
                 strokeLinejoin="round" 
             />
-            
-            {/* C Letter wrapping around F */}
             <path 
-                d="M 82 45 C 78 32 54 30 49 45 C 44 60 44 70 51 82 C 59 92 80 88 83 75" 
-                stroke="url(#logo-grad)" 
-                strokeWidth="6.5" 
-                strokeLinecap="round" 
+                d="M 88 38 L 82 46 V 78" 
+                fill="none" 
+                className="stroke-[#1b2a36] dark:stroke-[#00ffa3]" 
+                strokeWidth="2.5" 
                 strokeLinejoin="round" 
             />
-            
-            {/* Accent dot */}
-            <circle cx="60" cy="22" r="3.5" fill="#00ffa3" className="animate-pulse" />
+
+            {/* 골대 본체 크로스바 (입체감 보정) */}
+            <path 
+                d="M 22 78 V 38 A 10 10 0 0 1 32 28 H 88 A 10 10 0 0 1 98 38 V 78 H 88 V 38 A 2 2 0 0 0 86 36 H 34 A 2 2 0 0 0 32 38 V 78 Z" 
+                className="fill-[url(#net-post-light)] dark:fill-[url(#net-post-dark)] stroke-[#1b2a36] dark:stroke-[#090a10]" 
+                strokeWidth="2.5" 
+                strokeLinejoin="round" 
+            />
+
+            {/* fcmoim 브랜드 텍스트 */}
+            <text 
+                x="60" 
+                y="60" 
+                fontFamily="system-ui, -apple-system, sans-serif" 
+                fontWeight="900" 
+                fontSize="24" 
+                textAnchor="middle" 
+                dominantBaseline="middle" 
+                className="fill-[#1b252b] dark:fill-[#ffffff] stroke-[#ffffff] dark:stroke-[#141624] paint-order-stroke-fill"
+                strokeWidth="5" 
+                strokeLinejoin="round" 
+                letterSpacing="-0.5"
+            >
+                fcmoim
+            </text>
+
+            {/* 전체 테두리 프레임 */}
+            <rect 
+                x="10" y="10" width="100" height="100" rx="22" 
+                fill="none" 
+                className="stroke-[#1b2a36] dark:stroke-[#25283e]" 
+                strokeWidth="2.5" 
+            />
         </svg>
     );
 }
