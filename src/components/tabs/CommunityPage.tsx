@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
-import { ChevronDown, ChevronUp, Megaphone, Pin, MessageSquare, Image as ImageIcon, Pencil, Trash2, X, Plus, Flame, Laugh, Crown, ThumbsUp, MessageCircle } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { ChevronDown, ChevronUp, Megaphone, Pin, MessageSquare, Image as ImageIcon, Pencil, Trash2, X, Plus, MessageCircle, Paperclip, Video, Send } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import { useAnnouncementStore } from '@/stores/useAnnouncementStore';
 import type { Announcement } from '@/stores/announcementClient';
@@ -174,6 +174,25 @@ export default function CommunityPage({
     }
   };
 
+  const handleCancelCompose = () => {
+    if (isPosting) return;
+    setIsComposeOpen(false);
+    setComposeText('');
+    setComposeMediaUrl('');
+    setComposeType('text');
+  };
+
+  const handleComposeTypeChange = (type: FeedContentType) => {
+    setComposeType(type);
+    if (type === 'text') setComposeMediaUrl('');
+  };
+
+  const updateFeedPostCommentCount = (postId: string, count: number) => {
+    setFeedPosts((posts) => posts.map((post) => (
+      post.id === postId ? { ...post, commentCount: count } : post
+    )));
+  };
+
   const handleReaction = async (post: FeedPost, reactionType: FeedReactionType) => {
     try {
       await toggleFeedReaction({ clubId: activeClubId, postId: post.id, reactionType });
@@ -224,9 +243,20 @@ export default function CommunityPage({
           <FeedTimeline
             posts={feedPosts}
             status={feedStatus}
-            onCompose={() => setIsComposeOpen(true)}
+            composeOpen={isComposeOpen}
+            composeType={composeType}
+            composeText={composeText}
+            composeMediaUrl={composeMediaUrl}
+            isPosting={isPosting}
+            onCompose={() => setIsComposeOpen((open) => !open)}
+            onComposeTypeChange={handleComposeTypeChange}
+            onComposeTextChange={setComposeText}
+            onComposeMediaUrlChange={setComposeMediaUrl}
+            onCreatePost={handleCreatePost}
+            onCancelCompose={handleCancelCompose}
             onReaction={handleReaction}
             onDelete={handleDeletePost}
+            onCommentCountChange={updateFeedPostCommentCount}
             commentsPostId={commentsPostId}
             setCommentsPostId={setCommentsPostId}
             clubId={activeClubId}
@@ -237,11 +267,22 @@ export default function CommunityPage({
           <FeedGallery
             posts={feedPosts}
             status={feedStatus}
+            composeOpen={isComposeOpen}
+            composeType={composeType}
+            composeText={composeText}
+            composeMediaUrl={composeMediaUrl}
+            isPosting={isPosting}
             onCompose={() => {
               setComposeType('image');
-              setIsComposeOpen(true);
+              setIsComposeOpen((open) => !open);
             }}
+            onComposeTypeChange={handleComposeTypeChange}
+            onComposeTextChange={setComposeText}
+            onComposeMediaUrlChange={setComposeMediaUrl}
+            onCreatePost={handleCreatePost}
+            onCancelCompose={handleCancelCompose}
             onReaction={handleReaction}
+            onCommentCountChange={updateFeedPostCommentCount}
             commentsPostId={commentsPostId}
             setCommentsPostId={setCommentsPostId}
             clubId={activeClubId}
@@ -388,81 +429,55 @@ export default function CommunityPage({
           </button>
         </div>
       </Modal>
-      <Modal title="피드 작성" isOpen={isComposeOpen} onClose={() => setIsComposeOpen(false)}>
-        <div className="space-y-4">
-          <div className="grid grid-cols-3 gap-2">
-            {(['text', 'image', 'video'] as const).map((type) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => setComposeType(type)}
-                className={`rounded-xl border px-3 py-2 text-xs font-black transition-all ${
-                  composeType === type
-                    ? 'border-social-like bg-social-like/10 text-social-like'
-                    : 'border-border bg-surface-bg text-secondary'
-                }`}
-              >
-                {type === 'text' ? '글' : type === 'image' ? '사진' : '영상'}
-              </button>
-            ))}
-          </div>
-          <label className="block">
-            <span className="mb-1 block text-xs font-bold text-secondary">내용</span>
-            <textarea
-              value={composeText}
-              onChange={(event) => setComposeText(event.target.value)}
-              rows={4}
-              maxLength={500}
-              className="w-full resize-none rounded-xl border border-border bg-surface-bg px-3 py-2.5 text-sm text-primary transition-colors focus:border-brand-primary focus:outline-none"
-            />
-          </label>
-          {composeType !== 'text' ? (
-            <label className="block">
-              <span className="mb-1 block text-xs font-bold text-secondary">미디어 URL</span>
-              <input
-                value={composeMediaUrl}
-                onChange={(event) => setComposeMediaUrl(event.target.value)}
-                placeholder="https:// 또는 /storage/v1/object/..."
-                className="w-full rounded-xl border border-border bg-surface-bg px-3 py-2.5 text-sm text-primary transition-colors focus:border-brand-primary focus:outline-none"
-              />
-            </label>
-          ) : null}
-          <button
-            type="button"
-            disabled={isPosting}
-            onClick={() => void handleCreatePost()}
-            className="w-full rounded-xl bg-action-primary px-4 py-3 text-sm font-black text-white transition-all hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-tertiary"
-          >
-            {isPosting ? '등록 중' : '등록'}
-          </button>
-        </div>
-      </Modal>
     </div>
   );
 }
 
-const FEED_REACTIONS: Array<{ type: FeedReactionType; label: string; Icon: ComponentType<{ size?: number; 'aria-hidden'?: boolean }> }> = [
-  { type: 'fire', label: '열정', Icon: Flame },
-  { type: 'laugh', label: '웃김', Icon: Laugh },
-  { type: 'goat', label: 'GOAT', Icon: Crown },
-  { type: 'clap', label: '박수', Icon: ThumbsUp },
+const FEED_REACTIONS: Array<{ type: FeedReactionType; label: string; emoji: string }> = [
+  { type: 'up', label: '좋아요', emoji: '👍' },
+  { type: 'down', label: '별로예요', emoji: '👎' },
+  { type: 'check', label: '확인', emoji: '✅' },
+  { type: 'smile', label: '웃어요', emoji: '🙂' },
+  { type: 'sad', label: '아쉬워요', emoji: '😢' },
 ];
 
 function FeedTimeline({
   posts,
   status,
+  composeOpen,
+  composeType,
+  composeText,
+  composeMediaUrl,
+  isPosting,
   onCompose,
+  onComposeTypeChange,
+  onComposeTextChange,
+  onComposeMediaUrlChange,
+  onCreatePost,
+  onCancelCompose,
   onReaction,
   onDelete,
+  onCommentCountChange,
   commentsPostId,
   setCommentsPostId,
   clubId,
 }: {
   posts: FeedPost[];
   status: 'idle' | 'loading' | 'ready' | 'error';
+  composeOpen: boolean;
+  composeType: FeedContentType;
+  composeText: string;
+  composeMediaUrl: string;
+  isPosting: boolean;
   onCompose: () => void;
+  onComposeTypeChange: (type: FeedContentType) => void;
+  onComposeTextChange: (text: string) => void;
+  onComposeMediaUrlChange: (url: string) => void;
+  onCreatePost: () => void;
+  onCancelCompose: () => void;
   onReaction: (post: FeedPost, reactionType: FeedReactionType) => void;
   onDelete: (post: FeedPost) => void;
+  onCommentCountChange: (postId: string, count: number) => void;
   commentsPostId: string | null;
   setCommentsPostId: (postId: string | null) => void;
   clubId: string;
@@ -470,6 +485,19 @@ function FeedTimeline({
   return (
     <section className="space-y-3">
       <FeedHeader title="게시판" icon={<MessageSquare size={18} />} onCompose={onCompose} />
+      {composeOpen ? (
+        <FeedComposer
+          composeType={composeType}
+          composeText={composeText}
+          composeMediaUrl={composeMediaUrl}
+          isPosting={isPosting}
+          onComposeTypeChange={onComposeTypeChange}
+          onComposeTextChange={onComposeTextChange}
+          onComposeMediaUrlChange={onComposeMediaUrlChange}
+          onCreatePost={onCreatePost}
+          onCancelCompose={onCancelCompose}
+        />
+      ) : null}
       {status === 'loading' ? <FeedStatus label="피드를 불러오는 중입니다" /> : null}
       {status === 'error' ? <FeedStatus label="피드를 불러오지 못했어요" /> : null}
       {status === 'ready' && posts.length === 0 ? <FeedStatus label="아직 피드가 없어요" /> : null}
@@ -481,6 +509,7 @@ function FeedTimeline({
           onDelete={onDelete}
           commentsOpen={commentsPostId === post.id}
           setCommentsOpen={(open) => setCommentsPostId(open ? post.id : null)}
+          onCommentCountChange={(count) => onCommentCountChange(post.id, count)}
           clubId={clubId}
         />
       ))}
@@ -491,16 +520,38 @@ function FeedTimeline({
 function FeedGallery({
   posts,
   status,
+  composeOpen,
+  composeType,
+  composeText,
+  composeMediaUrl,
+  isPosting,
   onCompose,
+  onComposeTypeChange,
+  onComposeTextChange,
+  onComposeMediaUrlChange,
+  onCreatePost,
+  onCancelCompose,
   onReaction,
+  onCommentCountChange,
   commentsPostId,
   setCommentsPostId,
   clubId,
 }: {
   posts: FeedPost[];
   status: 'idle' | 'loading' | 'ready' | 'error';
+  composeOpen: boolean;
+  composeType: FeedContentType;
+  composeText: string;
+  composeMediaUrl: string;
+  isPosting: boolean;
   onCompose: () => void;
+  onComposeTypeChange: (type: FeedContentType) => void;
+  onComposeTextChange: (text: string) => void;
+  onComposeMediaUrlChange: (url: string) => void;
+  onCreatePost: () => void;
+  onCancelCompose: () => void;
   onReaction: (post: FeedPost, reactionType: FeedReactionType) => void;
+  onCommentCountChange: (postId: string, count: number) => void;
   commentsPostId: string | null;
   setCommentsPostId: (postId: string | null) => void;
   clubId: string;
@@ -508,6 +559,19 @@ function FeedGallery({
   return (
     <section className="space-y-3">
       <FeedHeader title="갤러리" icon={<ImageIcon size={18} />} onCompose={onCompose} />
+      {composeOpen ? (
+        <FeedComposer
+          composeType={composeType}
+          composeText={composeText}
+          composeMediaUrl={composeMediaUrl}
+          isPosting={isPosting}
+          onComposeTypeChange={onComposeTypeChange}
+          onComposeTextChange={onComposeTextChange}
+          onComposeMediaUrlChange={onComposeMediaUrlChange}
+          onCreatePost={onCreatePost}
+          onCancelCompose={onCancelCompose}
+        />
+      ) : null}
       {status === 'loading' ? <FeedStatus label="갤러리를 불러오는 중입니다" /> : null}
       {status === 'error' ? <FeedStatus label="갤러리를 불러오지 못했어요" /> : null}
       {status === 'ready' && posts.length === 0 ? <FeedStatus label="아직 미디어 피드가 없어요" /> : null}
@@ -521,12 +585,20 @@ function FeedGallery({
                 type="button"
                 onClick={() => setCommentsPostId(commentsPostId === post.id ? null : post.id)}
                 className="mt-2 inline-flex items-center gap-1 text-[11px] font-black text-secondary"
+                aria-label={`댓글 ${post.commentCount}개`}
               >
                 <MessageCircle size={13} aria-hidden="true" />
                 {post.commentCount}
               </button>
               {commentsPostId === post.id ? (
-                <EventComments clubId={clubId} targetType="feed_post" targetId={post.id} showPhase={false} embedded />
+                <EventComments
+                  clubId={clubId}
+                  targetType="feed_post"
+                  targetId={post.id}
+                  showPhase={false}
+                  embedded
+                  onCommentCountChange={(count) => onCommentCountChange(post.id, count)}
+                />
               ) : null}
             </div>
           </div>
@@ -555,12 +627,116 @@ function FeedHeader({ title, icon, onCompose }: { title: string; icon: ReactNode
   );
 }
 
+function FeedComposer({
+  composeType,
+  composeText,
+  composeMediaUrl,
+  isPosting,
+  onComposeTypeChange,
+  onComposeTextChange,
+  onComposeMediaUrlChange,
+  onCreatePost,
+  onCancelCompose,
+}: {
+  composeType: FeedContentType;
+  composeText: string;
+  composeMediaUrl: string;
+  isPosting: boolean;
+  onComposeTypeChange: (type: FeedContentType) => void;
+  onComposeTextChange: (text: string) => void;
+  onComposeMediaUrlChange: (url: string) => void;
+  onCreatePost: () => void;
+  onCancelCompose: () => void;
+}) {
+  const canSubmit = !isPosting && (
+    composeType === 'text'
+      ? composeText.trim().length > 0
+      : composeMediaUrl.trim().length > 0
+  );
+
+  return (
+    <div className="rounded-xl border border-glass-border bg-glass-bg p-3 shadow-glass-shadow backdrop-blur-md" data-testid="feed-inline-composer">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="flex gap-1.5" role="group" aria-label="피드 유형">
+          {([
+            { type: 'text' as const, label: '글', icon: <MessageSquare size={14} aria-hidden="true" /> },
+            { type: 'image' as const, label: '사진', icon: <ImageIcon size={14} aria-hidden="true" /> },
+            { type: 'video' as const, label: '영상', icon: <Video size={14} aria-hidden="true" /> },
+          ]).map((option) => {
+            const selected = composeType === option.type;
+
+            return (
+              <button
+                key={option.type}
+                type="button"
+                onClick={() => onComposeTypeChange(option.type)}
+                aria-pressed={selected}
+                className={`inline-flex h-8 items-center justify-center gap-1 rounded-lg border px-2 text-[11px] font-black transition-all ${
+                  selected
+                    ? 'border-brand-primary bg-brand-primary-bg text-brand-primary'
+                    : 'border-border bg-surface-bg text-secondary'
+                }`}
+              >
+                {option.icon}
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          onClick={onCancelCompose}
+          disabled={isPosting}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface-bg text-secondary transition-all hover:bg-surface-hover active:scale-95 disabled:opacity-50"
+          aria-label="피드 작성 닫기"
+        >
+          <X size={14} aria-hidden="true" />
+        </button>
+      </div>
+
+      <textarea
+        value={composeText}
+        onChange={(event) => onComposeTextChange(event.target.value)}
+        rows={2}
+        maxLength={500}
+        placeholder={composeType === 'text' ? '무슨 이야기를 남길까요?' : '미디어와 함께 남길 말'}
+        className="w-full resize-none rounded-xl border border-border bg-surface-bg px-3 py-2 text-xs font-bold text-primary placeholder:text-tertiary focus:border-brand-primary focus:outline-none"
+      />
+
+      {composeType !== 'text' ? (
+        <label className="mt-2 flex items-center gap-2 rounded-xl border border-border bg-surface-bg px-3 py-2">
+          <Paperclip size={14} className="shrink-0 text-secondary" aria-hidden="true" />
+          <input
+            value={composeMediaUrl}
+            onChange={(event) => onComposeMediaUrlChange(event.target.value)}
+            placeholder="미디어 URL"
+            className="min-w-0 flex-1 bg-transparent text-xs font-bold text-primary placeholder:text-tertiary focus:outline-none"
+          />
+        </label>
+      ) : null}
+
+      <div className="mt-2 flex justify-end">
+        <button
+          type="button"
+          disabled={!canSubmit}
+          onClick={() => void onCreatePost()}
+          className="inline-flex h-9 min-w-20 items-center justify-center gap-1.5 rounded-xl bg-action-primary px-3 text-xs font-black text-white transition-all hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-tertiary"
+        >
+          <Send size={13} aria-hidden="true" />
+          {isPosting ? '등록 중' : '등록'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function FeedPostCard({
   post,
   onReaction,
   onDelete,
   commentsOpen,
   setCommentsOpen,
+  onCommentCountChange,
   clubId,
 }: {
   post: FeedPost;
@@ -568,6 +744,7 @@ function FeedPostCard({
   onDelete: (post: FeedPost) => void;
   commentsOpen: boolean;
   setCommentsOpen: (open: boolean) => void;
+  onCommentCountChange: (count: number) => void;
   clubId: string;
 }) {
   return (
@@ -575,7 +752,7 @@ function FeedPostCard({
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-black text-primary">{post.authorName}</p>
-          <p className="text-[11px] font-bold text-tertiary">{formatRelativeDate(post.createdAt)}</p>
+          <p className="text-[11px] font-bold text-tertiary">{formatFeedDateTime(post.createdAt)}</p>
         </div>
         <button
           type="button"
@@ -594,13 +771,21 @@ function FeedPostCard({
           type="button"
           onClick={() => setCommentsOpen(!commentsOpen)}
           className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-bg px-2 py-1 text-[11px] font-black text-secondary"
+          aria-label={`댓글 ${post.commentCount}개`}
         >
           <MessageCircle size={13} aria-hidden="true" />
           {post.commentCount}
         </button>
       </div>
       {commentsOpen ? (
-        <EventComments clubId={clubId} targetType="feed_post" targetId={post.id} showPhase={false} embedded />
+        <EventComments
+          clubId={clubId}
+          targetType="feed_post"
+          targetId={post.id}
+          showPhase={false}
+          embedded
+          onCommentCountChange={onCommentCountChange}
+        />
       ) : null}
     </article>
   );
@@ -632,7 +817,7 @@ function FeedMedia({ post, compact = false }: { post: FeedPost; compact?: boolea
 function FeedReactions({ post, onReaction }: { post: FeedPost; onReaction: (post: FeedPost, reactionType: FeedReactionType) => void }) {
   return (
     <div className="flex flex-wrap gap-1">
-      {FEED_REACTIONS.map(({ type, label, Icon }) => {
+      {FEED_REACTIONS.map(({ type, label, emoji }) => {
         const selected = post.myReactions.includes(type);
         return (
           <button
@@ -646,7 +831,7 @@ function FeedReactions({ post, onReaction }: { post: FeedPost; onReaction: (post
             }`}
             aria-label={label}
           >
-            <Icon size={12} />
+            <span aria-hidden="true">{emoji}</span>
             {post.reactionCounts[type]}
           </button>
         );
@@ -668,4 +853,13 @@ function formatRelativeDate(value: string) {
   if (Number.isNaN(date.getTime())) return '';
 
   return `${date.getMonth() + 1}월 ${date.getDate()}일`;
+}
+
+function formatFeedDateTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const hours = `${date.getHours()}`.padStart(2, '0');
+  const minutes = `${date.getMinutes()}`.padStart(2, '0');
+  return `${date.getMonth() + 1}월 ${date.getDate()}일 ${hours}:${minutes}`;
 }

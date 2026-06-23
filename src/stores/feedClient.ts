@@ -3,7 +3,7 @@
 import { SchedulePollApiError } from './schedulePollClient';
 
 export type FeedContentType = 'text' | 'image' | 'video';
-export type FeedReactionType = 'fire' | 'laugh' | 'goat' | 'clap';
+export type FeedReactionType = 'up' | 'down' | 'check' | 'smile' | 'sad';
 
 export type FeedPost = {
   id: string;

@@ -2,7 +2,7 @@ import { AppError } from '../types/api';
 import type { AuthContext, TeamMembershipRow } from '../types/domain';
 
 export type FeedContentType = 'text' | 'image' | 'video';
-export type FeedReactionType = 'fire' | 'laugh' | 'goat' | 'clap';
+export type FeedReactionType = 'up' | 'down' | 'check' | 'smile' | 'sad';
 
 export type FeedPostRow = {
   id: string;
@@ -165,7 +165,7 @@ function normalizeContentTypeFilter(value: string | null | undefined) {
 }
 
 function normalizeReactionType(value: string): FeedReactionType {
-  if (value === 'fire' || value === 'laugh' || value === 'goat' || value === 'clap') return value;
+  if (value === 'up' || value === 'down' || value === 'check' || value === 'smile' || value === 'sad') return value;
   throw new AppError('bad_request', 'reactionType is invalid.');
 }
 

@@ -2696,14 +2696,17 @@ async function hydrateFeedPosts(
   return rows.map((row) => {
     const postReactions = reactionsByPostId.get(row.id) ?? [];
     const reactionCounts = {
-      fire: 0,
-      laugh: 0,
-      goat: 0,
-      clap: 0,
+      up: 0,
+      down: 0,
+      check: 0,
+      smile: 0,
+      sad: 0,
     } satisfies Record<FeedReactionType, number>;
 
     for (const reaction of postReactions) {
-      reactionCounts[reaction.reaction_type] += 1;
+      if (reaction.reaction_type in reactionCounts) {
+        reactionCounts[reaction.reaction_type] += 1;
+      }
     }
 
     return {

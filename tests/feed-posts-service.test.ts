@@ -31,7 +31,7 @@ function createRepositories() {
         mediaUrl: input.mediaUrl,
         createdAt: '2026-06-22T00:00:00.000Z',
         updatedAt: '2026-06-22T00:00:00.000Z',
-        reactionCounts: { fire: 0, laugh: 0, goat: 0, clap: 0 },
+        reactionCounts: { up: 0, down: 0, check: 0, smile: 0, sad: 0 },
         myReactions: [],
         commentCount: 0,
       })),
@@ -107,7 +107,7 @@ describe('feed post service', () => {
       auth,
       clubId: 'club-1',
       postId: 'post-1',
-      reactionType: 'fire',
+      reactionType: 'up',
     })).resolves.toEqual({
       postId: 'post-1',
       toggled: true,
@@ -116,7 +116,7 @@ describe('feed post service', () => {
     expect(repositories.reactions.toggle).toHaveBeenCalledWith({
       postId: 'post-1',
       membershipId: 'member-1',
-      reactionType: 'fire',
+      reactionType: 'up',
     });
   });
 });

@@ -1,92 +1,117 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 99,
-  "updatedAt": "2026-06-15T09:06:00+09:00",
-  "updatedBy": "orchestrator",
-  "currentPhase": "locker-room-trait-shop-main-cherry-pick",
+  "updateVersion": 102,
+  "updatedAt": "2026-06-23T23:00:45+09:00",
+  "updatedBy": "codex",
+  "currentPhase": "browser-feedback-community-feed-inline-compose",
   "activeWork": {
-    "taskId": "locker-room-trait-shop-main-cherry-pick",
-    "status": "ready",
+    "taskId": "browser-feedback-community-feed-inline-compose",
+    "status": "complete",
     "designMode": "maintenance",
-    "baselineCommit": "d34f762f",
+    "baselineCommit": "72d6513560fde2a9c1ff915572974fb50d19a877",
     "changedFiles": [
-      "docs/plan/09_locker_room_shop_ux.md",
-      "supabase/migrations/20260613142619_locker_room_trait_shop.sql",
-      "src/types/domain.ts",
-      "src/types/index.ts",
-      "src/services/account-membership.ts",
+      "docs/project-context.json",
+      "supabase/migrations/20260623224500_feed_reaction_simple_emoji.sql",
+      "src/components/features/EventComments.tsx",
+      "src/components/tabs/CommunityPage.tsx",
+      "src/services/feed-posts.ts",
       "src/services/supabase-repositories.ts",
-      "src/lib/api.ts",
-      "src/lib/traitCatalog.ts",
-      "src/stores/membershipClient.ts",
-      "src/stores/useAuthStore.ts",
-      "src/components/features/CardMarket.tsx",
-      "src/components/features/LockerProfile.tsx",
-      "src/components/ui/PlayerAbilityPanel.tsx",
-      "src/components/tabs/LockerRoomTab.tsx",
-      "src/app/api/membership/traits/trait-route-helpers.ts",
-      "src/app/api/membership/traits/purchase/route.ts",
-      "src/app/api/membership/traits/equip/route.ts",
-      "tests/account-membership-flows.test.ts",
-      "tests/frontend-membership-client.test.ts",
+      "src/stores/feedClient.ts",
+      "tests/feed-posts-service.test.ts",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
-      "tests/local-supabase-api.test.ts",
-      "docs/project-context.json"
+      "tests/local-supabase-api.test.ts"
     ],
-    "changedSurfaces": ["ui", "api", "data", "tests", "docs"],
+    "changedSurfaces": [
+      "ui",
+      "api",
+      "data",
+      "tests",
+      "docs"
+    ],
     "allowedPaths": [
-      "docs/plan/09_locker_room_shop_ux.md",
-      "supabase/migrations/20260613142619_locker_room_trait_shop.sql",
-      "src/types/domain.ts",
-      "src/types/index.ts",
-      "src/services/account-membership.ts",
+      "docs/project-context.json",
+      "supabase/migrations/20260623224500_feed_reaction_simple_emoji.sql",
+      "src/components/features/EventComments.tsx",
+      "src/components/tabs/CommunityPage.tsx",
+      "src/services/feed-posts.ts",
       "src/services/supabase-repositories.ts",
-      "src/lib/api.ts",
-      "src/lib/traitCatalog.ts",
-      "src/stores/membershipClient.ts",
-      "src/stores/useAuthStore.ts",
-      "src/components/features/CardMarket.tsx",
-      "src/components/features/LockerProfile.tsx",
-      "src/components/ui/PlayerAbilityPanel.tsx",
-      "src/components/tabs/LockerRoomTab.tsx",
-      "src/app/api/membership/traits/trait-route-helpers.ts",
-      "src/app/api/membership/traits/purchase/route.ts",
-      "src/app/api/membership/traits/equip/route.ts",
-      "tests/account-membership-flows.test.ts",
-      "tests/frontend-membership-client.test.ts",
+      "src/stores/feedClient.ts",
+      "tests/feed-posts-service.test.ts",
       "tests/frontend-auth-and-schedule-ui.test.tsx",
-      "tests/local-supabase-api.test.ts",
-      "docs/project-context.json"
+      "tests/local-supabase-api.test.ts"
     ],
     "evidence": {
-      "uiDeterministic": {
+      "scopeReview": {
+        "status": "completed",
+        "provider": "Manual review",
+        "command": "Reviewed browser comments plus CommunityPage, EventComments, feed client/service/repository, existing feed migration, and community UI tests.",
+        "summary": "Scope covers inline feed compose slot, feed comment count synchronization, simple emoji reaction type contract, post timestamp hh:mm display, and related tests/migration. No unrelated tabs/pages/components are created."
+      },
+      "targetedUiTests": {
         "status": "passed",
-        "type": "deterministic",
-        "provider": "Vitest + Testing Library",
-        "target": "tests/frontend-membership-client.test.ts, tests/frontend-auth-and-schedule-ui.test.tsx, tests/account-membership-flows.test.ts",
-        "command": "npm run test -- tests/frontend-membership-client.test.ts tests/frontend-auth-and-schedule-ui.test.tsx tests/account-membership-flows.test.ts --run",
-        "summary": "Trait shop client contracts, MyPage compact shop rendering, hidden purchase/price/grade UI, and membership snapshot mapping passed: 3 test files, 122 tests."
+        "provider": "Vitest",
+        "command": "npx vitest run tests/feed-posts-service.test.ts tests/frontend-auth-and-schedule-ui.test.tsx",
+        "summary": "Feed service and UI regression tests passed for inline feed compose, simple emoji reactions, 24h feed timestamp, and live feed comment count synchronization.",
+        "type": "deterministic"
+      },
+      "typecheck": {
+        "status": "passed",
+        "provider": "npm",
+        "command": "npm run typecheck",
+        "summary": "TypeScript typecheck passed after feed reaction type contract and EventComments callback changes."
+      },
+      "dbCheck": {
+        "status": "passed",
+        "provider": "npm",
+        "command": "npm run db:check",
+        "summary": "Supabase migration contract check passed including the feed_reactions simple emoji constraint migration."
       },
       "baseline": {
         "status": "passed",
-        "provider": "TypeScript",
-        "command": "npm run typecheck",
-        "summary": "TypeScript passed after installing the already-declared firebase-admin dependency in node_modules."
+        "provider": "npm",
+        "command": "npm run verify:baseline",
+        "summary": "Baseline verification passed. Existing lint warnings remain in CommunityPage exhaustive-deps and img usage, with no new blocking errors."
       },
-      "guard": {
-        "status": "not_run",
-        "provider": "Harness",
-        "command": "npm run harness:guard:verify",
-        "summary": "Skipped for this main cherry-pick because main had pre-existing unrelated docs/plan working-tree changes outside this task scope."
+      "designGuard": {
+        "status": "passed",
+        "provider": "Harness guard",
+        "command": "node .agents/scripts/guard-design.mjs",
+        "summary": "Design guard passed for the guarded UI surfaces touched by this change."
+      },
+      "localDb": {
+        "status": "passed",
+        "provider": "Local Supabase CLI",
+        "command": "npm run verify:db:local",
+        "summary": "Local Supabase reset, seed, and API smoke tests passed. Feed reaction API now verifies the new up reaction contract.",
+        "type": "database"
+      },
+      "browserRuntime": {
+        "status": "passed",
+        "provider": "In-app browser",
+        "command": "localhost:3000 QA login -> Records > Board -> 게시판 작성 -> create feed -> open comments -> submit comment",
+        "summary": "Verified that board write opens an inline composer instead of a modal, no 피드 작성 dialog is present, a new post displays 24h timestamp such as 6월 23일 22:58, only 👍/👎/✅/🙂/😢 reactions render, and the comment button updates from 댓글 0개 to 댓글 1개 after submitting a comment. App terminal logs were unavailable in this Codex thread because no terminal session is attached.",
+        "type": "runtime"
+      },
+      "apiIntegration": {
+        "status": "passed",
+        "type": "api",
+        "provider": "Local Supabase CLI",
+        "command": "npm run verify:db:local",
+        "summary": "Local API smoke tests passed against the reset Local Supabase stack, including feed post comment and reaction endpoint coverage."
       }
     },
     "retrospective": {
-      "issuesObserved": ["Cherry-picking only the UI simplification commit would have omitted the required trait shop implementation dependencies, so the two source commits were applied together as one main commit.", "Main already had unrelated docs/plan working-tree changes, so full harness guard was not rerun for this cherry-pick."],
-      "missedEvidence": ["In-app browser verification was not rerun during the main cherry-pick; deterministic UI tests covered the requested compact shop behavior."],
+      "issuesObserved": [
+        "Feed compose used a modal, which interrupted the board flow.",
+        "Feed post comment count was hydrated only from list responses, so newly submitted embedded comments did not update the parent post count.",
+        "Existing feed reaction labels were domain-specific instead of the requested simple emoji set.",
+        "Local Supabase reset invalidated the previous browser session, so browser evidence used the configured local QA email login flow."
+      ],
+      "missedEvidence": [],
       "harnessImprovementProposal": [],
       "promotionRecommendation": "none",
-      "reason": "This was a branch integration/cherry-pick task with product-specific UI and API changes."
+      "reason": "This is product-specific community feed feedback and does not justify reusable harness policy changes."
     },
     "reviewStatus": "ready",
     "loopCounters": {

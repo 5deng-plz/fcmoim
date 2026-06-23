@@ -4146,6 +4146,96 @@ describe('records and header polish UI', () => {
     expect(screen.getByRole('button', { name: '갤러리' })).toHaveAttribute('aria-pressed', 'true');
   });
 
+  it('uses inline feed compose, simple emoji reactions, 24h time, and live comment count', async () => {
+    const user = userEvent.setup();
+    const post = {
+      id: 'feed-1',
+      clubId: 'club-test',
+      membershipId: 'membership-admin',
+      authorName: '김영수',
+      matchId: null,
+      contentType: 'text',
+      textContent: 'll',
+      mediaUrl: null,
+      createdAt: '2026-06-23T22:35:00.000+09:00',
+      updatedAt: '2026-06-23T22:35:00.000+09:00',
+      reactionCounts: { up: 0, down: 0, check: 0, smile: 0, sad: 0 },
+      myReactions: [],
+      commentCount: 0,
+    };
+    vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.startsWith('/api/feed-posts?')) {
+        return new Response(JSON.stringify([post]), { status: 200 });
+      }
+      if (url === '/api/feed-posts' && init?.method === 'POST') {
+        expect(JSON.parse(String(init.body))).toMatchObject({
+          clubId: 'club-test',
+          contentType: 'image',
+          textContent: '새 피드',
+          mediaUrl: '/storage/v1/object/feed-media/club-test/feed.png',
+        });
+        return new Response(JSON.stringify({
+          ...post,
+          id: 'feed-2',
+          textContent: '새 피드',
+          contentType: 'image',
+          mediaUrl: '/storage/v1/object/feed-media/club-test/feed.png',
+        }), { status: 200 });
+      }
+      if (url === '/api/comments' && init?.method === 'POST') {
+        return new Response(JSON.stringify({
+          id: 'comment-1',
+          targetType: 'feed_post',
+          targetId: 'feed-1',
+          membershipId: 'membership-admin',
+          authorName: '김영수',
+          content: '댓글이냐 이거?',
+          createdAt: '2026-06-23T22:36:00.000+09:00',
+        }), { status: 200 });
+      }
+      if (url.startsWith('/api/comments?')) {
+        return new Response(JSON.stringify([]), { status: 200 });
+      }
+      if (url === '/api/feed-posts/feed-1/react') {
+        expect(JSON.parse(String(init?.body))).toEqual({
+          clubId: 'club-test',
+          reactionType: 'up',
+        });
+        return new Response(JSON.stringify({ postId: 'feed-1', toggled: true }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ enabled: false }), { status: 200 });
+    });
+
+    render(<CommunityPage />);
+
+    await user.click(screen.getByRole('button', { name: '게시판' }));
+    expect(await screen.findByText('ll')).toBeInTheDocument();
+    expect(screen.getByText('6월 23일 22:35')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '좋아요' })).toHaveTextContent('👍0');
+    expect(screen.getByRole('button', { name: '별로예요' })).toHaveTextContent('👎0');
+    expect(screen.getByRole('button', { name: '확인' })).toHaveTextContent('✅0');
+    expect(screen.getByRole('button', { name: '웃어요' })).toHaveTextContent('🙂0');
+    expect(screen.getByRole('button', { name: '아쉬워요' })).toHaveTextContent('😢0');
+
+    await user.click(screen.getByRole('button', { name: '게시판 작성' }));
+    expect(screen.queryByRole('dialog', { name: '피드 작성' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('feed-inline-composer')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '사진' }));
+    await user.type(screen.getByPlaceholderText('미디어 URL'), '/storage/v1/object/feed-media/club-test/feed.png');
+    await user.type(screen.getByPlaceholderText('미디어와 함께 남길 말'), '새 피드');
+    await user.click(screen.getByRole('button', { name: '등록' }));
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/feed-posts', expect.objectContaining({ method: 'POST' })));
+    await user.click(screen.getByRole('button', { name: '댓글 0개' }));
+    await user.type(screen.getByPlaceholderText('할 말?'), '댓글이냐 이거?');
+    await user.click(screen.getByRole('button', { name: '코멘트 등록' }));
+    expect(await screen.findByRole('button', { name: '댓글 1개' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '좋아요' }));
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/feed-posts/feed-1/react', expect.objectContaining({ method: 'POST' })));
+  });
+
   it('creates a manual schedule through the real match API flow', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date(2026, 4, 1));

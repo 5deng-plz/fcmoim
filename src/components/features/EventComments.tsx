@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { Bird, MessageSquareText, Send } from 'lucide-react';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
@@ -16,6 +16,7 @@ interface EventCommentsProps {
   showPhase?: boolean;
   embedded?: boolean;
   themeType?: 'match' | 'vote_match' | 'training' | 'seminar' | 'etc' | 'poll';
+  onCommentCountChange?: (count: number) => void;
 }
 
 export default function EventComments({
@@ -26,14 +27,20 @@ export default function EventComments({
   showPhase = targetType === 'match',
   embedded = false,
   themeType = targetType === 'match' ? 'match' : 'poll',
+  onCommentCountChange,
 }: EventCommentsProps) {
   const [newComment, setNewComment] = useState('');
   const [comments, setComments] = useState<EventComment[]>([]);
   const [lineup, setLineup] = useState<MatchLineupEntry[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const onCommentCountChangeRef = useRef(onCommentCountChange);
 
   const themeClasses = getScheduleEventTheme(themeType).comment;
+
+  useEffect(() => {
+    onCommentCountChangeRef.current = onCommentCountChange;
+  }, [onCommentCountChange]);
 
   useEffect(() => {
     let ignore = false;
@@ -49,6 +56,7 @@ export default function EventComments({
       .then(([items, lineupEntries]) => {
         if (ignore) return;
         setComments(items);
+        onCommentCountChangeRef.current?.(items.length);
         setLineup(lineupEntries);
         setStatus('ready');
       })
@@ -71,7 +79,11 @@ export default function EventComments({
     setIsSubmitting(true);
     try {
       const comment = await createEventComment({ clubId, targetType, targetId, content });
-      setComments((items) => [...items, comment]);
+      setComments((items) => {
+        const nextItems = [...items, comment];
+        onCommentCountChangeRef.current?.(nextItems.length);
+        return nextItems;
+      });
       setNewComment('');
       setStatus('ready');
     } catch {

@@ -996,7 +996,7 @@ describeLocal('local Supabase API integration', () => {
         method: 'POST',
         body: JSON.stringify({
           clubId: clubIds.guppy,
-          reactionType: 'clap',
+          reactionType: 'up',
         }),
       }), { params: Promise.resolve({ id: created.id }) });
 
@@ -1033,7 +1033,7 @@ describeLocal('local Supabase API integration', () => {
       expect(posts).toEqual(expect.arrayContaining([
         expect.objectContaining({
           id: created.id,
-          reactionCounts: expect.objectContaining({ clap: 1 }),
+          reactionCounts: expect.objectContaining({ up: 1 }),
           commentCount: 1,
         }),
       ]));
