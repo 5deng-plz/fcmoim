@@ -218,6 +218,11 @@ export default function CommunityPage({
         <div className="px-4 py-2 flex gap-1 border-b border-border bg-surface-card sticky top-0 z-10">
           {communityTabs.map((tab) => {
             const isActive = activeTab === tab.key;
+            const TabIcon = {
+              announcements: Megaphone,
+              board: MessageSquare,
+              gallery: ImageIcon,
+            }[tab.key];
 
             return (
               <button
@@ -225,13 +230,14 @@ export default function CommunityPage({
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
                 aria-pressed={isActive}
-                className={`px-4 py-2 text-sm transition-colors ${
+                className={`px-4 py-2 text-sm transition-colors flex items-center gap-1.5 ${
                   isActive
                     ? 'border-b-2 border-brand-primary font-bold text-brand-primary'
                     : 'font-medium text-tertiary hover:text-secondary'
                 }`}
               >
-                {tab.label}
+                <TabIcon size={15} className={isActive ? 'text-brand-primary' : 'text-tertiary'} />
+                <span>{tab.label}</span>
               </button>
             );
           })}

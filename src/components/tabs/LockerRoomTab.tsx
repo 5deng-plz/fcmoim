@@ -264,7 +264,7 @@ export default function LockerRoomTab() {
         <div className="flex min-h-[40px] w-full items-center gap-2 bg-surface-bg px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-secondary border-b border-border">
           <div className="flex w-12 shrink-0 items-center justify-center gap-1">
             <span className="w-[14px] shrink-0" />
-            <span className="text-brand-primary">OVR</span>
+            <span className="text-brand-primary font-mono font-black italic text-[10px]">OVR</span>
           </div>
           <div className="w-[44px] shrink-0" />
           <div className="flex-1 text-left">이름</div>
@@ -291,7 +291,7 @@ export default function LockerRoomTab() {
                   />
                   <div className="pointer-events-none relative z-0 flex w-12 shrink-0 items-center justify-center gap-1 text-center">
                     <MatchPointAward rank={topMatchPointRanks.get(member.id)} />
-                    <span className="text-brand-primary font-extrabold text-sm">
+                    <span className="text-brand-primary font-mono font-black italic text-sm">
                       {member.ovr}
                     </span>
                   </div>

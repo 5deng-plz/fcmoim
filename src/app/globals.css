@@ -45,12 +45,18 @@
     --foreground: var(--text-primary);
 
     /* ── Brand ── */
-    --color-brand: #00b872;
-    --color-brand-light: #e0fbf0;
-    --color-brand-hover: #00995e;
+    --color-brand: #0c8250; /* 가독성 높은 피치 그린 (명도 대비 확보) */
+    --color-brand-light: #e8f9f1;
+    --color-brand-hover: #0a6941;
     --brand-primary: var(--color-brand);
     --brand-primary-hover: var(--color-brand-hover);
     --brand-primary-bg: var(--color-brand-light);
+
+    /* ── fcgreen (High Contrast Green for Light Mode) ── */
+    --fcgreen-100: #d0ffe9;
+    --fcgreen-500: #0b663e; /* 고대비 그린 */
+    --fcgreen-600: #095232; /* 더 짙은 고대비 그린 */
+    --fcgreen-700: #073e26;
 
     /* ── Action ── */
     --action-primary: var(--brand-primary);
@@ -70,9 +76,9 @@
     --color-blue-team-border: #bfdbfe;
 
     /* ── Semantic ── */
-    --color-success: #10b981;
-    --color-success-bg: #ecfdf5;
-    --color-success-border: #a7f3d0;
+    --color-success: #0b663e; /* 번짐 방지 및 가독성을 위한 고대비 피치 그린 */
+    --color-success-bg: #e6f7ef;
+    --color-success-border: #a3e2c9;
     --color-warning: #f59e0b;
     --color-warning-bg: #fffbeb;
     --color-warning-border: #fde68a;
@@ -343,6 +349,12 @@
       --brand-primary-hover: var(--color-brand-hover);
       --brand-primary-bg: rgba(0, 255, 163, 0.15);
 
+      /* ── fcgreen (Neon Green for Dark Mode) ── */
+      --fcgreen-100: rgba(0, 255, 163, 0.1);
+      --fcgreen-500: #00ffa3;
+      --fcgreen-600: #00e58f;
+      --fcgreen-700: #00b872;
+
       /* ── Glassmorphism (Dark) ── */
       --glass-bg: rgba(20, 22, 36, 0.85);
       --glass-bg-hover: rgba(20, 22, 36, 0.92);
@@ -367,6 +379,7 @@
 
       --text-secondary: #cbd5e1;
       --text-tertiary: #94a3b8;
+      --color-success: #10b981; /* 다크 모드에서는 오리지널 에메랄드 성공색 사용 */
       --color-success-bg: #052e16;
       --color-success-border: #166534;
       --color-warning-bg: #451a03;
@@ -1129,11 +1142,7 @@
     letter-spacing: -0.015em;
   }
 
-  /* 다크모드 서체 번짐 방지 및 도톰한 굵기 보정 */
-  :root[data-theme="dark"] .phone-shell {
-    font-weight: 450; /* 어두운 배경에서 글씨가 더 뚜렷이 맺히도록 미세 보정 */
-    -webkit-font-smoothing: subpixel-antialiased; /* 다크모드에서 서체 굵기 유지 */
-  }
+
 
   /* 네온 그린 텍스트가 번쩍이는 할레이션 방지를 위한 디밍 보정 (다크 모드 전용) */
   :root[data-theme="dark"] .text-brand-primary, 

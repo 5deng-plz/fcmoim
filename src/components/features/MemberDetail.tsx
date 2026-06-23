@@ -87,8 +87,8 @@ export default function MemberDetail({ member: m }: MemberDetailProps) {
             unoptimized
           />
           <div className="absolute bottom-1 w-full flex flex-col items-center drop-shadow-lg">
-            <span className="text-[7px] font-black text-green-400 uppercase leading-none tracking-tighter">OVR</span>
-            <span className="text-sm font-black text-green-400 leading-none mt-0.5 italic">{m.ovr}</span>
+            <span className="text-[7px] font-black text-brand-primary uppercase leading-none tracking-tighter font-mono italic">OVR</span>
+            <span className="text-sm font-black text-brand-primary leading-none mt-0.5 italic font-mono">{m.ovr}</span>
           </div>
         </div>
         <div className="flex-1 flex flex-col justify-center gap-3">

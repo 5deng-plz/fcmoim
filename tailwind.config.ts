@@ -27,10 +27,10 @@ const config: Config = {
           'primary-bg': 'var(--brand-primary-bg)',
         },
         fcgreen: {
-          100: "#d0ffe9",
-          500: "#00ffa3",
-          600: "#00e58f",
-          700: "#00b872",
+          100: "var(--fcgreen-100)",
+          500: "var(--fcgreen-500)",
+          600: "var(--fcgreen-600)",
+          700: "var(--fcgreen-700)",
         },
         action: {
           primary: 'var(--action-primary)',

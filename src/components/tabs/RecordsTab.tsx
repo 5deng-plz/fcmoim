@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import Image from 'next/image';
-import { Flame, Handshake, Medal, MinusCircle, Target, Trophy, Users, XCircle } from 'lucide-react';
+import { Flame, Handshake, Medal, MinusCircle, Target, Trophy, Users, XCircle, Megaphone, MessageSquare, Image as ImageIcon } from 'lucide-react';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import { useAppStore } from '@/stores/useAppStore';
 import { useRecordsStore } from '@/stores/useRecordsStore';
@@ -84,10 +84,16 @@ export default function RecordsTab() {
   return (
     <div className="space-y-4 animate-fadeIn pb-20">
       {/* Sub Tab Navigation */}
-      <div className="flex gap-1 border-b border-border bg-surface-card -mx-4 -mt-4 mb-4 px-4 py-2 sticky top-0 z-10">
+      <div className="flex gap-1 border-b border-border bg-surface-card -mx-4 -mt-4 mb-4 px-4 py-2 sticky top-0 z-10 overflow-x-auto scrollbar-none">
         {(['season', 'announcements', 'board', 'gallery'] as const).map((tabKey) => {
           const isActive = recordsSubTab === tabKey;
           const label = tabKey === 'season' ? '시즌' : tabKey === 'announcements' ? '공지사항' : tabKey === 'board' ? '게시판' : '갤러리';
+          const TabIcon = {
+            season: Trophy,
+            announcements: Megaphone,
+            board: MessageSquare,
+            gallery: ImageIcon,
+          }[tabKey];
 
           return (
             <button
@@ -95,13 +101,14 @@ export default function RecordsTab() {
               type="button"
               onClick={() => setRecordsSubTab(tabKey)}
               aria-pressed={isActive}
-              className={`px-4 py-2 text-sm transition-colors ${
+              className={`flex items-center gap-1.5 px-4 py-2 text-sm transition-colors whitespace-nowrap ${
                 isActive
                   ? 'border-b-2 border-brand-primary font-bold text-brand-primary'
                   : 'font-medium text-tertiary hover:text-secondary'
               }`}
             >
-              {label}
+              <TabIcon size={14} className={isActive ? 'text-brand-primary' : 'text-tertiary'} />
+              <span>{label}</span>
             </button>
           );
         })}
@@ -124,7 +131,7 @@ export default function RecordsTab() {
           <div className="overflow-hidden rounded-3xl border border-glass-border bg-glass-bg shadow-glass-shadow backdrop-blur-md">
             <div className="grid min-h-[40px] grid-cols-[24px_34px_minmax(92px,1fr)_74px_40px_50px] items-center border-b border-glass-border/50 bg-glass-bg/60 px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-secondary">
               <div className="text-center">#</div>
-              <div className="text-center text-fcgreen-600">OVR</div>
+              <div className="text-center font-mono font-black italic text-brand-primary text-[10px]">OVR</div>
               <div className="px-2">선수</div>
               <div className="text-center">승무패</div>
               <div className="text-center">승점</div>
@@ -140,7 +147,7 @@ export default function RecordsTab() {
                     className="grid h-[50px] min-h-[50px] grid-cols-[24px_34px_minmax(92px,1fr)_74px_40px_50px] items-center px-2 py-0 text-sm"
                   >
                     <RankMark rank={index + 1} />
-                    <div className="text-center font-extrabold text-fcgreen-600">{row.ovr}</div>
+                    <div className="text-center font-mono font-black italic text-brand-primary">{row.ovr}</div>
                     <div className="min-w-0 px-1">
                       <div className="flex min-w-0 items-center gap-2">
                         <Image

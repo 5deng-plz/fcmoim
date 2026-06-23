@@ -83,15 +83,13 @@ export default function FcmoimLogo({ size = 120, className, ...props }: FcmoimLo
             {/* fcmoim 브랜드 텍스트 */}
             <text 
                 x="60" 
-                y="60" 
+                y="63" 
                 fontFamily="system-ui, -apple-system, sans-serif" 
                 fontWeight="900" 
-                fontSize="24" 
+                fontSize="21" 
                 textAnchor="middle" 
                 dominantBaseline="middle" 
-                className="fill-[#1b252b] dark:fill-[#ffffff] stroke-[#ffffff] dark:stroke-[#141624] paint-order-stroke-fill"
-                strokeWidth="5" 
-                strokeLinejoin="round" 
+                className="fill-[#1b2a36] dark:fill-[#ffffff]"
                 letterSpacing="-0.5"
             >
                 fcmoim
