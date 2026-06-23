@@ -53,7 +53,7 @@ export default function BottomNav() {
   };
 
   return (
-    <nav className="sticky bottom-0 z-20 min-h-[var(--bottom-nav-height)] bg-surface-card/80 backdrop-blur-xl px-2 pb-[var(--safe-area-bottom)] shadow-sm">
+    <nav className="sticky bottom-0 z-20 min-h-[var(--bottom-nav-height)] bg-surface-card/85 backdrop-blur-md px-2 pb-[var(--safe-area-bottom)] border-t border-divider-subtle/80 shadow-md">
       <div className="flex justify-around">
         {tabs.map(({ key, label, Icon }) => {
           const isActive = activeTab === key && !showMyPage && !showJoinForm;
@@ -61,19 +61,19 @@ export default function BottomNav() {
 
           return (
             <button
-              key={key}
-              onClick={() => handleTabClick(key)}
-              className={`flex flex-col items-center gap-0.5 py-2.5 px-3 transition-all duration-200 relative ${
-                isActive
-                  ? 'text-green-600'
-                  : isLocked
-                  ? 'text-action-disabled'
-                  : 'text-tertiary hover:text-secondary'
-              }`}
+               key={key}
+               onClick={() => handleTabClick(key)}
+               className={`flex flex-col items-center gap-0.5 py-2.5 px-3 transition-all duration-200 relative ${
+                 isActive
+                   ? 'text-brand-primary'
+                   : isLocked
+                   ? 'text-action-disabled'
+                   : 'text-tertiary hover:text-secondary'
+               }`}
             >
               {/* 활성 탭 인디케이터 pill */}
               {isActive && (
-                <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-5 h-[3px] bg-green-600 rounded-full" />
+                <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-5 h-[3px] bg-brand-primary rounded-full shadow-[0_0_8px_rgba(0,255,163,0.5)]" />
               )}
               <div className="relative">
                 <Icon

@@ -45,9 +45,9 @@
     --foreground: var(--text-primary);
 
     /* ── Brand ── */
-    --color-brand: #0fb752;
-    --color-brand-light: #e6f8ed;
-    --color-brand-hover: #0d9e46;
+    --color-brand: #00b872;
+    --color-brand-light: #e0fbf0;
+    --color-brand-hover: #00995e;
     --brand-primary: var(--color-brand);
     --brand-primary-hover: var(--color-brand-hover);
     --brand-primary-bg: var(--color-brand-light);
@@ -329,23 +329,31 @@
   }
 
   :root[data-theme="dark"] {
-      --surface-bg: #0f172a;
-      --surface-card: #111827;
-      --surface-card-hover: #1f2937;
-      --surface-elevated: #111827;
+      --surface-bg: #090a10;
+      --surface-card: #141624;
+      --surface-card-hover: #1e2136;
+      --surface-elevated: #1c1e30;
       --text-primary: #f8fafc;
 
+      /* ── Brand (Chzzk Neon Green) ── */
+      --color-brand: #00ffa3;
+      --color-brand-hover: #00e58f;
+      --color-brand-light: rgba(0, 255, 163, 0.1);
+      --brand-primary: var(--color-brand);
+      --brand-primary-hover: var(--color-brand-hover);
+      --brand-primary-bg: rgba(0, 255, 163, 0.15);
+
       /* ── Glassmorphism (Dark) ── */
-      --glass-bg: rgba(17, 24, 39, 0.85);
-      --glass-bg-hover: rgba(17, 24, 39, 0.92);
+      --glass-bg: rgba(20, 22, 36, 0.85);
+      --glass-bg-hover: rgba(20, 22, 36, 0.92);
       --glass-border: rgba(255, 255, 255, 0.08);
       --glass-border-hover: rgba(255, 255, 255, 0.15);
-      --glass-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 4px 20px 0 rgba(0, 0, 0, 0.2);
+      --glass-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 4px 20px 0 rgba(0, 0, 0, 0.4);
 
       /* Level 1: Subtle cards */
-      --glass-lvl1-bg: rgba(17, 24, 39, 0.45);
+      --glass-lvl1-bg: rgba(20, 22, 36, 0.45);
       --glass-lvl1-border: rgba(255, 255, 255, 0.04);
-      --glass-lvl1-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.1);
+      --glass-lvl1-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.2);
 
       /* Level 2: Default interactive cards */
       --glass-lvl2-bg: var(--glass-bg);
@@ -353,9 +361,9 @@
       --glass-lvl2-shadow: var(--glass-shadow);
 
       /* Level 3: Elevated overlays, modals, dropdowns */
-      --glass-lvl3-bg: rgba(17, 24, 39, 0.95);
+      --glass-lvl3-bg: rgba(20, 22, 36, 0.95);
       --glass-lvl3-border: rgba(255, 255, 255, 0.14);
-      --glass-lvl3-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6), 0 10px 20px -5px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+      --glass-lvl3-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.7), 0 10px 20px -5px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
 
       --text-secondary: #cbd5e1;
       --text-tertiary: #94a3b8;
@@ -365,17 +373,16 @@
       --color-warning-border: #92400e;
       --color-error-bg: #450a0a;
       --color-error-border: #991b1b;
-      --brand-primary-bg: rgba(15, 183, 82, 0.15);
       --color-red-team-bg: rgba(239, 68, 68, 0.15);
       --color-blue-team-bg: rgba(59, 130, 246, 0.15);
       --action-secondary: #cbd5e1;
       --action-secondary-hover: #f8fafc;
       --action-disabled: #475569;
-      --border-default: #334155;
-      --border-subtle: rgba(148, 163, 184, 0.22);
-      --divider-default: #334155;
-      --divider-subtle: rgba(148, 163, 184, 0.16);
-      --card-border: 1px solid rgba(148, 163, 184, 0.22);
+      --border-default: #25283e;
+      --border-subtle: rgba(37, 40, 62, 0.6);
+      --divider-default: #25283e;
+      --divider-subtle: rgba(37, 40, 62, 0.4);
+      --card-border: 1px solid #25283e;
       --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
       --card-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.32);
 
@@ -639,6 +646,8 @@
     min-height: 0;
     overflow: hidden;
     touch-action: pan-y;
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
   }
 
   @media screen and (max-width: 768px) {
@@ -1015,3 +1024,113 @@
   .animate-counter-spin {
     animation: counter-spin 10s linear infinite;
   }
+
+  /* ── Chzzk Live Player & Danmaku Animation Styles ── */
+  @keyframes danmaku-flow {
+    0% { transform: translateX(100dvw); }
+    100% { transform: translateX(-100%); }
+  }
+
+  .danmaku-container {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 10;
+  }
+
+  .danmaku-track {
+    position: absolute;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    font-size: 18px;
+    font-weight: 900;
+    color: #ffffff;
+    text-shadow: 
+      -1.5px -1.5px 0 #000,  
+       1.5px -1.5px 0 #000,
+      -1.5px  1.5px 0 #000,
+       1.5px  1.5px 0 #000,
+       0 3px 6px rgba(0,0,0,0.6);
+    animation: danmaku-flow linear infinite;
+  }
+
+  /* Winning Eleven Grid Pulse */
+  @keyframes winning-pulse {
+    0%, 100% { opacity: 0.15; }
+    50% { opacity: 0.35; }
+  }
+
+  .winning-bg-grid {
+    background-size: 40px 40px;
+    background-image: 
+      linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  }
+
+  /* ── Chzzk Desktop Layout Overrides ── */
+  @media (min-width: 1024px) {
+    .app-viewport.chzzk-layout {
+      padding: 0 !important;
+      align-items: stretch !important;
+      justify-content: flex-start !important;
+      width: 100vw;
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    .phone-shell.chzzk-chat-panel {
+      width: 380px !important;
+      height: 100vh !important;
+      height: 100dvh !important;
+      max-height: none !important;
+      border: none !important;
+      border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .phone-shell.chzzk-chat-panel {
+      width: 420px !important;
+    }
+  }
+
+  @media (min-width: 1536px) {
+    .phone-shell.chzzk-chat-panel {
+      width: 460px !important;
+    }
+  }
+
+  /* ══════════════════════════════════════════
+   * 3040 아재 맞춤형 가독성 최적화 (눈 피로 방지 및 시원한 서체)
+   * ══════════════════════════════════════════ */
+  .phone-shell {
+    font-size: 15px; /* 모바일 기본 폰트 사이즈 미세하게 상향 */
+  }
+
+  .phone-shell .text-xs {
+    font-size: 13px !important; /* 너무 얇고 작은 글자(12px) 방지 */
+    letter-spacing: -0.01em;
+  }
+
+  .phone-shell .text-sm {
+    font-size: 14.5px !important; /* 14px -> 14.5px 가독성 향상 */
+    letter-spacing: -0.015em;
+  }
+
+  /* 다크모드 서체 번짐 방지 및 도톰한 굵기 보정 */
+  :root[data-theme="dark"] .phone-shell {
+    font-weight: 450; /* 어두운 배경에서 글씨가 더 뚜렷이 맺히도록 미세 보정 */
+    -webkit-font-smoothing: subpixel-antialiased; /* 다크모드에서 서체 굵기 유지 */
+  }
+
+  /* 네온 그린 텍스트가 번쩍이는 할레이션 방지를 위한 디밍 보정 */
+  .text-brand-primary, .text-fcgreen-500, .text-fcgreen-600 {
+    text-shadow: 0 0 1px rgba(0, 0, 0, 0.5); /* 텍스트 주변 대비 조절 */
+  }
+

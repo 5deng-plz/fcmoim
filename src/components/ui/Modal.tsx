@@ -21,7 +21,7 @@ export default function Modal({ title, isOpen, onClose, children, presentation =
   return (
     <div className={`fixed inset-0 z-50 flex justify-center ${isSheet ? 'items-end sm:items-center' : 'items-center px-4'}`}>
       <div
-        className="absolute inset-0 bg-black/40 animate-fadeIn"
+        className="absolute inset-0 bg-black/60 backdrop-blur-[2px] animate-fadeIn"
         onClick={onClose}
       />
       <div
