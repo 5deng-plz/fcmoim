@@ -238,7 +238,7 @@ export default function RecentNotice() {
 
       <div className="space-y-2">
         {activePollsStatus === 'loading' ? (
-          <div role="status" className="rounded-3xl border border-glass-border bg-glass-bg p-4 text-xs font-bold text-secondary shadow-glass-shadow backdrop-blur-md transition-colors">
+          <div role="status" className="rounded-3xl glass-lvl1 p-4 text-xs font-bold text-secondary transition-colors">
             일정 투표를 불러오는 중입니다
           </div>
         ) : null}
@@ -261,7 +261,7 @@ export default function RecentNotice() {
         ) : null}
 
         {pinnedAnnouncements.map((announcement) => (
-          <section key={announcement.id} className="overflow-hidden rounded-3xl border border-glass-border bg-glass-bg shadow-glass-shadow backdrop-blur-md transition-colors">
+          <section key={announcement.id} className="overflow-hidden rounded-3xl glass-lvl1 transition-colors">
             <button
               type="button"
               onClick={() => useAppStore.getState().setActiveTab('community')}
@@ -493,7 +493,7 @@ export default function RecentNotice() {
         })}
 
         {activePollsStatus === 'ready' && activePolls.length === 0 && pinnedAnnouncements.length === 0 ? (
-              <div className="flex items-center gap-3 rounded-3xl border border-glass-border bg-glass-bg p-4 shadow-glass-shadow backdrop-blur-md transition-colors">
+              <div className="flex items-center gap-3 rounded-3xl glass-lvl1 p-4 transition-colors">
             <div className="w-10 h-10 bg-surface-bg rounded-full flex items-center justify-center shrink-0">
               <Megaphone size={18} className="text-tertiary" />
             </div>

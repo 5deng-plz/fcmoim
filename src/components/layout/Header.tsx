@@ -217,7 +217,7 @@ export default function Header() {
                   </button>
 
                   {isGuestMode && isProfileMenuOpen ? (
-                    <div className="absolute right-0 top-11 z-50 w-52 rounded-xl border border-border-subtle bg-surface-card p-3 shadow-xl animate-slideDown">
+                    <div className="absolute right-0 top-11 z-50 w-52 rounded-2xl p-3 shadow-2xl glass-lvl3 animate-slideDown">
                       <p className="truncate text-xs font-black text-primary">{profileName}</p>
                       {profileEmail ? (
                         <p className="mt-0.5 truncate text-[11px] font-bold text-tertiary">{profileEmail}</p>

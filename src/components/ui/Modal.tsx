@@ -28,8 +28,8 @@ export default function Modal({ title, isOpen, onClose, children, presentation =
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={`relative z-10 flex max-h-[85vh] w-full max-w-[400px] flex-col overflow-hidden bg-surface-elevated animate-slideUp ${
-          isSheet ? 'rounded-t-2xl sm:rounded-2xl' : 'rounded-2xl'
+        className={`relative z-10 flex max-h-[85vh] w-full max-w-[400px] flex-col overflow-hidden glass-lvl3 shadow-2xl animate-slideUp ${
+          isSheet ? 'rounded-t-3xl sm:rounded-3xl' : 'rounded-3xl'
         }`}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
