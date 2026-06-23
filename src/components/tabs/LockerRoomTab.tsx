@@ -9,7 +9,7 @@ import Modal from '@/components/ui/Modal';
 import ConditionIcon from '@/components/ui/ConditionIcon';
 import type { ConditionLevel } from '@/components/ui/ConditionIcon';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
-import PlayerAbilityPanel from '@/components/ui/PlayerAbilityPanel';
+import PlayerAbilityPanel, { type PlayerAbilityPanelSeasonRecord } from '@/components/ui/PlayerAbilityPanel';
 import {
   fetchApprovedMemberships,
   fetchClubSettings,
@@ -24,11 +24,15 @@ import {
 } from '@/stores/membershipClient';
 import { useAppStore } from '@/stores/useAppStore';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useRecordsStore } from '@/stores/useRecordsStore';
 import { useToastStore } from '@/stores/useToastStore';
 
 export default function LockerRoomTab() {
   const memberProfile = useAuthStore((state) => state.memberProfile);
   const { activeClubId, availableClubs, teamLogoUrl, teamName, userRole } = useAppStore();
+  const records = useRecordsStore((state) => state.records);
+  const recordsStatus = useRecordsStore((state) => state.recordsStatus);
+  const loadRecords = useRecordsStore((state) => state.loadRecords);
   const { showToast } = useToastStore();
   const logoInputRef = useRef<HTMLInputElement | null>(null);
   const [pendingMembers, setPendingMembers] = useState<PendingMembershipReview[]>([]);
@@ -47,6 +51,10 @@ export default function LockerRoomTab() {
   const canReview = userRole === 'admin' || userRole === 'operator';
   const canAssignOperator = userRole === 'admin';
   const topMatchPointRanks = useMemo(() => buildTopMatchPointRanks(squadMembers), [squadMembers]);
+  const seasonRecordByMembershipId = useMemo(() => {
+    if (!Array.isArray(records?.rankingRows)) return new Map();
+    return new Map(records.rankingRows.map((row) => [row.membershipId, row]));
+  }, [records]);
   const sortedSquadMembers = useMemo(
     () => sortSquadMembers(squadMembers, topMatchPointRanks),
     [squadMembers, topMatchPointRanks],
@@ -56,6 +64,14 @@ export default function LockerRoomTab() {
   const [cardMember, setCardMember] = useState<ApprovedMembership | null>(null);
   const [memberActionModal, setMemberActionModal] = useState<MemberActionModalState>(null);
   const [withdrawConfirmName, setWithdrawConfirmName] = useState('');
+
+  useEffect(() => {
+    if (!activeClubId || recordsStatus !== 'idle') return;
+
+    void loadRecords(activeClubId).catch((error) => {
+      console.error('[FC Moim] Locker season records failed:', error);
+    });
+  }, [activeClubId, loadRecords, recordsStatus]);
 
   useEffect(() => {
     let isActive = true;
@@ -309,6 +325,7 @@ export default function LockerRoomTab() {
                 {expandedMemberId === member.id ? (
                   <MemberProfileAccordion
                     member={member}
+                    seasonRecord={seasonRecordByMembershipId.get(member.id) ?? null}
                     canManageMembers={canAssignOperator}
                     isSelf={member.id === memberProfile?.id}
                     changingRoleId={changingRoleId}
@@ -621,6 +638,7 @@ function getDisplayCondition(): ConditionLevel {
 
 function MemberProfileAccordion({
   member,
+  seasonRecord,
   canManageMembers,
   isSelf,
   changingRoleId,
@@ -630,6 +648,7 @@ function MemberProfileAccordion({
   onCardOpen,
 }: {
   member: ApprovedMembership;
+  seasonRecord: PlayerAbilityPanelSeasonRecord | null;
   canManageMembers: boolean;
   isSelf: boolean;
   changingRoleId: string | null;
@@ -650,6 +669,7 @@ function MemberProfileAccordion({
         preferredFoot={member.preferredFoot}
         position={member.position === 'FW' || member.position === 'MF' || member.position === 'DF' || member.position === 'GK' ? member.position : undefined}
         selectedTraitId={member.selectedTraitId}
+        seasonRecord={seasonRecord}
         birthDate={member.birthDate}
         heightCm={member.heightCm}
         weightKg={member.weightKg}

@@ -3256,6 +3256,61 @@ describe('locker room team management UI', () => {
       },
       isLoading: false,
     });
+    useRecordsStore.setState({
+      recordsStatus: 'ready',
+      recordsError: null,
+      records: {
+        seasonId: 'season-1',
+        rankingRows: [
+          {
+            membershipId: 'membership-admin',
+            nickname: OWNER_PROFILE_NAME,
+            photoUrl: OWNER_PROFILE_PHOTO_URL,
+            position: 'MF',
+            preferredFoot: 'right',
+            selectedTraitId: 'classic-no10',
+            stats: DEFAULT_STATS,
+            ovr: 70,
+            wins: 3,
+            draws: 1,
+            losses: 0,
+            winRate: 75,
+            leaguePoints: 10,
+            goals: 2,
+            assists: 1,
+            momCount: 1,
+            appearances: 4,
+          },
+          {
+            membershipId: 'membership-member',
+            nickname: '김멤버',
+            photoUrl: null,
+            position: 'MF',
+            preferredFoot: 'right',
+            selectedTraitId: null,
+            stats: DEFAULT_STATS,
+            ovr: 66,
+            wins: 2,
+            draws: 1,
+            losses: 1,
+            winRate: 50,
+            leaguePoints: 7,
+            goals: 1,
+            assists: 0,
+            momCount: 0,
+            appearances: 4,
+          },
+        ],
+        seasonSummary: {
+          totalMatches: 4,
+          topVenue: null,
+          topAppearance: null,
+          topGoals: null,
+          topAssists: null,
+          topMom: null,
+        },
+      },
+    });
   });
 
   it('moves team management into the squad accordion with confirmation modals', async () => {
@@ -3352,6 +3407,8 @@ describe('locker room team management UI', () => {
     expect(screen.getByRole('button', { name: /운영진 권한 부여/ })).toHaveClass('bg-brand-primary');
     expect(screen.getByRole('button', { name: /탈퇴 처리/ })).toHaveClass('bg-feedback-error');
     expect(screen.getAllByTestId('player-badge-slot')).toHaveLength(4);
+    expect(screen.getByTestId('player-ovr-style-card')).toHaveClass('h-[164px]');
+    expect(screen.getByTestId('player-season-mini-record')).toHaveTextContent('21150%');
     expect(screen.getAllByText('경기 Point').length).toBeGreaterThan(0);
     expect(screen.getByText('2,000').closest('span')).toHaveClass('rounded-full');
     expect(screen.getAllByLabelText('컨디션 보통').length).toBeGreaterThanOrEqual(2);
@@ -3448,6 +3505,8 @@ describe('locker room team management UI', () => {
     expect(within(screen.getByTestId('player-ovr-style-card')).getByText('60')).toBeInTheDocument();
     expect(screen.getByTestId('player-ability-panel')).toHaveClass('border-glass-border', 'bg-glass-bg', 'backdrop-blur-md');
     expect(screen.getByTestId('player-ovr-style-card')).toHaveClass('w-[104px]', 'border-glass-border', 'bg-glass-bg', 'backdrop-blur-sm', 'shadow-glass-shadow');
+    expect(screen.getByTestId('player-ovr-style-card')).toHaveClass('h-[164px]');
+    expect(screen.getByTestId('player-season-mini-record')).toHaveTextContent('31075%');
     expect(screen.getByTestId('player-trait-card')).toHaveClass('h-[88px]', 'rounded-xl', 'border', 'shadow-inner', 'bg-gradient-to-br', 'from-brand-primary-bg', 'via-brand-primary-bg', 'to-surface-card', 'text-primary');
     expect(screen.getAllByTestId('locker-shop-trait-card')[0]).toHaveClass('h-[76px]', 'w-[86px]', 'shrink-0', 'snap-start', 'rounded-xl', 'border', 'shadow-inner', 'bg-gradient-to-br', 'text-primary');
     expect(screen.getAllByTestId('locker-shop-trait-card')[0]).toHaveTextContent('타깃맨');
@@ -3463,10 +3522,16 @@ describe('locker room team management UI', () => {
     expect(screen.getByTestId('hexagon-radar')).toHaveClass('max-w-[190px]');
     expect(screen.getByTestId('hexagon-radar')).toHaveAttribute('aria-label', expect.stringContaining('공격 60'));
     expect(screen.getByTestId('hexagon-radar')).toHaveAttribute('aria-label', expect.stringContaining('체력 60'));
+    const attackAxis = container.querySelector('.radar-axis[aria-label="공격 60"]') as SVGGElement | null;
+    const attackAxisValue = attackAxis?.querySelector('.radar-axis-value') as SVGTextElement | null;
+    expect(attackAxisValue).not.toHaveAttribute('style', expect.stringContaining('opacity'));
+    if (!attackAxis) throw new Error('Expected attack radar axis');
+    await user.click(attackAxis);
+    expect(attackAxisValue).toHaveStyle({ opacity: '1' });
     expect(screen.getAllByTestId('player-badge-slot')).toHaveLength(4);
     expect(screen.queryByText('사용 가능한 아이템이 없어요')).not.toBeInTheDocument();
     ['공격', '수비', '체력', '멘탈', '스피드', '인성'].forEach((label) => {
-      expect(screen.getByText(label)).toBeInTheDocument();
+      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
     });
     expect(container.querySelector('[aria-label="공격 60"]')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '경기 Point 내역 보기' }));

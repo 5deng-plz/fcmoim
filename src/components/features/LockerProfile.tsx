@@ -2,13 +2,14 @@
 
 import { LoaderCircle } from 'lucide-react';
 import Image from 'next/image';
-import { useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import Modal from '@/components/ui/Modal';
 import PlayerAbilityPanel, { type ProfileField } from '@/components/ui/PlayerAbilityPanel';
 import { useAppStore } from '@/stores/useAppStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useToastStore } from '@/stores/useToastStore';
+import { useRecordsStore } from '@/stores/useRecordsStore';
 import { fetchMatchPointLedger, type MatchPointLedgerEntry } from '@/stores/membershipClient';
 import { DEFAULT_STATS, type UserStats } from '@/types';
 import { calculateOvr } from '@/components/ui/PlayerAbilityPanel';
@@ -19,6 +20,9 @@ export default function LockerProfile() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { activeClubId } = useAppStore();
   const memberProfile = useAuthStore((state) => state.memberProfile);
+  const records = useRecordsStore((state) => state.records);
+  const recordsStatus = useRecordsStore((state) => state.recordsStatus);
+  const loadRecords = useRecordsStore((state) => state.loadRecords);
   const saveMemberPhoto = useAuthStore((state) => state.saveMemberPhoto);
   const saveMemberProfile = useAuthStore((state) => state.saveMemberProfile);
   const { showToast } = useToastStore();
@@ -45,6 +49,17 @@ export default function LockerProfile() {
   const remainingStatPoints = Math.max(0, maxStatsSum - sumStats(stats));
   const isStatsDirty = tempStats !== null && !areStatsEqual(tempStats, baseStats);
   const points = memberProfile?.matchPoints ?? 100;
+  const seasonRecord = Array.isArray(records?.rankingRows)
+    ? records.rankingRows.find((row) => row.membershipId === memberProfile?.id)
+    : null;
+
+  useEffect(() => {
+    if (!activeClubId || recordsStatus !== 'idle') return;
+
+    void loadRecords(activeClubId).catch((error) => {
+      console.error('[FC Moim] Profile season record load failed:', error);
+    });
+  }, [activeClubId, loadRecords, recordsStatus]);
 
   const handleUploadBannerClick = () => {
     if (!activeClubId || isUploading) return;
@@ -308,6 +323,7 @@ export default function LockerProfile() {
           preferredFoot={preferredFoot}
           position={memberProfile?.mainPosition}
           selectedTraitId={memberProfile?.selectedTraitId}
+          seasonRecord={seasonRecord}
           surface="flat"
           birthDate={memberProfile?.birth}
           residence={memberProfile?.residence}

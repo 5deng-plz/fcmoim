@@ -1,4 +1,4 @@
-import { useRef, type PointerEvent } from 'react';
+import { useRef, useState, type PointerEvent } from 'react';
 import { STAT_KEYS, type UserStats } from '@/types';
 
 interface HexagonRadarProps {
@@ -24,6 +24,7 @@ export default function HexagonRadar({
 }: HexagonRadarProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const activeAxisRef = useRef<{ key: keyof UserStats; angle: number } | null>(null);
+  const [selectedAxisKey, setSelectedAxisKey] = useState<keyof UserStats | null>(null);
   const cx = 130;
   const cy = 108;
   const r = 54;
@@ -176,7 +177,12 @@ export default function HexagonRadar({
             className={`radar-axis outline-none ${onAxisClick ? 'cursor-pointer' : ''}`}
             tabIndex={0}
             aria-label={`${axis.label} ${axis.value}`}
+            onMouseEnter={() => setSelectedAxisKey(axis.key)}
+            onMouseLeave={() => setSelectedAxisKey((current) => (current === axis.key ? null : current))}
+            onFocus={() => setSelectedAxisKey(axis.key)}
+            onBlur={() => setSelectedAxisKey((current) => (current === axis.key ? null : current))}
             onClick={() => {
+              setSelectedAxisKey(axis.key);
               if (onAxisClick) {
                 onAxisClick(axis.key, axis.label, axis.value);
               }
@@ -188,7 +194,7 @@ export default function HexagonRadar({
               x={textX}
               y={valueY}
               className="radar-axis-value"
-              style={showAllValues ? { opacity: 1 } : undefined}
+              style={showAllValues || selectedAxisKey === axis.key ? { opacity: 1 } : undefined}
               fill="var(--viz-danger)"
               fontSize="11"
               fontWeight="900"

@@ -17,6 +17,7 @@ import {
   LockKeyhole,
   Map,
   MapPin,
+  MinusCircle,
   MoveDiagonal,
   Radar,
   Rocket,
@@ -28,9 +29,11 @@ import {
   Sparkles,
   Swords,
   Target,
+  Trophy,
   Users,
   Wind,
   X,
+  XCircle,
 } from 'lucide-react';
 import Image from 'next/image';
 import { createElement, type ReactNode } from 'react';
@@ -48,6 +51,18 @@ import PreferredFootIcon from '@/components/ui/PreferredFootIcon';
 
 export type ProfileField = 'height' | 'weight' | 'birth' | 'residence';
 
+export type PlayerAbilityPanelSeasonRecord = {
+  appearances?: number;
+  goals?: number;
+  assists?: number;
+  momCount?: number;
+  avgRating?: number | null;
+  wins?: number;
+  draws?: number;
+  losses?: number;
+  winRate?: number;
+};
+
 interface PlayerAbilityPanelProps {
   stats: UserStats;
   ovr?: number | null;
@@ -60,13 +75,7 @@ interface PlayerAbilityPanelProps {
   weightKg?: number | null;
   playerName?: string | null;
   photoUrl?: string | null;
-  seasonRecord?: {
-    appearances?: number;
-    goals?: number;
-    assists?: number;
-    momCount?: number;
-    avgRating?: number | null;
-  } | null;
+  seasonRecord?: PlayerAbilityPanelSeasonRecord | null;
   topBadges?: Array<{ code: string; name: string }>;
   className?: string;
   layout?: 'full' | 'stats-only' | 'radar-only' | 'profile-only' | 'fut-card';
@@ -281,9 +290,17 @@ function PlayerOvrStyleCard({
     );
   }
 
+  const shouldShowSeasonMiniRecord = seasonRecord
+    && typeof seasonRecord.wins === 'number'
+    && typeof seasonRecord.draws === 'number'
+    && typeof seasonRecord.losses === 'number'
+    && typeof seasonRecord.winRate === 'number';
+
   return (
     <div
-      className="relative flex h-[136px] w-[104px] flex-col gap-1.5 rounded-2xl border border-glass-border bg-glass-bg p-2 text-center shadow-glass-shadow backdrop-blur-sm transition-colors hover:bg-glass-bg-hover select-none"
+      className={`relative flex w-[104px] flex-col gap-1.5 rounded-2xl border border-glass-border bg-glass-bg p-2 text-center shadow-glass-shadow backdrop-blur-sm transition-colors hover:bg-glass-bg-hover select-none ${
+        shouldShowSeasonMiniRecord ? 'h-[164px]' : 'h-[136px]'
+      }`}
       data-testid="player-ovr-style-card"
     >
       {/* Header Row: OVR + Preferred Foot side-by-side */}
@@ -319,7 +336,29 @@ function PlayerOvrStyleCard({
           {trait.name}
         </span>
       </div>
+
+      {shouldShowSeasonMiniRecord ? (
+        <div className="grid grid-cols-[1fr_auto] items-center gap-1 border-t border-current/10 pt-1 tabular-nums" data-testid="player-season-mini-record">
+          <div className="flex min-w-0 items-center justify-center gap-0.5">
+            <MiniRecordCell icon={Trophy} value={seasonRecord.wins ?? 0} className="text-result-win" />
+            <MiniRecordCell icon={MinusCircle} value={seasonRecord.draws ?? 0} className="text-result-draw" />
+            <MiniRecordCell icon={XCircle} value={seasonRecord.losses ?? 0} className="text-result-loss" />
+          </div>
+          <div className="text-[10px] font-black leading-none text-fcgreen-600">
+            {seasonRecord.winRate ?? 0}%
+          </div>
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+function MiniRecordCell({ icon: Icon, value, className }: { icon: typeof Trophy; value: number; className: string }) {
+  return (
+    <span className="inline-flex min-w-0 items-center justify-center gap-px text-[9px] font-black leading-none text-secondary">
+      <Icon size={9} className={`shrink-0 ${className}`} />
+      {value}
+    </span>
   );
 }
 
@@ -453,6 +492,7 @@ export default function PlayerAbilityPanel({
               stats={stats}
               position={position}
               selectedTraitId={selectedTraitId}
+              seasonRecord={seasonRecord}
               onPreferredFootClick={onPreferredFootClick}
             />
           </div>
@@ -462,7 +502,6 @@ export default function PlayerAbilityPanel({
               data={stats}
               className="w-full max-w-[190px]"
               onAxisClick={onRadarAxisClick}
-              showAllValues={Boolean(onRadarAxisClick)}
               isDraggable={isDraggable}
               onStatDrag={onStatDrag}
               onDragStart={onDragStart}
@@ -476,7 +515,6 @@ export default function PlayerAbilityPanel({
             data={stats}
             className="w-full max-w-[190px]"
             onAxisClick={onRadarAxisClick}
-            showAllValues={Boolean(onRadarAxisClick)}
             isDraggable={isDraggable}
             onStatDrag={onStatDrag}
             onDragStart={onDragStart}
