@@ -46,8 +46,14 @@ function validateBrowserSmoke() {
     return;
   }
 
+  const text = evidenceText(evidence.browserRuntime);
+  const passedTerms = policy.passedEvidenceTerms || [];
+  const missingPassedTerms = passedTerms.filter((term) => !text.includes(String(term).toLowerCase()));
+  if (missingPassedTerms.length > 0) {
+    errors.push(`browserRuntime evidence marked passed must mention: ${missingPassedTerms.join(', ')}.`);
+  }
+
   if (policy.packageReasonRequired && requiredFiles.some((file) => matchAny(file, policy.packageReasonPaths || []))) {
-    const text = evidenceText(evidence.browserRuntime);
     const terms = policy.packageReasonTerms || [];
     if (terms.length > 0 && !terms.some((term) => text.includes(String(term).toLowerCase()))) {
       errors.push('browserRuntime evidence for package/runtime files must include the runtime impact reason.');

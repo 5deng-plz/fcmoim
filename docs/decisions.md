@@ -14,12 +14,13 @@ This file starts clean for `prototype v0.1`.
 ### Quality Gate Policy
 
 - `harness:validate` is structure-only and must not be described as app quality or release readiness.
-- `harness:guard:verify` is the default completion gate: harness structure, design guard, diff guard, lint, typecheck, tests, and tracked Supabase SQL contract checks. It does not automatically include Local Supabase runtime tests or browser smoke evidence.
+- Harness guard profiles are tiered: `quick` for small UI/test/docs work, `standard` for scoped implementation work, and `full` for DB/Auth/RLS/package/runtime-entrypoint or release-readiness work.
+- `harness:guard:verify` remains as a compatibility alias for the full policy gate. It is not a product runtime guarantee by itself and does not automatically include Local Supabase runtime tests.
 - `verify` is the full local gate and includes Local Supabase reset/seed/API integration checks.
 - Runtime-affecting UI changes require matching SDD-based deterministic test evidence; API, auth, Supabase, and data access changes require matching API or Supabase evidence.
 - Auth/API/Data, app entrypoint, or package/runtime config changes require affected-runtime evidence: `verify:baseline`, `verify:db:local` when database/Auth/API behavior changes, and `npm run dev` plus in-app browser smoke for changed startup/session paths.
 - Dev server smoke is affected-runtime evidence, not a replacement for release readiness or database verification.
-- Completion requires a lightweight retrospective in project state. Harness improvements found during the retrospective stay as proposals until the user explicitly approves promotion into durable rules or guard changes.
+- `docs/project-context.json` and retrospective are not required for `quick` work. Standard/full work records concise active work state; reusable harness improvements stay as proposals until the user explicitly approves promotion into durable rules or guard changes.
 - Verifier approval with no blockers is required before Orchestrator marks work complete.
 - If required evidence cannot be collected, the work remains blocked or conditional.
 
@@ -27,7 +28,7 @@ This file starts clean for `prototype v0.1`.
 
 - `.agents/` is reusable harness engine only; project paths, commands, stack names, and evidence providers live in `docs/agent-rules.json`.
 - Agent path ownership, forbidden paths, and required evidence are enforced by guard scripts and CI.
-- CI runs the `verify` guard profile; local Git integration is intentionally not part of the harness.
+- CI may run the `verify` guard profile as a full policy check; local Git integration is intentionally not part of the harness.
 
 ### Design Token Enforcement
 

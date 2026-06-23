@@ -1,126 +1,109 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 103,
-  "updatedAt": "2026-06-23T23:06:30+09:00",
+  "updateVersion": 106,
+  "updatedAt": "2026-06-23T23:28:20+09:00",
   "updatedBy": "codex",
-  "currentPhase": "browser-feedback-community-feed-inline-compose",
+  "currentPhase": "harness-lightweight-profiles",
   "activeWork": {
-    "taskId": "browser-feedback-community-feed-inline-compose",
+    "taskId": "harness-lightweight-profiles",
     "status": "complete",
     "designMode": "maintenance",
-    "baselineCommit": "72d6513560fde2a9c1ff915572974fb50d19a877",
+    "baselineCommit": "dadc2ca",
     "changedFiles": [
+      ".agents/fixtures/negative-fixtures.json",
+      ".agents/scripts/bootstrap-harness.mjs",
+      ".agents/scripts/guard-evidence.mjs",
+      ".agents/scripts/test-harness.mjs",
+      "AGENT.md",
       "docs/project-context.json",
-      "supabase/migrations/20260623224500_feed_reaction_simple_emoji.sql",
-      "src/components/features/EventComments.tsx",
-      "src/components/tabs/CommunityPage.tsx",
-      "src/services/feed-posts.ts",
-      "src/services/supabase-repositories.ts",
-      "src/stores/feedClient.ts",
-      "tests/feed-posts-service.test.ts",
-      "tests/frontend-auth-and-schedule-ui.test.tsx",
-      "tests/local-supabase-api.test.ts"
+      "docs/agent-rules.json",
+      "docs/decisions.md",
+      "docs/user/design-harness-workflow.md",
+      "package.json"
     ],
     "changedSurfaces": [
-      "ui",
-      "api",
-      "data",
-      "tests",
+      "infra",
       "docs"
     ],
     "allowedPaths": [
+      ".agents/fixtures/negative-fixtures.json",
+      ".agents/scripts/bootstrap-harness.mjs",
+      ".agents/scripts/guard-evidence.mjs",
+      ".agents/scripts/test-harness.mjs",
+      "AGENT.md",
       "docs/project-context.json",
-      "supabase/migrations/20260623224500_feed_reaction_simple_emoji.sql",
-      "src/components/features/EventComments.tsx",
-      "src/components/tabs/CommunityPage.tsx",
-      "src/services/feed-posts.ts",
-      "src/services/supabase-repositories.ts",
-      "src/stores/feedClient.ts",
-      "tests/feed-posts-service.test.ts",
-      "tests/frontend-auth-and-schedule-ui.test.tsx",
-      "tests/local-supabase-api.test.ts"
+      "docs/agent-rules.json",
+      "docs/decisions.md",
+      "docs/user/design-harness-workflow.md",
+      "package.json"
     ],
     "evidence": {
       "scopeReview": {
         "status": "completed",
         "provider": "Manual review",
-        "command": "Reviewed browser comments plus CommunityPage, EventComments, feed client/service/repository, existing feed migration, and community UI tests.",
-        "summary": "Scope covers inline feed compose slot, feed comment count synchronization, simple emoji reaction type contract, post timestamp hh:mm display, and related tests/migration. No unrelated tabs/pages/components are created."
+        "command": "Reviewed current guard profiles, evidence guard, harness regression fixtures, package scripts, AGENT.md, workflow, and decision docs.",
+        "summary": "Scope covers harness profile split into quick/standard/full, project-context requirement reduction for quick work, stricter browserRuntime passed evidence wording, and related harness regression coverage."
       },
-      "targetedUiTests": {
+      "harnessValidate": {
         "status": "passed",
-        "provider": "Vitest",
-        "command": "npx vitest run tests/feed-posts-service.test.ts tests/frontend-auth-and-schedule-ui.test.tsx",
-        "summary": "Feed service and UI regression tests passed for inline feed compose, simple emoji reactions, 24h feed timestamp, and live feed comment count synchronization.",
-        "type": "deterministic"
+        "provider": "Harness",
+        "command": "npm run harness:validate",
+        "summary": "Harness structure, project rules, documentation line limits, and purity checks passed."
       },
-      "typecheck": {
+      "harnessRegression": {
         "status": "passed",
-        "provider": "npm",
-        "command": "npm run typecheck",
-        "summary": "TypeScript typecheck passed after feed reaction type contract and EventComments callback changes."
+        "provider": "Harness fixtures",
+        "command": "npm run harness:test",
+        "summary": "Harness regression passed with 20 fixture cases, including quick no-context pass, standard diff ownership failure, full data evidence failure, and stricter browserRuntime passed evidence terms."
+      },
+      "quickProfile": {
+        "status": "passed",
+        "provider": "Harness guard",
+        "command": "npm run harness:guard:quick",
+        "summary": "Quick profile passed without project-context evidence or diff ownership checks for the current harness/docs-only changes."
+      },
+      "standardProfile": {
+        "status": "passed",
+        "provider": "Harness guard",
+        "command": "npm run harness:guard:standard",
+        "summary": "Standard profile passed: harness validation, token sync, design guard, diff ownership for 10 changed files, baseline verification, and db:check."
       },
       "dbCheck": {
         "status": "passed",
-        "provider": "npm",
+        "provider": "Supabase contract checker",
         "command": "npm run db:check",
-        "summary": "Supabase migration contract check passed including the feed_reactions simple emoji constraint migration."
-      },
-      "baseline": {
-        "status": "passed",
-        "provider": "npm",
-        "command": "npm run verify:baseline",
-        "summary": "Baseline verification passed. Existing lint warnings remain in CommunityPage exhaustive-deps and img usage, with no new blocking errors."
-      },
-      "designGuard": {
-        "status": "passed",
-        "provider": "Harness guard",
-        "command": "node .agents/scripts/guard-design.mjs",
-        "summary": "Design guard passed for the guarded UI surfaces touched by this change."
-      },
-      "localDb": {
-        "status": "passed",
-        "provider": "Local Supabase CLI",
-        "command": "npm run verify:db:local",
-        "summary": "Local Supabase reset, seed, and API smoke tests passed. Feed reaction API now verifies the new up reaction contract.",
-        "type": "database"
+        "summary": "Tracked Supabase SQL contract check passed; no DB schema changes were made by this task."
       },
       "browserRuntime": {
         "status": "passed",
-        "provider": "In-app browser",
-        "command": "localhost:3000 QA login -> Records > Board -> 게시판 작성 -> create feed -> open comments -> submit comment",
-        "summary": "Verified that board write opens an inline composer instead of a modal, no 피드 작성 dialog is present, a new post displays 24h timestamp such as 6월 23일 22:58, only 👍/👎/✅/🙂/😢 reactions render, and the comment button updates from 댓글 0개 to 댓글 1개 after submitting a comment. App terminal logs were unavailable in this Codex thread because no terminal session is attached.",
-        "type": "runtime"
-      },
-      "apiIntegration": {
-        "status": "passed",
-        "type": "api",
-        "provider": "Local Supabase CLI",
-        "command": "npm run verify:db:local",
-        "summary": "Local API smoke tests passed against the reset Local Supabase stack, including feed post comment and reaction endpoint coverage."
-      },
-      "runtimeErrorFollowup": {
-        "status": "passed",
         "type": "runtime",
-        "provider": "curl + bundle grep + Vitest",
-        "command": "curl -i http://localhost:3000/; curl -s http://localhost:3000/_next/static/chunks/src_components_tabs_01o6m85._.js | rg \"FEED_REACTIONS|Flame|fire|laugh|goat|clap\"; npx vitest run tests/feed-posts-service.test.ts tests/frontend-auth-and-schedule-ui.test.tsx; npm run typecheck",
-        "summary": "GET / returned 200 OK. CommunityPage bundled FEED_REACTIONS uses the new emoji labels; remaining Flame reference is RecordsTab scoring icon usage, not feed reactions. EventComments no longer invokes parent comment-count updates from inside the setComments updater."
+        "provider": "Current dev server + in-app browser logs",
+        "command": "curl http://localhost:3000/; inspect .next/dev/logs/next-development.log delta; inspect in-app browser recent logs",
+        "summary": "Current dev server on localhost:3000 responded 200 and first screen HTML rendered. Browser console recent logs showed only React DevTools/HMR messages and no new errors. Server log delta for the check had no app errors. Package change is harness script/profile metadata, not a runtime dependency change."
+      },
+      "fullProfile": {
+        "status": "passed",
+        "provider": "Harness guard",
+        "command": "npm run harness:guard:full",
+        "summary": "Full profile passed with evidence guard enabled."
+      },
+      "verifyAlias": {
+        "status": "passed",
+        "provider": "Harness guard",
+        "command": "npm run harness:guard:verify",
+        "summary": "Existing verify command remains compatible and runs the full policy profile."
       }
     },
     "retrospective": {
       "issuesObserved": [
-        "Feed compose used a modal, which interrupted the board flow.",
-        "Feed post comment count was hydrated only from list responses, so newly submitted embedded comments did not update the parent post count.",
-        "Existing feed reaction labels were domain-specific instead of the requested simple emoji set.",
-        "Local Supabase reset invalidated the previous browser session, so browser evidence used the configured local QA email login flow.",
-        "A follow-up runtime review found EventComments was calling the parent comment-count callback inside a React state updater, which caused a setState-during-render warning after comment submit.",
-        "The earlier browserRuntime evidence did not include attached terminal log review; this follow-up used GET / and bundle inspection to verify the reported Flame runtime failure was not present in the current CommunityPage bundle."
+        "The previous single verify profile made small UI feedback carry the same project-state and evidence overhead as DB/runtime work.",
+        "browserRuntime evidence accepted passed text too easily unless server log and console checks were explicitly recorded."
       ],
       "missedEvidence": [],
       "harnessImprovementProposal": [],
-      "promotionRecommendation": "none",
-      "reason": "This is product-specific community feed feedback and does not justify reusable harness policy changes."
+      "promotionRecommendation": "propose",
+      "reason": "This task intentionally changes reusable harness policy to reduce overhead while keeping full evidence checks for higher-risk work."
     },
     "reviewStatus": "ready",
     "loopCounters": {

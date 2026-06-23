@@ -48,7 +48,27 @@
   },
   "guardProfiles": {
     "preCommit": { "steps": ["validateHarness", "guardDesignStaged", "projectPreCommit"] },
+    "quick": { "steps": ["validateHarness", "guardDesign"] },
+    "standard": { "steps": ["validateHarness", "guardTokenSync", "guardDesign", "guardDiff", "projectVerify"] },
+    "full": { "steps": ["validateHarness", "guardTokenSync", "guardDesign", "guardDiff", "projectVerify", "guardEvidence"] },
     "verify": { "steps": ["validateHarness", "guardTokenSync", "guardDesign", "guardDiff", "projectVerify", "guardEvidence"] }
+  },
+  "workLevels": {
+    "quick": {
+      "description": "Small UI, test, or docs changes. Do not update project context or retrospective by default.",
+      "requiresProjectContext": false,
+      "recommendedGate": "npm run harness:guard:quick"
+    },
+    "standard": {
+      "description": "API, service, store, or multi-surface changes. Record concise activeWork scope and evidence.",
+      "requiresProjectContext": true,
+      "recommendedGate": "npm run harness:guard:standard"
+    },
+    "full": {
+      "description": "DB, Auth, RLS, package, runtime entrypoint, or release-readiness changes. Keep full evidence requirements.",
+      "requiresProjectContext": true,
+      "recommendedGate": "npm run harness:guard:full"
+    }
   },
   "statePolicy": {
     "writer": "orchestrator"
@@ -90,6 +110,7 @@
     "browserSmoke": {
       "requiredEvidence": [{ "type": "runtime", "maxAgeMinutes": 1440 }],
       "providers": ["npm run dev", "in-app browser", "server terminal log"],
+      "passedEvidenceTerms": ["dev server", "first screen", "console", "server log"],
       "requiredWhenChanged": [
         "src/app/page.tsx",
         "src/app/layout.tsx",

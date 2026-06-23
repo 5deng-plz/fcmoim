@@ -89,7 +89,10 @@ function createRules() {
       docs: { context: 'docs/state.json' }
     },
     agents: [
-      { id: 'writer', owns: ['app/allowed/**', 'app/view/**'], forbidden: ['app/blocked/**'] }
+      { id: 'builder', owns: ['app/allowed/**', 'app/view/**', 'db/**'], forbidden: ['app/blocked/**'] },
+      { id: 'infra', owns: ['docs/**', '.agents/**'], forbidden: [] },
+      { id: 'verifier', owns: ['specs/**'], forbidden: ['app/**', 'db/**'] },
+      { id: 'orchestrator', owns: ['docs/state.json', 'docs/agent-rules.json'], forbidden: [] }
     ],
     sharedAllowedPaths: [],
     surfaces: [
@@ -102,6 +105,12 @@ function createRules() {
     },
     evidencePolicy: {
       interface: { requiredEvidence: [{ type: 'visual', maxAgeMinutes: 1440, requireConsoleClean: true }] }
+    },
+    guardProfiles: {
+      quick: { steps: ['validateHarness', 'guardDesign'] },
+      standard: { steps: ['validateHarness', 'guardDesign', 'guardDiff', 'projectVerify'] },
+      full: { steps: ['validateHarness', 'guardDesign', 'guardDiff', 'projectVerify', 'guardEvidence'] },
+      verify: { steps: ['validateHarness', 'guardDesign', 'guardDiff', 'projectVerify', 'guardEvidence'] }
     },
     reviewPolicy: { required: true, readyStatus: 'ready' },
     statePolicy: {

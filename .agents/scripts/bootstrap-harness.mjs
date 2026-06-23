@@ -65,7 +65,10 @@ writeIfMissing(rulesPath, JSON.stringify({
   },
   guardProfiles: {
     preCommit: { steps: ['validateHarness', 'guardDesignStaged', 'projectPreCommit'] },
-    verify: { steps: ['validateHarness', 'guardDesign', 'guardDiff', 'projectVerify'] }
+    quick: { steps: ['validateHarness', 'guardDesign'] },
+    standard: { steps: ['validateHarness', 'guardDesign', 'guardDiff', 'projectVerify'] },
+    full: { steps: ['validateHarness', 'guardDesign', 'guardDiff', 'projectVerify', 'guardEvidence'] },
+    verify: { steps: ['validateHarness', 'guardDesign', 'guardDiff', 'projectVerify', 'guardEvidence'] }
   },
   evidencePolicy: {},
   reviewPolicy: { required: true, readyStatus: 'ready' },

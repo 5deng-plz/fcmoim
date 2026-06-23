@@ -293,6 +293,114 @@
         { "path": "app/runtime/session.ts", "content": "export const value = true;\n" }
       ],
       "expectedExit": 0
+    },
+    {
+      "id": "guard-profile-quick-no-project-state-update",
+      "description": "quick profile accepts a small guarded UI change without evidence or activeWork scope updates",
+      "command": "node .agents/scripts/guard-runner.mjs quick",
+      "mutations": [
+        { "path": "app/view/QuickCard.tsx", "content": "export default function QuickCard() { return <div className=\"bg-gray-100 text-gray-900\">quick</div>; }\n" }
+      ],
+      "expectedExit": 0
+    },
+    {
+      "id": "guard-profile-standard-keeps-diff-ownership",
+      "description": "standard profile still rejects changed files outside allowed paths",
+      "command": "node .agents/scripts/guard-runner.mjs standard",
+      "mutations": [
+        { "path": "forbidden/standard.txt", "content": "outside standard scope\n" }
+      ],
+      "expectedExit": 1
+    },
+    {
+      "id": "guard-profile-full-requires-data-evidence",
+      "description": "full profile rejects data changes without non-mock database evidence",
+      "command": "node .agents/scripts/guard-runner.mjs full",
+      "rulesPatch": {
+        "surfaces": [
+          { "id": "data", "paths": ["db/**"] }
+        ],
+        "evidencePolicy": {
+          "data": {
+            "requiredEvidence": [{ "type": "database", "maxAgeMinutes": 1440 }],
+            "providers": ["Local Database"],
+            "mockEvidenceAccepted": false
+          }
+        },
+        "retrospectivePolicy": {
+          "requiredAtCompletion": true,
+          "requiredFields": ["issuesObserved", "missedEvidence", "harnessImprovementProposal", "promotionRecommendation", "reason"],
+          "promotionRecommendations": ["none", "propose", "defer"]
+        }
+      },
+      "statePatch": {
+        "activeWork": {
+          "status": "complete",
+          "changedFiles": ["db/schema.sql"],
+          "changedSurfaces": ["data"],
+          "allowedPaths": ["db/**"],
+          "evidence": {},
+          "reviewStatus": "ready",
+          "retrospective": {
+            "issuesObserved": [],
+            "missedEvidence": ["database"],
+            "harnessImprovementProposal": [],
+            "promotionRecommendation": "none",
+            "reason": "Fixture retrospective present."
+          }
+        }
+      },
+      "mutations": [
+        { "path": "db/schema.sql", "content": "create table fixture_data(id text primary key);\n" }
+      ],
+      "expectedExit": 1
+    },
+    {
+      "id": "evidence-guard-browser-smoke-passed-requires-logs",
+      "description": "browserRuntime passed evidence must mention dev server, first screen, console, and server log checks",
+      "command": "node .agents/scripts/guard-evidence.mjs",
+      "rulesPatch": {
+        "evidencePolicy": {
+          "browserSmoke": {
+            "requiredEvidence": [{ "type": "runtime", "maxAgeMinutes": 1440 }],
+            "providers": ["Runtime Browser"],
+            "passedEvidenceTerms": ["dev server", "first screen", "console", "server log"],
+            "requiredWhenChanged": ["app/runtime/**"]
+          }
+        },
+        "retrospectivePolicy": {
+          "requiredAtCompletion": true,
+          "requiredFields": ["issuesObserved", "missedEvidence", "harnessImprovementProposal", "promotionRecommendation", "reason"],
+          "promotionRecommendations": ["none", "propose", "defer"]
+        }
+      },
+      "statePatch": {
+        "activeWork": {
+          "status": "complete",
+          "changedFiles": ["app/runtime/session.ts"],
+          "changedSurfaces": ["interface"],
+          "allowedPaths": ["app/runtime/**"],
+          "evidence": {
+            "browserRuntime": {
+              "status": "passed",
+              "provider": "Runtime Browser",
+              "summary": "First screen rendered."
+            }
+          },
+          "reviewStatus": "ready",
+          "retrospective": {
+            "issuesObserved": [],
+            "missedEvidence": [],
+            "harnessImprovementProposal": [],
+            "promotionRecommendation": "none",
+            "reason": "Fixture retrospective present."
+          }
+        }
+      },
+      "mutations": [
+        { "path": "app/runtime/session.ts", "content": "export const value = true;\n" }
+      ],
+      "expectedExit": 1
     }
   ]
 }
