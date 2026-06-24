@@ -700,10 +700,10 @@ function DesktopTacticsStudio({
 
         </div>
 
-        {/* Center Area: Mega Cyber Pitch (Centered overall) */}
-        <div className="flex flex-col justify-center items-center relative p-4 z-0">
+        {/* Center Area: Mega Cyber Pitch (Centered overall - Expanded) */}
+        <div className="flex-1 h-full flex flex-col justify-center items-center relative p-4 z-0">
           {/* Pitch Container with Skew Accent */}
-          <div className="w-full max-w-[480px] aspect-[5/3] relative rounded-3xl border border-[#00ffa3]/25 bg-soccer-pitch overflow-hidden shadow-[0_0_24px_rgba(0,255,163,0.06)] p-3">
+          <div className="w-[92%] max-w-[760px] xl:max-w-[820px] aspect-[5/3] relative rounded-3xl border border-[#00ffa3]/25 bg-soccer-pitch overflow-hidden shadow-[0_0_24px_rgba(0,255,163,0.06)] p-4 md:p-5">
             {/* Render 11 Positions based on Lineup */}
             {data.lineup.map((slot) => {
               const player = data.players.find((p) => p.id === slot.membershipId);
@@ -723,25 +723,25 @@ function DesktopTacticsStudio({
                   className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-all duration-500 ease-out"
                   style={{ top: `${top}%`, left: `${left}%` }}
                 >
-                  <div className={`relative flex flex-col items-center justify-between p-1 rounded-lg border shadow-lg ${cardTierClass} w-9 h-11 scale-90 md:scale-95`}>
+                  <div className={`relative flex flex-col items-center justify-between p-1 md:p-1.5 rounded-lg border shadow-lg ${cardTierClass} w-11 h-14 md:w-13 md:h-[68px] scale-90 md:scale-95 transition-all duration-300`}>
                     {player ? (
                       <>
-                        <div className="text-[6px] font-black absolute top-0.5 right-1">{player.ovr}</div>
-                        <div className="w-4 h-4 rounded-full overflow-hidden mt-1 border border-white/20">
+                        <div className="text-[7px] md:text-[9px] font-black absolute top-0.5 right-1 md:top-1 md:right-1.5">{player.ovr}</div>
+                        <div className="w-5 h-5 md:w-7 md:h-7 rounded-full overflow-hidden mt-1 md:mt-1.5 border border-white/20">
                           <img 
                             src={getFallbackAvatar(player.name)} 
                             alt="" 
                             className="w-full h-full object-cover" 
                           />
                         </div>
-                        <span className="text-[6px] font-extrabold truncate max-w-full text-center w-full mb-0.5 select-none">
+                        <span className="text-[7px] md:text-[9px] font-extrabold truncate max-w-full text-center w-full mb-0.5 md:mb-1 select-none">
                           {player.name}
                         </span>
                       </>
                     ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-[6px] font-bold">
+                      <div className="w-full h-full flex flex-col items-center justify-center text-[7px] md:text-[9px] font-bold">
                         <span>EMPTY</span>
-                        <span className="text-[5px] text-gray-700">SLOT</span>
+                        <span className="text-[5px] md:text-[6px] text-gray-700">SLOT</span>
                       </div>
                     )}
                   </div>
@@ -749,8 +749,8 @@ function DesktopTacticsStudio({
               );
             })}
           </div>
-          <div className="mt-3.5 text-[9px] text-gray-500 font-extrabold tracking-widest uppercase flex items-center gap-1.5 select-none">
-            <Info size={10} className="text-[#00ffa3]" />
+          <div className="mt-3.5 text-[9px] md:text-[10px] text-gray-500 font-extrabold tracking-widest uppercase flex items-center gap-1.5 select-none">
+            <Info size={11} className="text-[#00ffa3]" />
             전술 보드는 우측 모바일 제어반과 실시간 동기화 중입니다
           </div>
         </div>

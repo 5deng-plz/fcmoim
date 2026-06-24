@@ -148,12 +148,24 @@ export default function CalendarView({
               </span>
               {markerTypes.length > 0 ? (
                 <span className="mt-1 flex h-1.5 items-center justify-center gap-1" aria-hidden="true">
-                  {markerTypes.map((type) => (
-                    <span
-                      key={type}
-                      className="h-1.5 w-1.5 rounded-full bg-[#00ffa3] shadow-[0_0_6px_rgba(0,255,163,0.8)] animate-pulse"
-                    />
-                  ))}
+                  {markerTypes.map((type) => {
+                    let dotColorClass = 'bg-[#00ffa3] shadow-[0_0_6px_rgba(0,255,163,0.8)]';
+                    if (type === 'poll') {
+                      dotColorClass = 'bg-[#fbbf24] shadow-[0_0_6px_rgba(251,191,36,0.8)]';
+                    } else if (type === 'training') {
+                      dotColorClass = 'bg-[#c084fc] shadow-[0_0_6px_rgba(192,132,252,0.8)]';
+                    } else if (type === 'seminar') {
+                      dotColorClass = 'bg-[#f97316] shadow-[0_0_6px_rgba(249,115,22,0.8)]';
+                    } else if (type === 'etc') {
+                      dotColorClass = 'bg-[#9ca3af] shadow-[0_0_6px_rgba(156,163,175,0.8)]';
+                    }
+                    return (
+                      <span
+                        key={type}
+                        className={`h-1.5 w-1.5 rounded-full ${dotColorClass} animate-pulse`}
+                      />
+                    );
+                  })}
                 </span>
               ) : null}
             </button>
