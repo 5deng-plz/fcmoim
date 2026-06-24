@@ -11,13 +11,14 @@ import Badge from '@/components/ui/Badge';
 import type { EventType } from '@/types';
 
 export default function UpcomingMatch() {
-  const { activeClubId } = useAppStore();
+  const { activeClubId, setActiveTab, setFocusedMatchId } = useAppStore();
   const { showToast } = useToastStore();
   const {
     upcomingMatches,
     upcomingMatchesStatus,
     upcomingMatchesError,
     loadUpcomingMatches,
+    setSelectedDate,
   } = useScheduleStore();
   const [nowMs] = useState(() => Date.now());
   const nextMatch = upcomingMatches.find((match) => (
@@ -34,6 +35,13 @@ export default function UpcomingMatch() {
   }, [activeClubId, loadUpcomingMatches, showToast, upcomingMatchesStatus]);
 
   const dDayText = nextMatch ? getDDay(nextMatch.date) : '';
+
+  const handleNextMatchClick = () => {
+    if (!nextMatch) return;
+    setFocusedMatchId(nextMatch.id);
+    setSelectedDate(new Date(nextMatch.date).getDate());
+    setActiveTab('schedule');
+  };
 
   return (
     <section>
@@ -60,7 +68,10 @@ export default function UpcomingMatch() {
       ) : null}
 
       {upcomingMatchesStatus !== 'loading' && nextMatch ? (
-        <div className="relative overflow-hidden rounded-3xl border border-[#25283e] bg-[#141624]/85 px-5 py-4.5 shadow-lg shadow-black/40 transition-colors">
+        <div 
+          onClick={handleNextMatchClick}
+          className="relative cursor-pointer overflow-hidden rounded-3xl border border-[#25283e] bg-[#141624]/85 px-5 py-4.5 shadow-lg shadow-black/40 hover:bg-[#1e2136] active:scale-[0.98] transition-all duration-200"
+        >
           
           {/* D-Day Badge */}
           {dDayText && nextMatch.status !== 'cancelled' && (

@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import Header from '@/components/layout/Header';
 import BottomNav from '@/components/layout/BottomNav';
 import HomeTab from '@/components/tabs/HomeTab';
@@ -25,82 +25,98 @@ import { useAppStore } from '@/stores/useAppStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useModalStore } from '@/stores/useModalStore';
 import { useSmartScroll } from '@/hooks/useSmartScroll';
-import { Ban, ShieldAlert } from 'lucide-react';
+import { Ban, ShieldAlert, X, Shield, Award, Users, Info, Activity } from 'lucide-react';
+import { fetchMatchAttendees, fetchMatchLineup, type MatchLineupEntry } from '@/stores/matchClient';
+import { useScheduleStore } from '@/stores/useScheduleStore';
+import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
+import type { Player } from '@/components/features/TacticsDragBuilder';
 
 function PhoneFrame({ children, surface = 'white' }: { children: ReactNode; surface?: 'white' | 'soft' }) {
+  const { focusedMatchId, setFocusedMatchId, activeClubId } = useAppStore();
+
   return (
     <div className="app-viewport chzzk-layout text-primary">
       {/* Chzzk Live Stream Player Area (Visible only on Desktop) */}
       <div className="flex-1 h-full relative bg-black flex flex-col justify-between hidden lg:flex overflow-hidden select-none border-r border-[#25283e]" data-exempt=":// design-exempt(reason: chzzk layout border, expires: 2026-12-31)">
         
-        {/* Stream Header */}
-        <div className="p-4 bg-gradient-to-b from-black/95 to-transparent flex items-center justify-between z-20">
-          <div className="flex items-center gap-3">
-            <span className="flex h-5 items-center justify-center rounded bg-[#00ffa3] px-2.5 text-[10px] font-black text-black gap-1 shadow-[0_0_8px_rgba(0,255,163,0.4)]" data-exempt=":// design-exempt(reason: chzzk header badge, expires: 2026-12-31)">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" data-exempt=":// design-exempt(reason: red live status dot, expires: 2026-12-31)" />
-              실시간 중계
-            </span>
-            <span className="text-sm font-black text-white tracking-wide">
-              [라이브] 🏟️ FC Guppy 주말 아침 친선 매치 & 전술 전광판 (땀 흘리고 막걸리 내기)
-            </span>
-          </div>
-          <div className="flex items-center gap-4 text-[11px] font-black text-gray-400">
-            <span className="flex items-center gap-1.5">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00ffa3] opacity-75" data-exempt=":// design-exempt(reason: chzzk green live ping, expires: 2026-12-31)"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00ffa3]" data-exempt=":// design-exempt(reason: chzzk green live dot, expires: 2026-12-31)"></span>
-              </span>
-              <span className="text-[#00ffa3] font-bold" data-exempt=":// design-exempt(reason: chzzk green text, expires: 2026-12-31)">송출 양호 (1080p)</span>
-            </span>
-            <span className="border-l border-gray-800 pl-3">참석회원 10명 (풀방)</span>
-          </div>
-        </div>
- 
-        {/* Video Player Display (Winning Eleven Intro Theme + Danmaku Chat) */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#070914] winning-bg-grid z-0" data-exempt=":// design-exempt(reason: chzzk player background, expires: 2026-12-31)">
-          {/* Neon Glow Effects */}
-          <div className="absolute inset-0 bg-gradient-to-tr from-[#00ffa3]/10 via-transparent to-[#00b872]/15 mix-blend-color-dodge animate-pulse" style={{ animationDuration: '4s' }} data-exempt=":// design-exempt(reason: chzzk glow effects, expires: 2026-12-31)" />
-          
-          {/* Winning Eleven Title Card */}
-          <div className="text-center space-y-5 z-10 animate-fadeIn">
-            <div className="inline-block bg-gradient-to-r from-[#00b872] to-[#00ffa3] text-black font-black text-6xl tracking-wider px-8 py-3.5 transform -skew-x-12 border-[5px] border-black shadow-[0_0_30px_rgba(0,255,163,0.25)]" data-exempt=":// design-exempt(reason: chzzk winning eleven title card, expires: 2026-12-31)">
-              WINNING MOIM
+        {focusedMatchId ? (
+          <DesktopTacticsStudio 
+            matchId={focusedMatchId} 
+            activeClubId={activeClubId} 
+            onClose={() => setFocusedMatchId(null)} 
+          />
+        ) : (
+          <>
+            {/* Stream Header */}
+            <div className="p-4 bg-gradient-to-b from-black/95 to-transparent flex items-center justify-between z-20">
+              <div className="flex items-center gap-3">
+                <span className="flex h-5 items-center justify-center rounded bg-[#00ffa3] px-2.5 text-[10px] font-black text-black gap-1 shadow-[0_0_8px_rgba(0,255,163,0.4)]" data-exempt=":// design-exempt(reason: chzzk header badge, expires: 2026-12-31)">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" data-exempt=":// design-exempt(reason: red live status dot, expires: 2026-12-31)" />
+                  실시간 중계
+                </span>
+                <span className="text-sm font-black text-white tracking-wide">
+                  [라이브] 🏟️ FC Guppy 주말 아침 친선 매치 & 전술 전광판 (땀 흘리고 막걸리 내기)
+                </span>
+              </div>
+              <div className="flex items-center gap-4 text-[11px] font-black text-gray-400">
+                <span className="flex items-center gap-1.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00ffa3] opacity-75" data-exempt=":// design-exempt(reason: chzzk green live ping, expires: 2026-12-31)"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00ffa3]" data-exempt=":// design-exempt(reason: chzzk green live dot, expires: 2026-12-31)"></span>
+                  </span>
+                  <span className="text-[#00ffa3] font-bold" data-exempt=":// design-exempt(reason: chzzk green text, expires: 2026-12-31)">송출 양호 (1080p)</span>
+                </span>
+                <span className="border-l border-gray-800 pl-3">참석회원 10명 (풀방)</span>
+              </div>
             </div>
-            <div className="text-md font-black text-[#00ffa3] tracking-widest uppercase" data-exempt=":// design-exempt(reason: chzzk green text, expires: 2026-12-31)">
-              FC GUPPY 2026 SEASON
+     
+            {/* Video Player Display (Winning Eleven Intro Theme + Danmaku Chat) */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#070914] winning-bg-grid z-0" data-exempt=":// design-exempt(reason: chzzk player background, expires: 2026-12-31)">
+              {/* Neon Glow Effects */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-[#00ffa3]/10 via-transparent to-[#00b872]/15 mix-blend-color-dodge animate-pulse" style={{ animationDuration: '4s' }} data-exempt=":// design-exempt(reason: chzzk glow effects, expires: 2026-12-31)" />
+              
+              {/* Winning Eleven Title Card */}
+              <div className="text-center space-y-5 z-10 animate-fadeIn">
+                <div className="inline-block bg-gradient-to-r from-[#00b872] to-[#00ffa3] text-black font-black text-6xl tracking-wider px-8 py-3.5 transform -skew-x-12 border-[5px] border-black shadow-[0_0_30px_rgba(0,255,163,0.25)]" data-exempt=":// design-exempt(reason: chzzk winning eleven title card, expires: 2026-12-31)">
+                  WINNING MOIM
+                </div>
+                <div className="text-md font-black text-[#00ffa3] tracking-widest uppercase" data-exempt=":// design-exempt(reason: chzzk green text, expires: 2026-12-31)">
+                  FC GUPPY 2026 SEASON
+                </div>
+                <div className="pt-8">
+                  <button className="flex items-center gap-2 mx-auto rounded-full bg-[#00e58f] hover:bg-[#00ffa3] active:scale-95 transition-all px-8 py-3.5 text-xs font-black text-black shadow-lg shadow-[#00ffa3]/25" data-exempt=":// design-exempt(reason: chzzk play button, expires: 2026-12-31)">
+                    ▶ 인트로 재생
+                  </button>
+                </div>
+              </div>
+     
+              {/* Clean video screen without floating chat text */}
             </div>
-            <div className="pt-8">
-              <button className="flex items-center gap-2 mx-auto rounded-full bg-[#00e58f] hover:bg-[#00ffa3] active:scale-95 transition-all px-8 py-3.5 text-xs font-black text-black shadow-lg shadow-[#00ffa3]/25" data-exempt=":// design-exempt(reason: chzzk play button, expires: 2026-12-31)">
-                ▶ 인트로 재생
-              </button>
+     
+            {/* Video Player Controls */}
+            <div className="p-4 bg-gradient-to-t from-black/95 to-transparent flex items-center justify-between z-20">
+              <div className="flex items-center gap-4 text-white">
+                <button className="text-xs font-black text-gray-400 hover:text-white transition-colors">
+                  ⏸ 일시정지
+                </button>
+                <div className="text-[11px] font-black text-gray-400">
+                  02:12 / 03:00
+                </div>
+                <div className="text-xs text-[#00ffa3] font-black flex items-center gap-1.5" data-exempt=":// design-exempt(reason: chzzk live indicator text, expires: 2026-12-31)">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00ffa3] opacity-75" data-exempt=":// design-exempt(reason: chzzk live indicator ping, expires: 2026-12-31)"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#00ffa3]" data-exempt=":// design-exempt(reason: chzzk live indicator dot, expires: 2026-12-31)"></span>
+                  </span>
+                  LIVE
+                </div>
+              </div>
+              <div className="flex items-center gap-5 text-[11px] font-black text-gray-400">
+                <span className="hover:text-white transition-colors cursor-pointer">1080P SOURCE</span>
+                <span className="hover:text-white transition-colors cursor-pointer">SCREEN 16:9</span>
+              </div>
             </div>
-          </div>
- 
-          {/* Clean video screen without floating chat text */}
-        </div>
- 
-        {/* Video Player Controls */}
-        <div className="p-4 bg-gradient-to-t from-black/95 to-transparent flex items-center justify-between z-20">
-          <div className="flex items-center gap-4 text-white">
-            <button className="text-xs font-black text-gray-400 hover:text-white transition-colors">
-              ⏸ 일시정지
-            </button>
-            <div className="text-[11px] font-black text-gray-400">
-              02:12 / 03:00
-            </div>
-            <div className="text-xs text-[#00ffa3] font-black flex items-center gap-1.5" data-exempt=":// design-exempt(reason: chzzk live indicator text, expires: 2026-12-31)">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00ffa3] opacity-75" data-exempt=":// design-exempt(reason: chzzk live indicator ping, expires: 2026-12-31)"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#00ffa3]" data-exempt=":// design-exempt(reason: chzzk live indicator dot, expires: 2026-12-31)"></span>
-              </span>
-              LIVE
-            </div>
-          </div>
-          <div className="flex items-center gap-5 text-[11px] font-black text-gray-400">
-            <span className="hover:text-white transition-colors cursor-pointer">1080P SOURCE</span>
-            <span className="hover:text-white transition-colors cursor-pointer">SCREEN 16:9</span>
-          </div>
-        </div>
+          </>
+        )}
       </div>
  
       {/* PWA App Sidebar (Acts as Chzzk Chat Panel on Desktops) */}
@@ -519,4 +535,239 @@ export default function Home() {
       <AppShell />
     </PhoneFrame>
   );
+}
+
+// ─── 데스크탑 전술 중계 분석 스튜디오 컴포넌트 ───
+function DesktopTacticsStudio({ 
+  matchId, 
+  activeClubId, 
+  onClose 
+}: { 
+  matchId: string; 
+  activeClubId: string; 
+  onClose: () => void; 
+}) {
+  const { upcomingMatches, calendarMatches } = useScheduleStore();
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<{
+    players: Player[];
+    lineup: MatchLineupEntry[];
+  }>({ players: [], lineup: [] });
+
+  const match = useMemo(() => {
+    const all = [...upcomingMatches, ...calendarMatches];
+    return all.find((m) => m.id === matchId) || null;
+  }, [matchId, upcomingMatches, calendarMatches]);
+
+  useEffect(() => {
+    let ignore = false;
+    setLoading(true);
+
+    Promise.all([
+      fetchMatchAttendees({ clubId: activeClubId, matchId }),
+      fetchMatchLineup({ clubId: activeClubId, matchId }),
+    ])
+      .then(([attendees, lineup]) => {
+        if (ignore) return;
+        setData({
+          players: attendees.map((member) => ({
+            id: member.membershipId,
+            name: member.playerName,
+            ovr: member.playerOvr,
+            matchPoints: member.matchPoints,
+            photo: member.playerPhotoUrl || member.playerName,
+          })),
+          lineup,
+        });
+        setLoading(false);
+      })
+      .catch(() => {
+        if (ignore) return;
+        setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [matchId, activeClubId]);
+
+  if (!match) return null;
+
+  const avgOvr = data.players.length > 0
+    ? Math.round(data.players.reduce((sum, p) => sum + (p.ovr ?? 0), 0) / data.players.length)
+    : 70;
+
+  const totalSlots = data.lineup.length;
+  const attendanceRate = totalSlots > 0 ? Math.round((data.players.length / totalSlots) * 100) : 0;
+
+  return (
+    <div className="absolute inset-0 flex flex-col bg-[#070914] z-10 text-white animate-fadeIn overflow-hidden">
+      {/* Top Header Bar */}
+      <div className="flex justify-between items-center px-5 py-3.5 bg-black/40 border-b border-[#25283e] backdrop-blur-md select-none">
+        <div className="flex items-center gap-3">
+          <span className="flex h-5 items-center justify-center rounded bg-[#00ffa3] px-2.5 text-[9px] font-black text-black gap-1 shadow-[0_0_8px_rgba(0,255,163,0.4)]">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
+            TACTICS 스튜디오
+          </span>
+          <span className="text-xs font-black tracking-wide text-white truncate max-w-[280px]">
+            Stadium: {match.title}
+          </span>
+        </div>
+        <button 
+          onClick={onClose}
+          className="flex items-center justify-center w-7 h-7 rounded-full bg-black/60 border border-[#25283e] text-gray-400 hover:text-white active:scale-95 transition-all hover:bg-black/95 cursor-pointer"
+        >
+          <X size={14} />
+        </button>
+      </div>
+
+      {/* Main Studio Console Content */}
+      <div className="flex-1 flex min-h-0 relative">
+        {loading ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm z-30 space-y-3">
+            <div className="w-8 h-8 rounded-full border-4 border-[#00ffa3]/10 border-t-[#00ffa3] animate-spin" />
+            <p className="text-[10px] text-gray-400 font-bold">전술 데이터를 송출하는 중...</p>
+          </div>
+        ) : null}
+
+        {/* Left Area: Mega Cyber Pitch */}
+        <div className="w-[62%] h-full p-4 flex flex-col justify-center items-center relative border-r border-[#25283e] bg-[#070914] winning-bg-grid">
+          {/* Pitch Container with Skew Accent */}
+          <div className="w-full max-w-[480px] aspect-[5/3] relative rounded-3xl border border-[#00ffa3]/25 bg-soccer-pitch overflow-hidden shadow-[0_0_24px_rgba(0,255,163,0.06)] p-3">
+            {/* Render 11 Positions based on Lineup */}
+            {data.lineup.map((slot) => {
+              const player = data.players.find((p) => p.id === slot.membershipId);
+              const { top, left } = getPlayerCoordinate(slot.teamNumber, slot.formationSlot ?? 0);
+
+              const cardTierClass = player 
+                ? (player.ovr ?? 0) >= 80 
+                  ? 'border-yellow-500 bg-yellow-950/70 text-yellow-200 shadow-[0_0_8px_rgba(234,179,8,0.2)]' 
+                  : (player.ovr ?? 0) >= 70 
+                    ? 'border-slate-400 bg-slate-900/70 text-slate-200' 
+                    : 'border-amber-700 bg-amber-950/70 text-amber-200'
+                : 'border-dashed border-gray-700 bg-black/40 text-gray-600';
+
+              return (
+                <div 
+                  key={slot.id} 
+                  className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-all duration-500 ease-out"
+                  style={{ top: `${top}%`, left: `${left}%` }}
+                >
+                  <div className={`relative flex flex-col items-center justify-between p-1 rounded-lg border shadow-lg ${cardTierClass} w-9 h-11 scale-90 md:scale-95`}>
+                    {player ? (
+                      <>
+                        <div className="text-[6px] font-black absolute top-0.5 right-1">{player.ovr}</div>
+                        <div className="w-4 h-4 rounded-full overflow-hidden mt-1 border border-white/20">
+                          <img 
+                            src={getFallbackAvatar(player.name)} 
+                            alt="" 
+                            className="w-full h-full object-cover" 
+                          />
+                        </div>
+                        <span className="text-[6px] font-extrabold truncate max-w-full text-center w-full mb-0.5 select-none">
+                          {player.name}
+                        </span>
+                      </>
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-[6px] font-bold">
+                        <span>EMPTY</span>
+                        <span className="text-[5px] text-gray-700">SLOT</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-3.5 text-[9px] text-gray-500 font-extrabold tracking-widest uppercase flex items-center gap-1.5">
+            <Info size={10} className="text-[#00ffa3]" />
+            전술 보드는 우측 모바일 제어반과 실시간 동기화 중입니다
+          </div>
+        </div>
+
+        {/* Right Area: E-Sports Tactical Dashboard */}
+        <div className="w-[38%] h-full p-4 flex flex-col bg-[#0b0c16]/50 select-none overflow-y-auto no-scrollbar justify-start space-y-3.5">
+          
+          {/* Team OVR Spec Card */}
+          <div className="p-3 rounded-xl border border-[#25283e] bg-black/40 shadow-md">
+            <h4 className="text-[9px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-2">
+              <Shield size={12} className="text-[#00ffa3]" />
+              전력 OVR 분석
+            </h4>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-black text-white">{avgOvr} <span className="text-[9px] text-gray-400 font-bold">AVG</span></p>
+                <p className="text-[8px] font-bold text-gray-500 mt-0.5">선수 능력치 OVR 기반 환산 스쿼드 파워</p>
+              </div>
+              <div className="flex items-center justify-center w-11 h-11 rounded-lg bg-gradient-to-br from-[#00ffa3]/10 to-[#00b872]/5 border border-[#00ffa3]/25 shadow-[0_0_8px_rgba(0,255,163,0.1)]">
+                <Award className="text-[#00ffa3]" size={22} />
+              </div>
+            </div>
+          </div>
+
+          {/* Attendance Rate Mission Gauge */}
+          <div className="p-3 rounded-xl border border-[#25283e] bg-black/40 shadow-md space-y-1.5">
+            <div className="flex justify-between items-center text-[9px] font-black text-gray-400 tracking-wider">
+              <span className="flex items-center gap-1">
+                <Activity size={10} className="text-[#00ffa3] animate-pulse" />
+                출석 달성 게이지
+              </span>
+              <span className="text-white text-xs">{attendanceRate}%</span>
+            </div>
+            <div className="w-full h-1.5 rounded-full bg-black/60 border border-[#25283e] overflow-hidden relative">
+              <div 
+                className="h-full rounded-full bg-gradient-to-r from-[#00ffa3] to-[#00b872] transition-all duration-700 shadow-[0_0_6px_rgba(0,255,163,0.2)]"
+                style={{ width: `${attendanceRate}%` }}
+              />
+            </div>
+            <p className="text-[8px] font-bold text-gray-500">배치 스쿼드 {totalSlots}명 중 {data.players.length}명 참여 완료</p>
+          </div>
+
+          {/* Player List Stats Table */}
+          <div className="rounded-xl border border-[#25283e] bg-black/40 overflow-hidden shadow-md">
+            <div className="px-3 py-2 bg-[#0d0f1a] border-b border-[#25283e]">
+              <h4 className="text-[9px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1">
+                <Users size={10} className="text-[#00ffa3]" />
+                스쿼드 명단 ({data.players.length}명)
+              </h4>
+            </div>
+            <div className="divide-y divide-[#25283e]/50 max-h-[140px] overflow-y-auto no-scrollbar">
+              {data.players.map((player) => (
+                <div key={player.id} className="px-3 py-2 flex items-center justify-between text-[11px] hover:bg-[#141624]/40 transition-colors">
+                  <div className="flex items-center gap-1.5">
+                    <img 
+                      src={getFallbackAvatar(player.name)} 
+                      alt="" 
+                      className="w-3.5 h-3.5 rounded-full" 
+                    />
+                    <span className="font-extrabold text-white">{player.name}</span>
+                  </div>
+                  <span className="font-black text-[#00ffa3] bg-[#00ffa3]/10 border border-[#00ffa3]/20 px-1 py-0.5 rounded text-[8px]">
+                    OVR {player.ovr}
+                  </span>
+                </div>
+              ))}
+              {data.players.length === 0 && (
+                <div className="p-3 text-center text-[10px] text-gray-500 font-bold">배치된 스쿼드가 없습니다</div>
+              )}
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function getPlayerCoordinate(teamNumber: number, slotIndex: number) {
+  const row = Math.floor(slotIndex / 6);
+  const col = slotIndex % 6;
+  const top = 15 + row * 35;
+  let left = 0;
+  if (teamNumber === 1) {
+    left = 7 + col * 7.5;
+  } else {
+    left = 55 + col * 7.5;
+  }
+  return { top, left };
 }

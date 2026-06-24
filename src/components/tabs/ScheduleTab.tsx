@@ -53,7 +53,7 @@ export default function ScheduleTab() {
   } = useScheduleStore();
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
   const [nowMs] = useState(() => Date.now());
-  const { userRole, activeClubId, availableClubs, setSettlementNotification } = useAppStore();
+  const { userRole, activeClubId, availableClubs, setSettlementNotification, setFocusedMatchId } = useAppStore();
   const { openModal } = useModalStore();
   const { showToast } = useToastStore();
   const [matchDetail, setMatchDetail] = useState<{
@@ -211,6 +211,14 @@ export default function ScheduleTab() {
     [selectedEvents],
   );
   const selectedMatch = selectedMatches[0] ?? null;
+
+  useEffect(() => {
+    if (selectedMatch) {
+      setFocusedMatchId(selectedMatch.id);
+    } else {
+      setFocusedMatchId(null);
+    }
+  }, [selectedMatch, setFocusedMatchId]);
   const selectedMatchDetail = selectedMatch && matchDetail?.matchId === selectedMatch.id ? matchDetail : null;
   const selectedMatchDetailStatus = selectedMatch ? selectedMatchDetail?.status ?? 'loading' : 'idle';
   const focusDate = (isoDate: string) => {
