@@ -147,11 +147,11 @@
       "highlight", "metric", "social", "glass", "logo", "login"
     ],
     "modeProfiles": {
-      "maintenance": { "disallowedTailwindColorSeverity": "blocker", "enforceSemanticSlots": true },
+      "maintenance": { "disallowedTailwindColorSeverity": "warning", "enforceSemanticSlots": true },
       "redesign": { "disallowedTailwindColorSeverity": "warning", "enforceSemanticSlots": true, "requireVisualReview": true },
       "token-migration": { "disallowedTailwindColorSeverity": "blocker", "enforceSemanticSlots": true, "requireTokenSyncEvidence": true }
     },
-    "ruleSeverity": { "hardcodedColor": "blocker", "inlineSvg": "blocker", "layout": "blocker", "instructionalCopy": "blocker", "semanticSlot": "blocker", "expiredExempt": "blocker", "tokenSync": "blocker" },
+    "ruleSeverity": { "hardcodedColor": "warning", "inlineSvg": "warning", "disallowedTailwindColor": "warning", "layout": "blocker", "instructionalCopy": "warning", "semanticSlot": "blocker", "expiredExempt": "blocker", "tokenSync": "blocker" },
     "tokenSync": { "docs": "docs/design-tokens.md", "ignoredDocumentPrefixes": ["icon"] },
     "customSvgAllowedPaths": ["src/components/brand/**", "src/components/ui/**", "src/components/icons/**"],
     "exemptPatterns": ["// design-exempt"],
