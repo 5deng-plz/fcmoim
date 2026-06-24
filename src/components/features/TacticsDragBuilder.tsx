@@ -23,6 +23,7 @@ import {
   useSensors,
   DragEndEvent,
   DragStartEvent,
+  DragOverEvent,
   DragOverlay,
   useDroppable,
 } from '@dnd-kit/core';
@@ -626,6 +627,17 @@ function BenchStrip({
 }
 
 
+const triggerHaptic = (pattern: number | number[]) => {
+  if (typeof window !== 'undefined' && 'vibrate' in window.navigator) {
+    try {
+      window.navigator.vibrate(pattern);
+    } catch {
+      // Ignore vibration errors
+    }
+  }
+};
+
+
 // ─── 메인: 드래그 앤 드롭 전술 빌더 ───
 export default function TacticsDragBuilder({
   clubId,
@@ -653,6 +665,7 @@ export default function TacticsDragBuilder({
   const [bench, setBench] = useState<Player[]>(() => buildInitialBench(players, lineup));
   const [teams, setTeams] = useState<TeamState[]>(() => buildInitialTeams(lineup));
   const isDragScrollLockedRef = useRef(false);
+  const [lastOverId, setLastOverId] = useState<string | null>(null);
 
   const isOperator = userRole === 'admin' || userRole === 'operator';
   const isMatchTacticsCompleted = match?.tacticsCompleted ?? false;
@@ -717,7 +730,20 @@ export default function TacticsDragBuilder({
     }
     setActiveId(event.active.id as string);
     setSelectedPlacementPlayerId(null);
+    setLastOverId(null);
+    triggerHaptic(15);
   };
+
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const { over } = event;
+    const overId = over ? (over.id as string) : null;
+    if (overId && overId !== lastOverId) {
+      setLastOverId(overId);
+      triggerHaptic(5);
+    } else if (!overId && lastOverId) {
+      setLastOverId(null);
+    }
+  }, [lastOverId]);
 
   const placePlayerInSlot = async (playerId: string, targetZone: 'red' | 'blue' | 'bench', targetIndex: number | null) => {
     const player = [bench, ...teams.flatMap(t => t.players)].flat().find((p) => p.id === playerId);
@@ -920,19 +946,29 @@ export default function TacticsDragBuilder({
   const handleDragEnd = async (event: DragEndEvent) => {
     releaseDragScrollLock();
     setActiveId(null);
+    setLastOverId(null);
     const { active, over } = event;
-    if (!over) return;
+    if (!over) {
+      triggerHaptic([30, 50, 30]);
+      return;
+    }
 
     const targetZone = (over.data?.current as { zone?: string })?.zone;
-    if (targetZone !== 'red' && targetZone !== 'blue' && targetZone !== 'bench') return;
+    if (targetZone !== 'red' && targetZone !== 'blue' && targetZone !== 'bench') {
+      triggerHaptic([30, 50, 30]);
+      return;
+    }
 
     await placePlayerInSlot(active.id as string, targetZone, getDropSlotIndex(over));
     setRecentDropPlayerId(active.id as string);
+    triggerHaptic(20);
   };
 
   const handleDragCancel = () => {
     releaseDragScrollLock();
     setActiveId(null);
+    setLastOverId(null);
+    triggerHaptic([30, 50, 30]);
   };
 
   if (!canEdit && !isMatchTacticsCompleted) {
@@ -1055,6 +1091,7 @@ export default function TacticsDragBuilder({
         sensors={sensors}
         collisionDetection={slotFirstCollisionDetection}
         onDragStart={canEdit ? handleDragStart : undefined}
+        onDragOver={canEdit ? handleDragOver : undefined}
         onDragEnd={canEdit ? handleDragEnd : undefined}
         onDragCancel={canEdit ? handleDragCancel : undefined}
       >
