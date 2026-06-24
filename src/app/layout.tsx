@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "FC moim",
+  title: "FC Guppy",
   description: "아마추어 풋살 동호회 전용 매니지먼트 PWA",
   manifest: "/manifest.json",
   icons: {

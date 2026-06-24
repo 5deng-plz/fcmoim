@@ -425,7 +425,7 @@ function ClubCreateModal({
             value={slug}
             onChange={(event) => setSlug(normalizeClubSlugInput(event.target.value))}
             maxLength={50}
-            placeholder="www.fcmoim.com/{team-id}"
+            placeholder="www.fcguppy.com/{team-id}"
             className="mt-1 w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-100"
           />
           <SlugFeedback status={slugStatus} />

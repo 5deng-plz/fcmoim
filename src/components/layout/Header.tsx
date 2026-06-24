@@ -52,7 +52,7 @@ export default function Header() {
   };
 
   const isGuestMode = userStatus === 'guest' || userStatus === 'pending' || userStatus === 'withdrawn';
-  const displayedTeamName = isGuestMode ? 'FC moim' : teamName;
+  const displayedTeamName = isGuestMode ? 'FC Guppy' : teamName;
   const isCenteredSubPage = (showMyPage || showJoinForm) && !isGuestMode;
   const subPageTitle = showMyPage ? '마이페이지' : '입단신청';
   const shouldShowProfile = isGuestMode ? isAuthenticated && Boolean(authUser || memberProfile) : true;
