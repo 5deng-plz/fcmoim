@@ -622,7 +622,7 @@ function DesktopTacticsStudio({
       </div>
 
       {/* Main Studio Console Content */}
-      <div className="flex-1 flex min-h-0 relative">
+      <div className="flex-1 flex min-h-0 relative justify-center items-center bg-[#070914] winning-bg-grid">
         {loading ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm z-30 space-y-3">
             <div className="w-8 h-8 rounded-full border-4 border-[#00ffa3]/10 border-t-[#00ffa3] animate-spin" />
@@ -630,63 +630,8 @@ function DesktopTacticsStudio({
           </div>
         ) : null}
 
-        {/* Left Area: Mega Cyber Pitch */}
-        <div className="w-[62%] h-full p-4 flex flex-col justify-center items-center relative border-r border-[#25283e] bg-[#070914] winning-bg-grid">
-          {/* Pitch Container with Skew Accent */}
-          <div className="w-full max-w-[480px] aspect-[5/3] relative rounded-3xl border border-[#00ffa3]/25 bg-soccer-pitch overflow-hidden shadow-[0_0_24px_rgba(0,255,163,0.06)] p-3">
-            {/* Render 11 Positions based on Lineup */}
-            {data.lineup.map((slot) => {
-              const player = data.players.find((p) => p.id === slot.membershipId);
-              const { top, left } = getPlayerCoordinate(slot.teamNumber, slot.formationSlot ?? 0);
-
-              const cardTierClass = player 
-                ? (player.ovr ?? 0) >= 80 
-                  ? 'border-yellow-500 bg-yellow-950/70 text-yellow-200 shadow-[0_0_8px_rgba(234,179,8,0.2)]' 
-                  : (player.ovr ?? 0) >= 70 
-                    ? 'border-slate-400 bg-slate-900/70 text-slate-200' 
-                    : 'border-amber-700 bg-amber-950/70 text-amber-200'
-                : 'border-dashed border-gray-700 bg-black/40 text-gray-600';
-
-              return (
-                <div 
-                  key={slot.id} 
-                  className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-all duration-500 ease-out"
-                  style={{ top: `${top}%`, left: `${left}%` }}
-                >
-                  <div className={`relative flex flex-col items-center justify-between p-1 rounded-lg border shadow-lg ${cardTierClass} w-9 h-11 scale-90 md:scale-95`}>
-                    {player ? (
-                      <>
-                        <div className="text-[6px] font-black absolute top-0.5 right-1">{player.ovr}</div>
-                        <div className="w-4 h-4 rounded-full overflow-hidden mt-1 border border-white/20">
-                          <img 
-                            src={getFallbackAvatar(player.name)} 
-                            alt="" 
-                            className="w-full h-full object-cover" 
-                          />
-                        </div>
-                        <span className="text-[6px] font-extrabold truncate max-w-full text-center w-full mb-0.5 select-none">
-                          {player.name}
-                        </span>
-                      </>
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-[6px] font-bold">
-                        <span>EMPTY</span>
-                        <span className="text-[5px] text-gray-700">SLOT</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="mt-3.5 text-[9px] text-gray-500 font-extrabold tracking-widest uppercase flex items-center gap-1.5">
-            <Info size={10} className="text-[#00ffa3]" />
-            전술 보드는 우측 모바일 제어반과 실시간 동기화 중입니다
-          </div>
-        </div>
-
-        {/* Right Area: E-Sports Tactical Dashboard */}
-        <div className="w-[38%] h-full p-4 flex flex-col bg-[#0b0c16]/50 select-none overflow-y-auto no-scrollbar justify-start space-y-3.5">
+        {/* Left Area: E-Sports Tactical Dashboard (Floating HUD style) */}
+        <div className="absolute left-0 top-0 bottom-0 w-[320px] p-4 flex flex-col bg-[#0b0c16]/85 border-r border-[#25283e] backdrop-blur-md select-none overflow-y-auto no-scrollbar justify-start space-y-3.5 z-10">
           
           {/* Team OVR Spec Card */}
           <div className="p-3 rounded-xl border border-[#25283e] bg-black/40 shadow-md">
@@ -753,6 +698,61 @@ function DesktopTacticsStudio({
             </div>
           </div>
 
+        </div>
+
+        {/* Center Area: Mega Cyber Pitch (Centered overall) */}
+        <div className="flex flex-col justify-center items-center relative p-4 z-0">
+          {/* Pitch Container with Skew Accent */}
+          <div className="w-full max-w-[480px] aspect-[5/3] relative rounded-3xl border border-[#00ffa3]/25 bg-soccer-pitch overflow-hidden shadow-[0_0_24px_rgba(0,255,163,0.06)] p-3">
+            {/* Render 11 Positions based on Lineup */}
+            {data.lineup.map((slot) => {
+              const player = data.players.find((p) => p.id === slot.membershipId);
+              const { top, left } = getPlayerCoordinate(slot.teamNumber, slot.formationSlot ?? 0);
+
+              const cardTierClass = player 
+                ? (player.ovr ?? 0) >= 80 
+                  ? 'border-yellow-500 bg-yellow-950/70 text-yellow-200 shadow-[0_0_8px_rgba(234,179,8,0.2)]' 
+                  : (player.ovr ?? 0) >= 70 
+                    ? 'border-slate-400 bg-slate-900/70 text-slate-200' 
+                    : 'border-amber-700 bg-amber-950/70 text-amber-200'
+                : 'border-dashed border-gray-700 bg-black/40 text-gray-600';
+
+              return (
+                <div 
+                  key={slot.id} 
+                  className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-all duration-500 ease-out"
+                  style={{ top: `${top}%`, left: `${left}%` }}
+                >
+                  <div className={`relative flex flex-col items-center justify-between p-1 rounded-lg border shadow-lg ${cardTierClass} w-9 h-11 scale-90 md:scale-95`}>
+                    {player ? (
+                      <>
+                        <div className="text-[6px] font-black absolute top-0.5 right-1">{player.ovr}</div>
+                        <div className="w-4 h-4 rounded-full overflow-hidden mt-1 border border-white/20">
+                          <img 
+                            src={getFallbackAvatar(player.name)} 
+                            alt="" 
+                            className="w-full h-full object-cover" 
+                          />
+                        </div>
+                        <span className="text-[6px] font-extrabold truncate max-w-full text-center w-full mb-0.5 select-none">
+                          {player.name}
+                        </span>
+                      </>
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-[6px] font-bold">
+                        <span>EMPTY</span>
+                        <span className="text-[5px] text-gray-700">SLOT</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-3.5 text-[9px] text-gray-500 font-extrabold tracking-widest uppercase flex items-center gap-1.5 select-none">
+            <Info size={10} className="text-[#00ffa3]" />
+            전술 보드는 우측 모바일 제어반과 실시간 동기화 중입니다
+          </div>
         </div>
       </div>
     </div>
