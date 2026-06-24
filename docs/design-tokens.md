@@ -39,7 +39,7 @@
 - `stamina-*` — 체력 게이지 (full/mid/low)
 - `foot-*` — 주발 아이콘 (active/inactive/stroke)
 - `icon-*` CSS 변수 — `src/components/icons/**` 공유 SVG 내부 색상 전용
-- `logo-*` CSS 변수 — `src/components/brand/FcmoimLogo.tsx` 로고 렌더링 전용 변수 (bg, field, field-from/to, post-from/to, text, border, support 등)
+- `logo-*` CSS 변수 — `src/components/brand/FcmoimLogo.tsx` 로고 렌더링 전용 변수 (bg, field, field-from/to, post-from/to, text, border, support, shield-bg-from/to, shield-border-from/to, f-color, dot-color 등)
 - `login-*` CSS 변수 — 로그인 전용 타이틀 그라데이션 변수 (text-gradient-from/to)
 - `viz-*` — 데이터 시각화 (primary/secondary/tertiary/danger, fill, grid, label)
 - `event-*` — 카테고리별 일정 이벤트 테마 (`match`, `vote`, `seminar`, `etc` 카테고리 및 하부의 `-bg`, `-border`, `-text`, `-icon-bg`, `-icon-text`, `-detail-border`, `-meta-icon`, `-map-accent` 등)

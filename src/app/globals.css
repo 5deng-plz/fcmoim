@@ -339,6 +339,14 @@
     --logo-border: #1b2a36;
     --logo-support: #1b2a36;
 
+    /* ── brand logo shield theme styles (Chzzk style) ── */
+    --logo-shield-bg-from: #ffffff;
+    --logo-shield-bg-to: #f1f5f9;
+    --logo-shield-border-from: #00b872;
+    --logo-shield-border-to: #007a4d;
+    --logo-f-color: #0f172a;
+    --logo-dot-color: #00b872;
+
     /* ── login text styling variables ── */
     --login-text-gradient-from: #111827;
     --login-text-gradient-to: #4b5563;
@@ -601,6 +609,14 @@
       --logo-text: #ffffff;
       --logo-border: #25283e;
       --logo-support: #00ffa3;
+
+      /* ── brand logo shield theme styles (Chzzk style, Dark) ── */
+      --logo-shield-bg-from: #141624;
+      --logo-shield-bg-to: #090a10;
+      --logo-shield-border-from: #00ffa3;
+      --logo-shield-border-to: #007a4d;
+      --logo-f-color: #ffffff;
+      --logo-dot-color: #00ffa3;
 
       /* ── login text styling variables (Dark) ── */
       --login-text-gradient-from: #ffffff;
