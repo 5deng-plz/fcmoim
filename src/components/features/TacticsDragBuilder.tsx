@@ -162,9 +162,10 @@ function DraggablePlayerAvatar({
     isDragging,
   } = useSortable({ id: player.id, data: { zone, slotIndex }, disabled });
 
+  const isField = zone === 'red' || zone === 'blue';
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition: isField ? 'none' : transition,
     opacity: isDragging ? 0.4 : 1,
     zIndex: isDragging ? 30 : stackIndex,
   };
@@ -183,7 +184,9 @@ function DraggablePlayerAvatar({
       }}
       aria-label={player.name}
       aria-pressed={isSelected}
-      className={`group relative -m-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 bg-white shadow-sm transition-[box-shadow,transform,opacity] ${getAvatarBorderClass(zone)} ${
+      className={`group relative -m-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 bg-white shadow-sm ${
+        isField ? 'transition-[box-shadow,opacity]' : 'transition-[box-shadow,transform,opacity]'
+      } ${getAvatarBorderClass(zone)} ${
         disabled ? 'cursor-default' : 'cursor-grab active:cursor-grabbing active:scale-105'
       } ${
         isDragging || isSelected ? 'shadow-xl ring-2 ring-fcgreen-500' : 'hover:shadow-md'
@@ -1283,14 +1286,23 @@ function buildOperatorLineupDraft(input: {
 }
 
 function normalizeLeaderForTeam(team: TeamState): TeamState {
-  let hasLeader = false;
+  const existingLeader = team.players.find((p) => p.isLeader);
+  if (existingLeader) {
+    return {
+      ...team,
+      players: team.players.map((player) => ({
+        ...player,
+        isLeader: player.id === existingLeader.id,
+      })),
+    };
+  }
+
   return {
     ...team,
-    players: team.players.map((player, index) => {
-      const isLeader = !hasLeader && (player.isLeader || index === 0);
-      if (isLeader) hasLeader = true;
-      return { ...player, isLeader };
-    }),
+    players: team.players.map((player, index) => ({
+      ...player,
+      isLeader: index === 0,
+    })),
   };
 }
 
