@@ -26,7 +26,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { useModalStore } from '@/stores/useModalStore';
 import { useSmartScroll } from '@/hooks/useSmartScroll';
 import { Ban, ShieldAlert, X, Shield, Award, Users, Info, Activity } from 'lucide-react';
-import { fetchMatchAttendees, fetchMatchLineup, type MatchLineupEntry } from '@/stores/matchClient';
+import { fetchMatchAttendees, fetchMatchLineup, saveMatchLineup, type MatchLineupEntry } from '@/stores/matchClient';
 import { useScheduleStore } from '@/stores/useScheduleStore';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import type { Player } from '@/components/features/TacticsDragBuilder';
@@ -553,11 +553,36 @@ function DesktopTacticsStudio({
     players: Player[];
     lineup: MatchLineupEntry[];
   }>({ players: [], lineup: [] });
+  const [draggingPlayerId, setDraggingPlayerId] = useState<string | null>(null);
+
+  const { userRole } = useAppStore();
+  const memberProfile = useAuthStore((state) => state.memberProfile);
+  const isOperator = userRole === 'admin' || userRole === 'operator';
 
   const match = useMemo(() => {
     const all = [...upcomingMatches, ...calendarMatches];
     return all.find((m) => m.id === matchId) || null;
   }, [matchId, upcomingMatches, calendarMatches]);
+
+  const isMatchTacticsCompleted = match?.tacticsCompleted ?? false;
+
+  const redLeaderId = useMemo(() => {
+    return data.players.find(p => data.lineup.find(l => l.membershipId === p.id && l.teamNumber === 1 && l.isLeader))?.id;
+  }, [data.players, data.lineup]);
+  
+  const blueLeaderId = useMemo(() => {
+    return data.players.find(p => data.lineup.find(l => l.membershipId === p.id && l.teamNumber === 2 && l.isLeader))?.id;
+  }, [data.players, data.lineup]);
+
+  const isRedLeader = memberProfile?.id === redLeaderId;
+  const isBlueLeader = memberProfile?.id === blueLeaderId;
+
+  const canEdit = useMemo(() => {
+    return Boolean(
+      !isMatchTacticsCompleted &&
+      (isOperator || isRedLeader || isBlueLeader)
+    );
+  }, [isMatchTacticsCompleted, isOperator, isRedLeader, isBlueLeader]);
 
   useEffect(() => {
     let ignore = false;
@@ -590,6 +615,94 @@ function DesktopTacticsStudio({
       ignore = true;
     };
   }, [matchId, activeClubId]);
+
+  const handleDragStart = (e: React.DragEvent, playerId: string) => {
+    e.dataTransfer.setData("text/plain", playerId);
+    setDraggingPlayerId(playerId);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingPlayerId(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetTeamNumber: number, targetFormationSlot: number) => {
+    e.preventDefault();
+    const playerId = e.dataTransfer.getData("text/plain");
+    if (!playerId || !canEdit) return;
+
+    let nextLineup = [...data.lineup];
+    const sourceSlotIndex = nextLineup.findIndex(slot => slot.membershipId === playerId);
+    const targetSlotIndex = nextLineup.findIndex(slot => slot.teamNumber === targetTeamNumber && slot.formationSlot === targetFormationSlot);
+
+    if (sourceSlotIndex !== -1) {
+      if (targetSlotIndex !== -1) {
+        // Swap!
+        const sourceMemberId = nextLineup[sourceSlotIndex].membershipId;
+        const targetMemberId = nextLineup[targetSlotIndex].membershipId;
+        nextLineup[sourceSlotIndex] = {
+          ...nextLineup[sourceSlotIndex],
+          membershipId: targetMemberId
+        };
+        nextLineup[targetSlotIndex] = {
+          ...nextLineup[targetSlotIndex],
+          membershipId: sourceMemberId
+        };
+      } else {
+        // 빈 슬롯으로 이동
+        nextLineup[sourceSlotIndex] = {
+          ...nextLineup[sourceSlotIndex],
+          membershipId: ""
+        };
+        const targetEmptyIndex = nextLineup.findIndex(slot => slot.teamNumber === targetTeamNumber && slot.formationSlot === targetFormationSlot);
+        if (targetEmptyIndex !== -1) {
+          nextLineup[targetEmptyIndex] = {
+            ...nextLineup[targetEmptyIndex],
+            membershipId: playerId
+          };
+        }
+      }
+    } else {
+      // 대기명단에서 피드로 배치
+      if (targetSlotIndex !== -1) {
+        nextLineup[targetSlotIndex] = {
+          ...nextLineup[targetSlotIndex],
+          membershipId: playerId
+        };
+      }
+    }
+
+    // Optimistic Update
+    setData(prev => ({
+      ...prev,
+      lineup: nextLineup
+    }));
+
+    setLoading(true);
+    try {
+      const savedLineup = await saveMatchLineup({
+        clubId: activeClubId,
+        matchId,
+        entries: nextLineup
+      });
+      setData(prev => ({
+        ...prev,
+        lineup: savedLineup
+      }));
+    } catch (error) {
+      console.error('[FC Moim] Failed to save desktop match lineup:', error);
+      const refetchedLineup = await fetchMatchLineup({ clubId: activeClubId, matchId });
+      setData(prev => ({
+        ...prev,
+        lineup: refetchedLineup
+      }));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!match) return null;
 
@@ -678,7 +791,13 @@ function DesktopTacticsStudio({
             </div>
             <div className="divide-y divide-[#25283e]/50 max-h-[140px] overflow-y-auto no-scrollbar">
               {data.players.map((player) => (
-                <div key={player.id} className="px-3 py-2 flex items-center justify-between text-[11px] hover:bg-[#141624]/40 transition-colors">
+                <div 
+                  key={player.id} 
+                  draggable={canEdit}
+                  onDragStart={(e) => handleDragStart(e, player.id)}
+                  onDragEnd={handleDragEnd}
+                  className={`px-3 py-2 flex items-center justify-between text-[11px] hover:bg-[#141624]/40 transition-colors ${canEdit ? 'cursor-grab active:cursor-grabbing hover:scale-[1.02]' : ''}`}
+                >
                   <div className="flex items-center gap-1.5">
                     <img 
                       src={getFallbackAvatar(player.name)} 
@@ -708,6 +827,13 @@ function DesktopTacticsStudio({
             {data.lineup.map((slot) => {
               const player = data.players.find((p) => p.id === slot.membershipId);
               const { top, left } = getPlayerCoordinate(slot.teamNumber, slot.formationSlot ?? 0);
+              const isDraggingThis = draggingPlayerId === player?.id;
+              
+              // 드래그 중인 다른 플레이어가 있고, 이 슬롯이 비어 있을 때 강조 표시할 클래스
+              const isTargetSlotEmpty = !player;
+              const highlightSlot = draggingPlayerId && isTargetSlotEmpty 
+                ? 'border-dashed border-[#00ffa3] bg-[#00ffa3]/5 shadow-[0_0_10px_rgba(0,255,163,0.35)] animate-pulse' 
+                : '';
 
               const cardTierClass = player 
                 ? (player.ovr ?? 0) >= 80 
@@ -715,15 +841,24 @@ function DesktopTacticsStudio({
                   : (player.ovr ?? 0) >= 70 
                     ? 'border-slate-400 bg-slate-900/70 text-slate-200' 
                     : 'border-amber-700 bg-amber-950/70 text-amber-200'
-                : 'border-dashed border-gray-700 bg-black/40 text-gray-600';
+                : `border-dashed border-gray-700 bg-black/40 text-gray-600 ${highlightSlot}`;
 
               return (
                 <div 
                   key={slot.id} 
                   className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-all duration-500 ease-out"
                   style={{ top: `${top}%`, left: `${left}%` }}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, slot.teamNumber, slot.formationSlot ?? 0)}
                 >
-                  <div className={`relative flex flex-col items-center justify-between p-1 md:p-1.5 rounded-lg border shadow-lg ${cardTierClass} w-11 h-14 md:w-13 md:h-[68px] scale-90 md:scale-95 transition-all duration-300`}>
+                  <div 
+                    draggable={Boolean(player && canEdit)}
+                    onDragStart={(e) => player && handleDragStart(e, player.id)}
+                    onDragEnd={handleDragEnd}
+                    className={`relative flex flex-col items-center justify-between p-1 md:p-1.5 rounded-lg border shadow-lg ${cardTierClass} w-11 h-14 md:w-13 md:h-[68px] scale-90 md:scale-95 transition-all duration-300 ${
+                      player && canEdit ? 'cursor-grab active:cursor-grabbing hover:scale-105 active:scale-95' : ''
+                    } ${isDraggingThis ? 'opacity-30' : ''}`}
+                  >
                     {player ? (
                       <>
                         <div className="text-[7px] md:text-[9px] font-black absolute top-0.5 right-1 md:top-1 md:right-1.5">{player.ovr}</div>
