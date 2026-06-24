@@ -31,13 +31,13 @@ function PhoneFrame({ children, surface = 'white' }: { children: ReactNode; surf
   return (
     <div className="app-viewport chzzk-layout text-primary">
       {/* Chzzk Live Stream Player Area (Visible only on Desktop) */}
-      <div className="flex-1 h-full relative bg-black flex flex-col justify-between hidden lg:flex overflow-hidden select-none border-r border-default">
+      <div className="flex-1 h-full relative bg-black flex flex-col justify-between hidden lg:flex overflow-hidden select-none border-r border-[#25283e]" data-exempt=":// design-exempt(reason: chzzk layout border, expires: 2026-12-31)">
         
         {/* Stream Header */}
         <div className="p-4 bg-gradient-to-b from-black/95 to-transparent flex items-center justify-between z-20">
           <div className="flex items-center gap-3">
-            <span className="flex h-5 items-center justify-center rounded bg-brand-primary px-2.5 text-[10px] font-black text-black gap-1 shadow-[0_0_8px_var(--brand-primary-bg)]">
-              <span className="w-1.5 h-1.5 rounded-full bg-result-loss animate-pulse" />
+            <span className="flex h-5 items-center justify-center rounded bg-[#00ffa3] px-2.5 text-[10px] font-black text-black gap-1 shadow-[0_0_8px_rgba(0,255,163,0.4)]" data-exempt=":// design-exempt(reason: chzzk header badge, expires: 2026-12-31)">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" data-exempt=":// design-exempt(reason: red live status dot, expires: 2026-12-31)" />
               실시간 중계
             </span>
             <span className="text-sm font-black text-white tracking-wide">
@@ -47,30 +47,30 @@ function PhoneFrame({ children, surface = 'white' }: { children: ReactNode; surf
           <div className="flex items-center gap-4 text-[11px] font-black text-gray-400">
             <span className="flex items-center gap-1.5">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-primary"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00ffa3] opacity-75" data-exempt=":// design-exempt(reason: chzzk green live ping, expires: 2026-12-31)"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00ffa3]" data-exempt=":// design-exempt(reason: chzzk green live dot, expires: 2026-12-31)"></span>
               </span>
-              <span className="text-brand-primary font-bold">송출 양호 (1080p)</span>
+              <span className="text-[#00ffa3] font-bold" data-exempt=":// design-exempt(reason: chzzk green text, expires: 2026-12-31)">송출 양호 (1080p)</span>
             </span>
-            <span className="border-l border-border-default pl-3">참석회원 10명 (풀방)</span>
+            <span className="border-l border-gray-800 pl-3">참석회원 10명 (풀방)</span>
           </div>
         </div>
  
         {/* Video Player Display (Winning Eleven Intro Theme + Danmaku Chat) */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface-bg winning-bg-grid z-0">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#070914] winning-bg-grid z-0" data-exempt=":// design-exempt(reason: chzzk player background, expires: 2026-12-31)">
           {/* Neon Glow Effects */}
-          <div className="absolute inset-0 bg-gradient-to-tr from-brand-primary/10 via-transparent to-fcgreen-600/15 mix-blend-color-dodge animate-pulse" style={{ animationDuration: '4s' }} />
+          <div className="absolute inset-0 bg-gradient-to-tr from-[#00ffa3]/10 via-transparent to-[#00b872]/15 mix-blend-color-dodge animate-pulse" style={{ animationDuration: '4s' }} data-exempt=":// design-exempt(reason: chzzk glow effects, expires: 2026-12-31)" />
           
           {/* Winning Eleven Title Card */}
           <div className="text-center space-y-5 z-10 animate-fadeIn">
-            <div className="inline-block bg-gradient-to-r from-fcgreen-600 to-brand-primary text-black font-black text-6xl tracking-wider px-8 py-3.5 transform -skew-x-12 border-[5px] border-black shadow-[0_0_30px_var(--brand-primary-bg)]">
+            <div className="inline-block bg-gradient-to-r from-[#00b872] to-[#00ffa3] text-black font-black text-6xl tracking-wider px-8 py-3.5 transform -skew-x-12 border-[5px] border-black shadow-[0_0_30px_rgba(0,255,163,0.25)]" data-exempt=":// design-exempt(reason: chzzk winning eleven title card, expires: 2026-12-31)">
               WINNING MOIM
             </div>
-            <div className="text-md font-black text-brand-primary tracking-widest uppercase">
+            <div className="text-md font-black text-[#00ffa3] tracking-widest uppercase" data-exempt=":// design-exempt(reason: chzzk green text, expires: 2026-12-31)">
               FC GUPPY 2026 SEASON
             </div>
             <div className="pt-8">
-              <button className="flex items-center gap-2 mx-auto rounded-full bg-brand-primary-hover hover:bg-brand-primary active:scale-95 transition-all px-8 py-3.5 text-xs font-black text-black shadow-lg shadow-brand-primary/25">
+              <button className="flex items-center gap-2 mx-auto rounded-full bg-[#00e58f] hover:bg-[#00ffa3] active:scale-95 transition-all px-8 py-3.5 text-xs font-black text-black shadow-lg shadow-[#00ffa3]/25" data-exempt=":// design-exempt(reason: chzzk play button, expires: 2026-12-31)">
                 ▶ 인트로 재생
               </button>
             </div>
@@ -88,10 +88,10 @@ function PhoneFrame({ children, surface = 'white' }: { children: ReactNode; surf
             <div className="text-[11px] font-black text-gray-400">
               02:12 / 03:00
             </div>
-            <div className="text-xs text-brand-primary font-black flex items-center gap-1.5">
+            <div className="text-xs text-[#00ffa3] font-black flex items-center gap-1.5" data-exempt=":// design-exempt(reason: chzzk live indicator text, expires: 2026-12-31)">
               <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-primary"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00ffa3] opacity-75" data-exempt=":// design-exempt(reason: chzzk live indicator ping, expires: 2026-12-31)"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#00ffa3]" data-exempt=":// design-exempt(reason: chzzk live indicator dot, expires: 2026-12-31)"></span>
               </span>
               LIVE
             </div>
@@ -120,7 +120,7 @@ const DesktopIntroBackup = () => (
       </span>
       <h1 className="text-4xl font-black tracking-tight text-white leading-tight">
         형님들, 이번 주말에<br />공 차러 나오십니까?<br />
-        <span className="bg-clip-text text-transparent bg-gradient-to-r from-green-400 to-fcgreen-600">FC Guppy</span>
+        <span className="bg-clip-text text-transparent bg-gradient-to-r from-green-400 to-emerald-600" data-exempt=":// design-exempt(reason: chzzk intro description gradient and brand name, expires: 2026-12-31)">FC Guppy</span>
       </h1>
       <p className="text-sm text-gray-400 font-bold leading-relaxed">
         지각 및 미참석 벌금 엄격 적용합니다! 10명 남짓 정예 멤버로 다치지 않게 땀 흘리고 시원하게 막걸리 한 잔 나누기 위한 회원 전용 폐쇄형 아지트입니다.
