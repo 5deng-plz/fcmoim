@@ -1133,7 +1133,7 @@ export default function TacticsDragBuilder({
           isOver={isOverBench}
         />
 
-        <DragOverlay adjustScale>
+        <DragOverlay adjustScale dropAnimation={null}>
           {activePlayer ? <PlayerOverlay player={activePlayer} /> : null}
         </DragOverlay>
       </DndContext>
