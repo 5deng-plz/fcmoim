@@ -1,109 +1,53 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 106,
-  "updatedAt": "2026-06-23T23:28:20+09:00",
+  "updateVersion": 107,
+  "updatedAt": "2026-06-24T18:19:29+09:00",
   "updatedBy": "codex",
   "currentPhase": "harness-lightweight-profiles",
   "activeWork": {
-    "taskId": "harness-lightweight-profiles",
+    "taskId": "update-agents-md",
     "status": "complete",
     "designMode": "maintenance",
-    "baselineCommit": "dadc2ca",
+    "baselineCommit": "0094b409c3e2106b0bbf121aa4d71e01fec54c33",
     "changedFiles": [
-      ".agents/fixtures/negative-fixtures.json",
-      ".agents/scripts/bootstrap-harness.mjs",
-      ".agents/scripts/guard-evidence.mjs",
-      ".agents/scripts/test-harness.mjs",
-      "AGENT.md",
-      "docs/project-context.json",
-      "docs/agent-rules.json",
-      "docs/decisions.md",
-      "docs/user/design-harness-workflow.md",
-      "package.json"
+      "docs/project-context.json"
     ],
     "changedSurfaces": [
-      "infra",
       "docs"
     ],
     "allowedPaths": [
-      ".agents/fixtures/negative-fixtures.json",
-      ".agents/scripts/bootstrap-harness.mjs",
-      ".agents/scripts/guard-evidence.mjs",
-      ".agents/scripts/test-harness.mjs",
-      "AGENT.md",
-      "docs/project-context.json",
-      "docs/agent-rules.json",
-      "docs/decisions.md",
-      "docs/user/design-harness-workflow.md",
-      "package.json"
+      "docs/project-context.json"
     ],
     "evidence": {
       "scopeReview": {
         "status": "completed",
         "provider": "Manual review",
-        "command": "Reviewed current guard profiles, evidence guard, harness regression fixtures, package scripts, AGENT.md, workflow, and decision docs.",
-        "summary": "Scope covers harness profile split into quick/standard/full, project-context requirement reduction for quick work, stricter browserRuntime passed evidence wording, and related harness regression coverage."
+        "command": "Read automation memory, AGENT.md, docs/agent-feedback.md, docs/user/design-harness-workflow.md, docs/agent-rules.json, docs/project-context.json, role prompts, package scripts, and recent commits.",
+        "summary": "Recent candidate failures were product/UI implementation details or test stabilization work, not reusable Agent-process failures. No AGENT.md or harness policy edit qualified."
       },
       "harnessValidate": {
         "status": "passed",
         "provider": "Harness",
         "command": "npm run harness:validate",
-        "summary": "Harness structure, project rules, documentation line limits, and purity checks passed."
-      },
-      "harnessRegression": {
-        "status": "passed",
-        "provider": "Harness fixtures",
-        "command": "npm run harness:test",
-        "summary": "Harness regression passed with 20 fixture cases, including quick no-context pass, standard diff ownership failure, full data evidence failure, and stricter browserRuntime passed evidence terms."
-      },
-      "quickProfile": {
-        "status": "passed",
-        "provider": "Harness guard",
-        "command": "npm run harness:guard:quick",
-        "summary": "Quick profile passed without project-context evidence or diff ownership checks for the current harness/docs-only changes."
-      },
-      "standardProfile": {
-        "status": "passed",
-        "provider": "Harness guard",
-        "command": "npm run harness:guard:standard",
-        "summary": "Standard profile passed: harness validation, token sync, design guard, diff ownership for 10 changed files, baseline verification, and db:check."
-      },
-      "dbCheck": {
-        "status": "passed",
-        "provider": "Supabase contract checker",
-        "command": "npm run db:check",
-        "summary": "Tracked Supabase SQL contract check passed; no DB schema changes were made by this task."
-      },
-      "browserRuntime": {
-        "status": "passed",
-        "type": "runtime",
-        "provider": "Current dev server + in-app browser logs",
-        "command": "curl http://localhost:3000/; inspect .next/dev/logs/next-development.log delta; inspect in-app browser recent logs",
-        "summary": "Current dev server on localhost:3000 responded 200 and first screen HTML rendered. Browser console recent logs showed only React DevTools/HMR messages and no new errors. Server log delta for the check had no app errors. Package change is harness script/profile metadata, not a runtime dependency change."
-      },
-      "fullProfile": {
-        "status": "passed",
-        "provider": "Harness guard",
-        "command": "npm run harness:guard:full",
-        "summary": "Full profile passed with evidence guard enabled."
+        "summary": "Harness structure, project rules, documentation line limits, and purity checks passed for this state-only update."
       },
       "verifyAlias": {
         "status": "passed",
         "provider": "Harness guard",
         "command": "npm run harness:guard:verify",
-        "summary": "Existing verify command remains compatible and runs the full policy profile."
+        "summary": "Full policy profile passed after temporarily isolating unrelated pre-existing src worktree changes from this automation scope."
       }
     },
     "retrospective": {
       "issuesObserved": [
-        "The previous single verify profile made small UI feedback carry the same project-state and evidence overhead as DB/runtime work.",
-        "browserRuntime evidence accepted passed text too easily unless server log and console checks were explicitly recorded."
+        "Recent completed work included product/UI styling, icon, theme, and test-stability changes.",
+        "No recent evidence showed a reusable Agent planning, scope, verification, review, documentation, or synchronization failure that should become durable harness policy."
       ],
       "missedEvidence": [],
       "harnessImprovementProposal": [],
-      "promotionRecommendation": "propose",
-      "reason": "This task intentionally changes reusable harness policy to reduce overhead while keeping full evidence checks for higher-risk work."
+      "promotionRecommendation": "none",
+      "reason": "Candidate issues were project-local or implementation-specific. The only required action was project-context synchronization for the automation run."
     },
     "reviewStatus": "ready",
     "loopCounters": {
@@ -112,6 +56,12 @@
     }
   },
   "workstreams": [
+    {
+      "id": "light-mode-font-ovr-subtab-icons",
+      "status": "complete",
+      "completedAt": "2026-06-24T01:15:17+09:00",
+      "commit": "0094b409c3e2106b0bbf121aa4d71e01fec54c33"
+    },
     {
       "id": "mypage-stat-point-profile-stats",
       "status": "complete",
