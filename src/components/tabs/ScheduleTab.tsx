@@ -342,19 +342,7 @@ export default function ScheduleTab() {
     setSettlementNotification,
   ]);
 
-  useEffect(() => {
-    if (!firstVisibleEventDate) return;
-    if (selectedEvents.length > 0 || selectedPollOptions.length > 0) return;
-    if (selectedDate === firstVisibleEventDate.getDate()) return;
-
-    setSelectedDate(firstVisibleEventDate.getDate());
-  }, [
-    firstVisibleEventDate,
-    selectedDate,
-    selectedEvents.length,
-    selectedPollOptions.length,
-    setSelectedDate,
-  ]);
+  // Remove date-forcing useEffect to allow selecting dates with no events without being forced back
 
   return (
     <PullToRefresh onRefresh={refreshSchedule}>
