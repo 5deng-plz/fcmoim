@@ -123,7 +123,7 @@ export default function CalendarView({
           const isBlueDay = dayOfWeek === 6 && !isRedDay;
           
           const textColor = isSelected
-            ? 'text-background'
+            ? 'text-[#00ffa3]'
             : isRedDay
             ? 'text-result-loss'
             : isBlueDay
@@ -131,8 +131,8 @@ export default function CalendarView({
             : 'text-primary';
 
           const dayBgClassName = isSelected
-            ? 'bg-action-secondary font-bold'
-            : 'hover:bg-surface-hover';
+            ? '-skew-x-12 border border-[#00ffa3] bg-black/40 shadow-[0_0_10px_rgba(0,255,163,0.5)] font-bold'
+            : 'rounded-full hover:bg-surface-hover';
 
           return (
             <button
@@ -143,20 +143,17 @@ export default function CalendarView({
               aria-pressed={isSelected}
               className="relative mx-auto flex h-11 w-8 cursor-pointer flex-col items-center justify-start transition-all duration-200"
             >
-              <span className={`flex h-8 w-8 items-center justify-center rounded-full ${dayBgClassName} ${textColor}`}>
+              <span className={`flex h-8 w-8 items-center justify-center transition-all ${dayBgClassName} ${textColor}`}>
                 {d}
               </span>
               {markerTypes.length > 0 ? (
-                <span className="mt-0.5 flex h-2.5 items-center justify-center gap-0.5" aria-hidden="true">
-                  {markerTypes.map((type) => {
-                    const meta = getScheduleEventTheme(type);
-                    const Icon = meta.Icon || Vote;
-                    return (
-                      <span key={type} className={`flex h-3.5 w-3.5 items-center justify-center rounded-full ${meta.markerClassName}`}>
-                        <Icon size={7} />
-                      </span>
-                    );
-                  })}
+                <span className="mt-1 flex h-1.5 items-center justify-center gap-1" aria-hidden="true">
+                  {markerTypes.map((type) => (
+                    <span
+                      key={type}
+                      className="h-1.5 w-1.5 rounded-full bg-[#00ffa3] shadow-[0_0_6px_rgba(0,255,163,0.8)] animate-pulse"
+                    />
+                  ))}
                 </span>
               ) : null}
             </button>

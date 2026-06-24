@@ -365,27 +365,34 @@ export default function ScheduleTab() {
       >
         {canManageSchedule ? (
           <section
-            className={`rounded-xl border border-border bg-surface-card p-3 shadow-sm transition-all duration-300 ease-in-out ${smartFocusDimClass}`}
+            className={`rounded-2xl border border-[#25283e] bg-[#141624] p-4 shadow-lg shadow-black/40 transition-all duration-300 ease-in-out ${smartFocusDimClass}`}
             data-testid="schedule-ops-smartfocus"
             {...smartFocusInertProps}
           >
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-black text-primary">일정 운영</h3>
+                <h3 className="text-xs font-black tracking-wider text-gray-400 uppercase flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00ffa3] animate-pulse" />
+                  스튜디오 제어 콘솔
+                </h3>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3 pt-1">
               <button
                 onClick={() => openModal('matchCreate')}
-                className="rounded-lg bg-green-600 px-3 py-2.5 text-xs font-bold text-white transition-all hover:brightness-110 active:scale-95"
+                className="relative p-[1px] rounded-xl bg-gradient-to-r from-[#00ffa3] to-[#00b872] active:scale-95 transition-all transform -skew-x-12 overflow-hidden shadow-[0_0_12px_rgba(0,255,163,0.15)] hover:shadow-[0_0_16px_rgba(0,255,163,0.3)]"
               >
-                일정 만들기
+                <span className="flex items-center justify-center gap-1.5 w-full h-full bg-[#141624] hover:bg-[#1e2136] text-[#00ffa3] font-black text-xs py-2.5 px-3 rounded-[11px] skew-x-12 transition-colors">
+                  🔴 라이브 일정 생성
+                </span>
               </button>
               <button
                 onClick={() => openModal('pollCreate')}
-                className="rounded-lg border border-feedback-warning-border bg-feedback-warning-bg px-3 py-2.5 text-xs font-bold text-feedback-warning transition-all hover:brightness-95 active:scale-95"
+                className="relative p-[1px] rounded-xl bg-gradient-to-r from-[#ffb800] to-[#ff8a00] active:scale-95 transition-all transform -skew-x-12 overflow-hidden shadow-[0_0_12px_rgba(255,184,0,0.15)] hover:shadow-[0_0_16px_rgba(255,184,0,0.3)]"
               >
-                투표 만들기
+                <span className="flex items-center justify-center gap-1.5 w-full h-full bg-[#141624] hover:bg-[#1e2136] text-[#ffb800] font-black text-xs py-2.5 px-3 rounded-[11px] skew-x-12 transition-colors">
+                  🗳️ 일정 투표 생성
+                </span>
               </button>
             </div>
           </section>
@@ -548,14 +555,41 @@ export default function ScheduleTab() {
         ) : null}
 
         {selectedEvents.length === 0 && selectedPollOptions.length === 0 ? (
-          <section className="card overflow-hidden p-5">
-            <div className="rounded-2xl bg-feedback-success-bg px-4 py-5 text-center">
-              <div className="mx-auto mb-3 flex h-20 w-20 items-center justify-center">
-                <CalendarX2 size={56} className="text-brand-primary" strokeWidth={2.5} aria-hidden="true" />
+          <section className="card overflow-hidden p-5 border border-[#25283e] bg-[#141624]/60 shadow-lg shadow-black/30">
+            <div className="rounded-2xl bg-black/40 border border-[#25283e]/50 p-5 text-center flex flex-col items-center">
+              
+              {/* TV Color Bars - Offline Metaphor */}
+              <div className="w-full max-w-[280px] h-28 rounded-xl overflow-hidden relative flex flex-col justify-between bg-black border border-[#25283e] mb-4 shadow-[0_4px_20px_rgba(0,0,0,0.5)] select-none">
+                <div className="flex h-3/4 w-full">
+                  <div className="flex-1 bg-[#ffffff]" />
+                  <div className="flex-1 bg-[#fcfc00]" />
+                  <div className="flex-1 bg-[#00fcfc]" />
+                  <div className="flex-1 bg-[#00fc00]" />
+                  <div className="flex-1 bg-[#fc00fc]" />
+                  <div className="flex-1 bg-[#fc0000]" />
+                  <div className="flex-1 bg-[#0000fc]" />
+                </div>
+                <div className="flex h-1/4 w-full bg-[#000000] justify-around items-center px-1">
+                  <div className="w-8 h-full bg-[#00fcfc]" />
+                  <div className="w-8 h-full bg-[#141624]" />
+                  <div className="w-8 h-full bg-[#fc00fc]" />
+                  <div className="w-8 h-full bg-[#ffffff]" />
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="bg-black/90 px-3.5 py-1 border border-[#25283e] -skew-x-12 shadow-[0_0_12px_rgba(0,0,0,0.9)]">
+                    <span className="block text-[10px] font-black tracking-widest text-[#00ffa3] animate-pulse skew-x-12">
+                      OFFLINE
+                    </span>
+                  </div>
+                </div>
               </div>
-              <p className="text-base font-black text-primary">텅</p>
-              <p className="mt-1 text-xs font-medium text-secondary">
-                아직 등록된 일정이 없어요
+
+              <p className="text-sm font-black text-[#00ffa3] shadow-sm flex items-center gap-1.5 justify-center mb-1 bg-black/30 px-3 py-1 rounded-full border border-[#00ffa3]/20">
+                <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+                방송 준비 중 (Offline)
+              </p>
+              <p className="mt-2 text-xs font-semibold text-gray-400 max-w-[280px] leading-relaxed">
+                현재 예정된 방송(일정)이 없습니다. 새로운 일정 조율 투표가 생성되면 홈 화면 알림으로 가장 먼저 송출됩니다!
               </p>
             </div>
           </section>
@@ -703,10 +737,10 @@ function SelectedMatchPanel({
   return (
     <section className="space-y-3">
       {!isFinished ? (
-        <div className="overflow-hidden rounded-3xl border border-event-match-border bg-event-match-bg p-5 shadow-sm">
+        <div className="overflow-hidden rounded-3xl border border-[#25283e] bg-[#141624]/85 p-5 shadow-lg shadow-black/40">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <h3 className="text-base font-black text-primary">{stripDatePrefix(match.title)}</h3>
+              <h3 className="text-base font-black text-white">{stripDatePrefix(match.title)}</h3>
             </div>
             <div className="flex items-center gap-2">
               {canShowResultAction ? (
@@ -927,30 +961,36 @@ function MatchSummaryCard({
 
   return (
     <div className="flex min-w-0 items-center gap-3">
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center">
+      <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-[#00ffa3]/40 bg-black/50 shadow-[0_0_8px_rgba(0,255,163,0.15)]">
+        {match.status !== 'cancelled' && (
+          <span className="absolute -top-1 -left-1 flex h-3.5 items-center justify-center rounded bg-red-600 px-0.5 text-[7px] font-black text-white gap-0.5 shadow-[0_0_4px_rgba(239,68,68,0.5)] z-20 scale-90">
+            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+            LIVE
+          </span>
+        )}
         <Image
           src="/icons/svgrepo-football.svg"
           alt=""
-          width={46}
-          height={46}
-          className="h-11 w-11 object-contain"
+          width={40}
+          height={40}
+          className="h-9 w-9 object-contain"
           unoptimized
         />
       </div>
       <div className="min-w-0 flex-1">
         {showTitle ? (
           <div className="mb-1 flex flex-wrap items-center gap-2">
-            <p className="truncate text-base font-black leading-tight text-primary">{stripDatePrefix(match.title)}</p>
+            <p className="truncate text-base font-black leading-tight text-white">{stripDatePrefix(match.title)}</p>
             <Badge label={statusBadge.label} variant={statusBadge.variant} />
           </div>
         ) : null}
-        <div className="mt-2.5 space-y-1.5 text-xs font-bold text-secondary">
+        <div className="mt-2.5 space-y-1.5 text-xs font-bold text-gray-400">
           <span className="flex min-w-0 items-center gap-1.5">
-            <Clock3 size={14} className="text-blue-team shrink-0" aria-hidden="true" />
-            <span>{formatMatchDateTimeWithWeekday(match.date)}</span>
+            <Clock3 size={14} className="text-gray-500 shrink-0" aria-hidden="true" />
+            <span className="text-[#00ffa3]">{formatMatchDateTimeWithWeekday(match.date)}</span>
           </span>
           <span className="flex min-w-0 items-center gap-1.5">
-            <MapPin size={14} className="text-blue-team shrink-0" aria-hidden="true" />
+            <MapPin size={14} className="text-gray-500 shrink-0" aria-hidden="true" />
             <span className="truncate">{match.location}</span>
           </span>
         </div>

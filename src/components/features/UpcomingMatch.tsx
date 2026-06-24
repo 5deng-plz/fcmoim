@@ -60,22 +60,25 @@ export default function UpcomingMatch() {
       ) : null}
 
       {upcomingMatchesStatus !== 'loading' && nextMatch ? (
-        <div className="relative overflow-hidden rounded-3xl border border-glass-border bg-glass-bg px-5 py-4.5 shadow-glass-shadow backdrop-blur-md transition-colors">
-          {/* Ticket Left Punch Hole */}
-          <div className="absolute -left-3.5 top-[52px] z-10 h-7 w-7 rounded-full border border-glass-border/40 bg-surface-bg shadow-inner" />
-          {/* Ticket Right Punch Hole */}
-          <div className="absolute -right-3.5 top-[52px] z-10 h-7 w-7 rounded-full border border-glass-border/40 bg-surface-bg shadow-inner" />
-
+        <div className="relative overflow-hidden rounded-3xl border border-[#25283e] bg-[#141624]/85 px-5 py-4.5 shadow-lg shadow-black/40 transition-colors">
+          
           {/* D-Day Badge */}
           {dDayText && nextMatch.status !== 'cancelled' && (
-            <div className="absolute right-0 top-0 rounded-bl-2xl bg-brand-primary px-3.5 py-1 text-[9px] font-extrabold tracking-wide text-white shadow-sm ring-1 ring-white/10 uppercase">
+            <div className="absolute right-0 top-0 rounded-bl-2xl bg-gradient-to-r from-[#00ffa3] to-[#00b872] px-3.5 py-1.5 text-[9px] font-black tracking-wide text-black shadow-sm uppercase">
               {dDayText}
             </div>
           )}
 
           <div className="flex items-center gap-3.5 min-h-[92px]">
             {/* Football/Icon Emblem Wrapper */}
-            <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-glass-border/40 bg-glass-bg/70 shadow-inner ring-1 ring-white/40 backdrop-blur-sm ${shimmerClassName}`}>
+            <div className={`relative flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-[#00ffa3]/60 bg-black/60 shadow-[0_0_12px_rgba(0,255,163,0.15)] ${shimmerClassName}`}>
+              {/* "LIVE" pulse badge inside emblem */}
+              {nextMatch.status !== 'cancelled' && (
+                <span className="absolute -top-1.5 -left-1.5 flex h-4 items-center justify-center rounded bg-red-600 px-1 text-[8px] font-black text-white gap-0.5 shadow-[0_0_6px_rgba(239,68,68,0.5)] z-20 scale-90">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                  LIVE
+                </span>
+              )}
               {nextMatch.type === 'match' ? (
                 <Image
                   src="/icons/svgrepo-football.svg"
@@ -86,13 +89,13 @@ export default function UpcomingMatch() {
                   unoptimized
                 />
               ) : (
-                <span className="text-gray-800 animate-counter-spin">
+                <span className="text-gray-400 animate-counter-spin">
                   {nextMatch.type === 'training' ? (
-                    <Tent size={28} strokeWidth={2} />
+                    <Tent size={26} strokeWidth={2} />
                   ) : nextMatch.type === 'seminar' ? (
-                    <Beer size={28} strokeWidth={2} />
+                    <Beer size={26} strokeWidth={2} />
                   ) : (
-                    <Guitar size={28} strokeWidth={2} />
+                    <Guitar size={26} strokeWidth={2} />
                   )}
                 </span>
               )}
@@ -101,29 +104,26 @@ export default function UpcomingMatch() {
             {/* Main Info */}
             <div className="flex-1 min-w-0 pr-2">
               <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                <p className="text-base font-black leading-tight text-primary truncate max-w-[130px]">{stripDatePrefix(nextMatch.title)}</p>
+                <p className="text-base font-black leading-tight text-white truncate max-w-[130px]">{stripDatePrefix(nextMatch.title)}</p>
                 {nextMatch.status === 'cancelled' ? (
                   <Badge label="취소" variant="gray" className="border border-border bg-surface-hover text-secondary" />
                 ) : (
                   <Badge label="예정" variant="green" />
                 )}
               </div>
-              <div className="mt-2 space-y-1.5 text-xs font-bold text-secondary">
+              <div className="mt-2 space-y-1.5 text-xs font-bold text-gray-400">
                 <span className="flex min-w-0 items-center gap-1.5">
-                  <Clock3 size={14} className="shrink-0 text-secondary" aria-hidden="true" />
-                  <span className="truncate text-sm font-extrabold leading-tight text-secondary">{formatMatchDate(nextMatch.date)}</span>
+                  <Clock3 size={14} className="shrink-0 text-gray-500" aria-hidden="true" />
+                  <span className="truncate text-xs font-extrabold leading-tight text-[#00ffa3]">{formatMatchDate(nextMatch.date)}</span>
                 </span>
                 <span className="flex min-w-0 items-center gap-1.5">
-                  <MapPin size={14} className="shrink-0 text-secondary" aria-hidden="true" />
-                  <span className="truncate text-secondary">{nextMatch.location}</span>
+                  <MapPin size={14} className="shrink-0 text-gray-500" aria-hidden="true" />
+                  <span className="truncate text-gray-400">{nextMatch.location}</span>
                 </span>
               </div>
             </div>
 
-            {/* Vertical Ticket Dashed Separator */}
-            <div className="h-14 border-r border-dashed border-border/80 self-center mx-1 shrink-0" />
-
-            {/* Compact Forecast */}
+            {/* Compact Forecast (Clean gaming style card) */}
             <div className="shrink-0 pl-1">
               <MatchForecastPanel location={nextMatch.location} />
             </div>
@@ -166,20 +166,17 @@ function MatchForecastPanel({ location }: { location: string }) {
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="flex flex-col gap-2 rounded-xl py-0.5 text-right transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-brand-primary/30"
+      className="flex flex-col gap-1.5 rounded-lg bg-black/40 border border-[#25283e] p-2 text-right transition-all hover:bg-black/75 active:scale-95 shadow-md"
       aria-label={`경기일 예보: ${location} 네이버 날씨`}
     >
       <div className="flex items-center justify-end gap-1.5">
-        <span className="sr-only">날씨</span>
-        <CloudSun size={14} className="text-weather-clear shrink-0" />
-        <span className="text-xs font-black text-primary leading-none">맑음 24°</span>
+        <CloudSun size={13} className="text-[#ffb800] shrink-0 drop-shadow-[0_0_4px_rgba(255,184,0,0.4)]" />
+        <span className="text-[10px] font-black text-white leading-none">CLEAR / 24°C</span>
       </div>
       <div className="flex items-center justify-end gap-1">
-        <span className="sr-only">미세먼지</span>
-        <Wind size={13} className="text-fcgreen-600 shrink-0" />
-        <span className="text-[10px] font-extrabold text-secondary leading-none">
-          <span className="sr-only">보통</span>
-          먼지 보통
+        <Wind size={11} className="text-[#00ffa3] shrink-0" />
+        <span className="text-[9px] font-black text-gray-400 leading-none tracking-wider uppercase">
+          PM10 GOOD
         </span>
       </div>
     </a>
