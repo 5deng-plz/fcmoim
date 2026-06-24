@@ -701,7 +701,7 @@ function DesktopTacticsStudio({
         </div>
 
         {/* Center Area: Mega Cyber Pitch (Centered overall - Expanded) */}
-        <div className="flex-1 h-full flex flex-col justify-center items-center relative p-4 z-0">
+        <div className="flex-1 h-full flex flex-col justify-center items-center relative p-4 z-0 lg:pl-[320px]">
           {/* Pitch Container with Skew Accent */}
           <div className="w-[92%] max-w-[760px] xl:max-w-[820px] aspect-[5/3] relative rounded-3xl border border-[#00ffa3]/25 bg-soccer-pitch overflow-hidden shadow-[0_0_24px_rgba(0,255,163,0.06)] p-4 md:p-5">
             {/* Render 11 Positions based on Lineup */}

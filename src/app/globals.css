@@ -920,10 +920,23 @@
   /* ── 전술판 / 결과 구장 잔디 배경 그라데이션 ── */
   .bg-soccer-pitch {
     background-image: 
-      radial-gradient(circle, rgba(0, 255, 163, 0.06) 1.5px, transparent 1.5px),
-      linear-gradient(135deg, #090a10 0%, #121424 100%);
-    background-size: 20px 20px, 100% 100%;
-    box-shadow: inset 0 0 24px rgba(0, 255, 163, 0.06), 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+      /* 센터 서클 (중앙 원) */
+      radial-gradient(circle at 50% 50%, transparent 12%, rgba(255, 255, 255, 0.15) 12.5%, rgba(255, 255, 255, 0.15) 13.5%, transparent 14%),
+      /* 센터 스팟 (중앙 점) */
+      radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.3) 2.5px, transparent 3.5px),
+      /* 하프라인 (중앙 세로선) */
+      linear-gradient(90deg, transparent 49.7%, rgba(255, 255, 255, 0.15) 49.9%, rgba(255, 255, 255, 0.15) 50.1%, transparent 50.3%),
+      /* 외곽 경기장 터치라인/엔드라인 (안쪽 사각형 선) */
+      linear-gradient(0deg, transparent 4.5%, rgba(255, 255, 255, 0.08) 5%, rgba(255, 255, 255, 0.08) 6%, transparent 6.5%),
+      linear-gradient(180deg, transparent 4.5%, rgba(255, 255, 255, 0.08) 5%, rgba(255, 255, 255, 0.08) 6%, transparent 6.5%),
+      linear-gradient(90deg, transparent 3.5%, rgba(255, 255, 255, 0.08) 4%, rgba(255, 255, 255, 0.08) 5%, transparent 5.5%),
+      linear-gradient(270deg, transparent 3.5%, rgba(255, 255, 255, 0.08) 4%, rgba(255, 255, 255, 0.08) 5%, transparent 5.5%),
+      /* 천연 잔디 세로 스트라이프 패턴 */
+      repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0px, rgba(255, 255, 255, 0.02) 36px, transparent 36px, transparent 72px),
+      /* 딥 초록 잔디 그라데이션 베이스 */
+      linear-gradient(135deg, #14532d 0%, #15803d 50%, #052e16 100%);
+    background-size: 100% 100%;
+    box-shadow: inset 0 0 36px rgba(0, 0, 0, 0.5), 0 8px 32px rgba(0, 0, 0, 0.55) !important;
   }
 
   @keyframes gold-shimmer {
