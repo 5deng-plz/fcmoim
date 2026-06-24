@@ -753,154 +753,38 @@ export default function TacticsDragBuilder({
     if (!player) return;
 
     const sourceZone = findPlayerZone(playerId);
+    if (!sourceZone) return;
     if (!canEdit || !clubId || !matchId) return;
+
+    // 권한 체크
+    if (!isOperator) {
+      if (sourceZone === 'red' || sourceZone === 'blue') {
+        if (!canManageZone(sourceZone, { isOperator, isRedLeader, isBlueLeader })) {
+          showToast('소속 팀의 선수만 이동할 수 있어요.');
+          return;
+        }
+      }
+      if (targetZone === 'red' || targetZone === 'blue') {
+        if (!canManageZone(targetZone, { isOperator, isRedLeader, isBlueLeader })) {
+          showToast('소속 팀에만 선수를 배치할 수 있어요.');
+          return;
+        }
+      }
+    }
+
+    if (sourceZone === targetZone && targetIndex !== null) {
+      // 동일 zone 내에서 동일 index로 드롭한 경우 무시
+      const currentIdx = sourceZone === 'bench' 
+        ? bench.findIndex(p => p.id === playerId)
+        : teams.find(t => t.id === sourceZone)?.players.findIndex(p => p.id === playerId) ?? -1;
+      const currentSlot = sourceZone === 'bench' 
+        ? null 
+        : getPlayerSlot(player, currentIdx);
+      if (currentSlot === targetIndex) return;
+    }
 
     setIsSaving(true);
     try {
-      if (targetZone === 'bench') {
-        if (sourceZone === 'bench') return;
-        const isAuthorizedToBench = canManageZone(sourceZone, { isOperator, isRedLeader, isBlueLeader });
-        if (!isAuthorizedToBench) {
-          showToast('소속 팀의 선수만 대기명단으로 돌려보낼 수 있어요.');
-          return;
-        }
-
-        const draft = buildOperatorLineupDraft({
-          bench,
-          teams,
-          playerId,
-          targetTeamId: 'bench',
-          targetIndex: null,
-        });
-        setTeams(draft.teams);
-        setBench(draft.bench);
-        setSelectedPlacementPlayerId(null);
-        if (!draft.canPersist) {
-          showToast('Red/Blue에 최소 1명씩 배치하면 전술이 저장돼요.');
-          return;
-        }
-        
-        try {
-          const nextLineup = await saveMatchLineup({
-            clubId,
-            matchId,
-            entries: draft.entries,
-          });
-          setTeams(buildInitialTeams(nextLineup));
-          setBench(buildInitialBench(players, nextLineup));
-          onLineupUpdated?.(nextLineup);
-        } catch (error) {
-          console.warn('[FC Moim] saveMatchLineup failed, falling back to local simulation:', error);
-          const simulatedLineup = createSimulatedLineup(draft.entries, matchId, [
-            ...players,
-            ...teams.flatMap((team) => team.players),
-            ...bench,
-          ]);
-          onLineupUpdated?.(simulatedLineup);
-        }
-
-        if (match) {
-          onMatchUpdated?.(getMatchAfterLineupTeamChanges(match, [sourceZone]));
-        }
-        return;
-      }
-
-      if (sourceZone === targetZone) {
-        if (targetZone !== 'red' && targetZone !== 'blue') return;
-        const isAuthorizedToRearrange = canManageZone(targetZone, { isOperator, isRedLeader, isBlueLeader });
-        if (!isAuthorizedToRearrange) {
-          showToast('소속 팀의 슬롯만 변경할 수 있어요.');
-          return;
-        }
-
-        const team = teams.find((item) => item.id === targetZone);
-        const oldIndex = team?.players.findIndex((item) => item.id === playerId) ?? -1;
-        const newIndex = targetIndex ?? -1;
-        if (!team || oldIndex < 0 || newIndex < 0) return;
-        if (newIndex >= TACTICS_SLOT_COUNT) return;
-        const nextTeams = teams.map((item) => item.id === targetZone
-          ? normalizeLeaderForTeam({ ...item, players: movePlayerToSlot(item.players, playerId, newIndex) })
-          : item);
-        setTeams(nextTeams);
-        setSelectedPlacementPlayerId(null);
-        
-        try {
-          const nextLineup = await saveMatchLineup({
-            clubId,
-            matchId,
-            entries: nextTeams.flatMap(mapTeamToSaveEntries),
-          });
-          setTeams(buildInitialTeams(nextLineup));
-          setBench(buildInitialBench(players, nextLineup));
-          onLineupUpdated?.(nextLineup);
-        } catch (error) {
-          console.warn('[FC Moim] saveMatchLineup failed, falling back to local simulation:', error);
-          const entries = nextTeams.flatMap(mapTeamToSaveEntries);
-          const simulatedLineup = createSimulatedLineup(entries, matchId, [
-            ...players,
-            ...nextTeams.flatMap((team) => team.players),
-            ...bench,
-          ]);
-          onLineupUpdated?.(simulatedLineup);
-        }
-
-        if (match) {
-          onMatchUpdated?.(getMatchAfterLineupTeamChanges(match, [targetZone]));
-        }
-        return;
-      }
-
-      if (isOperator) {
-        const draft = buildOperatorLineupDraft({
-          bench,
-          teams,
-          playerId,
-          targetTeamId: targetZone,
-          targetIndex,
-        });
-        setTeams(draft.teams);
-        setBench(draft.bench);
-        setSelectedPlacementPlayerId(null);
-        if (!draft.canPersist) {
-          showToast('Red/Blue에 최소 1명씩 배치하면 전술이 저장돼요.');
-          return;
-        }
-        
-        try {
-          const nextLineup = await saveMatchLineup({
-            clubId,
-            matchId,
-            entries: draft.entries,
-          });
-          setTeams(buildInitialTeams(nextLineup));
-          setBench(buildInitialBench(players, nextLineup));
-          onLineupUpdated?.(nextLineup);
-        } catch (error) {
-          console.warn('[FC Moim] saveMatchLineup failed, falling back to local simulation:', error);
-          const simulatedLineup = createSimulatedLineup(draft.entries, matchId, [
-            ...players,
-            ...teams.flatMap((team) => team.players),
-            ...bench,
-          ]);
-          onLineupUpdated?.(simulatedLineup);
-        }
-
-        if (match) {
-          onMatchUpdated?.(getMatchAfterLineupTeamChanges(match, [sourceZone, targetZone]));
-        }
-        return;
-      }
-
-      if ((sourceZone === 'red' || sourceZone === 'blue') && !canManageZone(sourceZone, { isOperator, isRedLeader, isBlueLeader })) {
-        showToast('소속 팀의 선수만 이동할 수 있어요.');
-        return;
-      }
-
-      if (!canManageZone(targetZone, { isOperator, isRedLeader, isBlueLeader })) {
-        showToast('소속 팀에만 선수를 배치할 수 있어요.');
-        return;
-      }
-
       const draft = buildOperatorLineupDraft({
         bench,
         teams,
@@ -908,11 +792,17 @@ export default function TacticsDragBuilder({
         targetTeamId: targetZone,
         targetIndex,
       });
+
+      // UI 즉각 반영 (Optimistic Update)
       setTeams(draft.teams);
       setBench(draft.bench);
       setSelectedPlacementPlayerId(null);
+
+      // Red팀과 Blue팀에 각각 1명 이상 있어야 DB 영구 보존 API가 작동하므로,
+      // API 조건(canPersist) 충족 여부를 확인
       if (!draft.canPersist) {
         showToast('Red/Blue에 최소 1명씩 배치하면 전술이 저장돼요.');
+        setIsSaving(false);
         return;
       }
 
@@ -929,8 +819,8 @@ export default function TacticsDragBuilder({
         console.warn('[FC Moim] saveMatchLineup failed, falling back to local simulation:', error);
         const simulatedLineup = createSimulatedLineup(draft.entries, matchId, [
           ...players,
-          ...teams.flatMap((team) => team.players),
-          ...bench,
+          ...draft.teams.flatMap((team) => team.players),
+          ...draft.bench,
         ]);
         onLineupUpdated?.(simulatedLineup);
       }
@@ -1265,21 +1155,106 @@ function buildOperatorLineupDraft(input: {
     };
   }
 
-  const nextTeams = input.teams.map((team) => {
-    const retainedPlayers = team.players.filter((player) => player.id !== input.playerId);
-    if (team.id !== input.targetTeamId) {
-      return normalizeLeaderForTeam({ ...team, players: retainedPlayers });
+  const sourceTeam = input.teams.find((team) => team.players.some((p) => p.id === input.playerId));
+  const sourceZone = sourceTeam ? sourceTeam.id : 'bench';
+  const sourceSlot = sourceTeam 
+    ? getPlayerSlot(movedPlayer, sourceTeam.players.indexOf(movedPlayer))
+    : null;
+
+  let nextTeams = input.teams.map((t) => ({
+    ...t,
+    players: t.players.filter((p) => p.id !== input.playerId),
+  }));
+  let nextBench = input.bench.filter((p) => p.id !== input.playerId);
+
+  const targetIndex = input.targetIndex;
+  const isTargetSlotValid = typeof targetIndex === 'number' && targetIndex >= 0 && targetIndex < TACTICS_SLOT_COUNT;
+
+  if (input.targetTeamId === 'bench') {
+    nextBench.push({ ...movedPlayer, isLeader: false, slotIndex: undefined });
+  } else {
+    if (isTargetSlotValid) {
+      const originalTargetTeam = input.teams.find((t) => t.id === input.targetTeamId);
+      const occupyingPlayer = originalTargetTeam?.players.find(
+        (p, idx) => getPlayerSlot(p, idx) === targetIndex
+      );
+
+      if (occupyingPlayer) {
+        if (sourceZone === 'bench') {
+          nextTeams = nextTeams.map((team) => {
+            if (team.id === input.targetTeamId) {
+              const players = team.players.filter((p) => p.id !== occupyingPlayer.id);
+              return { ...team, players };
+            }
+            return team;
+          });
+          nextBench.push({ ...occupyingPlayer, isLeader: false, slotIndex: undefined });
+          nextTeams = nextTeams.map((team) => {
+            if (team.id === input.targetTeamId) {
+              const players = [...team.players, { ...movedPlayer, slotIndex: targetIndex, isLeader: false }];
+              return { ...team, players };
+            }
+            return team;
+          });
+        } else {
+          nextTeams = nextTeams.map((team) => {
+            if (team.id === input.targetTeamId) {
+              const players = team.players.filter((p) => p.id !== occupyingPlayer.id);
+              return { ...team, players };
+            }
+            return team;
+          });
+          nextTeams = nextTeams.map((team) => {
+            if (team.id === sourceZone) {
+              const players = [...team.players, { ...occupyingPlayer, slotIndex: sourceSlot ?? undefined, isLeader: false }];
+              return { ...team, players };
+            }
+            return team;
+          });
+          nextTeams = nextTeams.map((team) => {
+            if (team.id === input.targetTeamId) {
+              const players = [...team.players, { ...movedPlayer, slotIndex: targetIndex, isLeader: false }];
+              return { ...team, players };
+            }
+            return team;
+          });
+        }
+      } else {
+        nextTeams = nextTeams.map((team) => {
+          if (team.id === input.targetTeamId) {
+            const players = [...team.players, { ...movedPlayer, slotIndex: targetIndex, isLeader: false }];
+            return { ...team, players };
+          }
+          return team;
+        });
+      }
+    } else {
+      const targetTeamPlayersAfterRemoval = nextTeams.find((t) => t.id === input.targetTeamId)?.players ?? [];
+      const usedSlots = new Set(targetTeamPlayersAfterRemoval.map((item, idx) => getPlayerSlot(item, idx)));
+      const fallbackIndex = findFirstOpenSlot(usedSlots);
+
+      nextTeams = nextTeams.map((team) => {
+        if (team.id === input.targetTeamId) {
+          const players = [...team.players, { ...movedPlayer, slotIndex: fallbackIndex, isLeader: false }];
+          return { ...team, players };
+        }
+        return team;
+      });
     }
+  }
 
-    const nextPlayers = addPlayerToSlot(retainedPlayers, { ...movedPlayer, isLeader: false }, input.targetIndex);
-    return normalizeLeaderForTeam({ ...team, players: nextPlayers });
-  });
+  const normalizedTeams = nextTeams.map((team) => normalizeLeaderForTeam(team));
 
-  const assignedIds = new Set(nextTeams.flatMap((team) => team.players.map((player) => player.id)));
-  const entries = nextTeams.flatMap(mapTeamToSaveEntries);
+  const assignedIds = new Set(normalizedTeams.flatMap((team) => team.players.map((player) => player.id)));
+  const finalBench = allPlayers
+    .filter((player) => !assignedIds.has(player.id))
+    .map((p) => ({ ...p, isLeader: false, slotIndex: undefined }));
+
+  const entries = normalizedTeams.flatMap(mapTeamToSaveEntries);
+
   return {
-    teams: nextTeams,
-    bench: allPlayers.filter((player) => !assignedIds.has(player.id)),
+    teams: normalizedTeams,
+    bench: finalBench,
     entries,
     canPersist: hasBothTeams(entries),
   };
