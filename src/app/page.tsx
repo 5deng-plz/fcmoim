@@ -640,7 +640,7 @@ function DesktopTacticsStudio({
 
     if (sourceSlotIndex !== -1) {
       if (targetSlotIndex !== -1) {
-        // Swap: 필드 내부의 두 선수의 위치를 맞바꿈
+        // Swap!
         const sourceMemberId = nextLineup[sourceSlotIndex].membershipId;
         const targetMemberId = nextLineup[targetSlotIndex].membershipId;
         nextLineup[sourceSlotIndex] = {
@@ -652,44 +652,28 @@ function DesktopTacticsStudio({
           membershipId: sourceMemberId
         };
       } else {
-        // 빈 슬롯으로 이동: 필드 선수의 슬롯 좌표 변경
+        // 빈 슬롯으로 이동
         nextLineup[sourceSlotIndex] = {
           ...nextLineup[sourceSlotIndex],
-          teamNumber: targetTeamNumber as 1 | 2,
-          formationSlot: targetFormationSlot
+          membershipId: ""
         };
+        const targetEmptyIndex = nextLineup.findIndex(slot => slot.teamNumber === targetTeamNumber && slot.formationSlot === targetFormationSlot);
+        if (targetEmptyIndex !== -1) {
+          nextLineup[targetEmptyIndex] = {
+            ...nextLineup[targetEmptyIndex],
+            membershipId: playerId
+          };
+        }
       }
     } else {
-      // 대기명단에서 필드로 배치
+      // 대기명단에서 피드로 배치
       if (targetSlotIndex !== -1) {
-        // 타겟 슬롯에 이미 선수가 있다면, 기존 선수를 대기명단으로 보내고(삭제), 그 자리에 새 선수를 덮어씀
         nextLineup[targetSlotIndex] = {
           ...nextLineup[targetSlotIndex],
           membershipId: playerId
         };
-      } else {
-        // 타겟 슬롯이 비어있다면, 새로운 entry를 생성하여 추가
-        const newPlayer = data.players.find(p => p.id === playerId);
-        const newEntry: MatchLineupEntry = {
-          id: `temp-${Date.now()}`,
-          matchId,
-          membershipId: playerId,
-          teamNumber: targetTeamNumber as 1 | 2,
-          isLeader: false,
-          position: 'MF',
-          formationSlot: targetFormationSlot,
-          playerName: newPlayer?.name ?? '',
-          playerPosition: null,
-          playerOvr: newPlayer?.ovr ?? 0,
-          playerPhotoUrl: newPlayer?.photo ?? null,
-          playerMatchPoints: newPlayer?.matchPoints ?? 0
-        };
-        nextLineup.push(newEntry);
       }
     }
-
-    // 빈 유령 entry(membershipId가 없거나 빈 값)는 필터링
-    nextLineup = nextLineup.filter(slot => slot.membershipId && slot.membershipId !== "");
 
     // Optimistic Update
     setData(prev => ({
@@ -697,25 +681,12 @@ function DesktopTacticsStudio({
       lineup: nextLineup
     }));
 
-    const hasRed = nextLineup.some(slot => slot.teamNumber === 1);
-    const hasBlue = nextLineup.some(slot => slot.teamNumber === 2);
-    if (!hasRed || !hasBlue) {
-      // API를 호출하지 않고 로컬 상태만 업데이트하고 종료
-      return;
-    }
-
     setLoading(true);
     try {
       const savedLineup = await saveMatchLineup({
         clubId: activeClubId,
         matchId,
-        entries: nextLineup.map(slot => ({
-          membershipId: slot.membershipId,
-          teamNumber: slot.teamNumber,
-          isLeader: Boolean(slot.isLeader),
-          position: (slot.position || 'MF') as 'FW' | 'MF' | 'DF',
-          formationSlot: slot.formationSlot
-        }))
+        entries: nextLineup
       });
       setData(prev => ({
         ...prev,
@@ -852,21 +823,36 @@ function DesktopTacticsStudio({
         <div className="flex-1 h-full flex flex-col justify-center items-center relative p-4 z-0 lg:pl-[320px]">
           {/* Pitch Container with Skew Accent */}
           <div className="w-[92%] max-w-[760px] xl:max-w-[820px] aspect-[5/3] relative rounded-3xl border border-[#00ffa3]/25 bg-soccer-pitch overflow-hidden shadow-[0_0_24px_rgba(0,255,163,0.06)] p-4 md:p-5">
-            {/* Render Slots (Red: 18, Blue: 18) */}
-            {Array.from({ length: 36 }).map((_, index) => {
-              const teamNumber = index < 18 ? 1 : 2;
-              const formationSlot = index < 18 ? index : index - 18;
+            {/* Mega Cyber Pitch Lines */}
+            <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+              {/* 경기장 전체 안쪽 테두리선 */}
+              <div className="absolute inset-4 rounded-2xl border border-[#00ffa3]/25 shadow-[0_0_8px_rgba(0,255,163,0.08)]" />
+              {/* 하프라인 */}
+              <div className="absolute left-1/2 top-4 h-[calc(100%-32px)] w-px -translate-x-1/2 bg-[#00ffa3]/25" />
+              {/* 센터 서클 */}
+              <div className="absolute left-1/2 top-1/2 h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#00ffa3]/25 shadow-[0_0_8px_rgba(0,255,163,0.08)]" />
+              {/* 센터 스팟 */}
+              <div className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#00ffa3]/55 shadow-[0_0_6px_rgba(0,255,163,0.8)]" />
               
-              // 해당 슬롯에 배치된 라인업 정보가 있는지 확인
-              const slot = data.lineup.find(
-                (l) => l.teamNumber === teamNumber && l.formationSlot === formationSlot
-              );
-              
-              const player = slot 
-                ? data.players.find((p) => p.id === slot.membershipId)
-                : null;
-                
-              const { top, left } = getPlayerCoordinate(teamNumber, formationSlot);
+              {/* 왼쪽 페널티 박스 (Penalty Area) */}
+              <div className="absolute left-4 top-[22%] h-[56%] w-[15%] border border-l-0 border-[#00ffa3]/25 shadow-[0_0_6px_rgba(0,255,163,0.06)] rounded-r-2xl" />
+              {/* 왼쪽 골 에어리어 (Goal Area) */}
+              <div className="absolute left-4 top-[36%] h-[28%] w-[5%] border border-l-0 border-[#00ffa3]/25 shadow-[0_0_6px_rgba(0,255,163,0.06)] rounded-r-xl" />
+              {/* 왼쪽 페널티 스팟 */}
+              <div className="absolute left-[11%] top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#00ffa3]/55 shadow-[0_0_4px_rgba(0,255,163,0.8)]" />
+
+              {/* 오른쪽 페널티 박스 (Penalty Area) */}
+              <div className="absolute right-4 top-[22%] h-[56%] w-[15%] border border-r-0 border-[#00ffa3]/25 shadow-[0_0_6px_rgba(0,255,163,0.06)] rounded-l-2xl" />
+              {/* 오른쪽 골 에어리어 (Goal Area) */}
+              <div className="absolute right-4 top-[36%] h-[28%] w-[5%] border border-r-0 border-[#00ffa3]/25 shadow-[0_0_6px_rgba(0,255,163,0.06)] rounded-l-xl" />
+              {/* 오른쪽 페널티 스팟 */}
+              <div className="absolute right-[11%] top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#00ffa3]/55 shadow-[0_0_4px_rgba(0,255,163,0.8)]" />
+            </div>
+
+            {/* Render 11 Positions based on Lineup */}
+            {data.lineup.map((slot) => {
+              const player = data.players.find((p) => p.id === slot.membershipId);
+              const { top, left } = getPlayerCoordinate(slot.teamNumber, slot.formationSlot ?? 0);
               const isDraggingThis = draggingPlayerId === player?.id;
               
               // 드래그 중인 다른 플레이어가 있고, 이 슬롯이 비어 있을 때 강조 표시할 클래스
@@ -881,15 +867,15 @@ function DesktopTacticsStudio({
                   : (player.ovr ?? 0) >= 70 
                     ? 'border-slate-400 bg-slate-900/70 text-slate-200' 
                     : 'border-amber-700 bg-amber-950/70 text-amber-200'
-                : `border-dashed border-gray-700 bg-black/40 text-gray-600/40 hover:border-gray-500/60 ${highlightSlot}`;
+                : `border-dashed border-gray-700 bg-black/40 text-gray-600 ${highlightSlot}`;
 
               return (
                 <div 
-                  key={`${teamNumber}-${formationSlot}`} 
+                  key={slot.id} 
                   className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-all duration-500 ease-out"
                   style={{ top: `${top}%`, left: `${left}%` }}
                   onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, teamNumber, formationSlot)}
+                  onDrop={(e) => handleDrop(e, slot.teamNumber, slot.formationSlot ?? 0)}
                 >
                   <div 
                     draggable={Boolean(player && canEdit)}
@@ -914,9 +900,9 @@ function DesktopTacticsStudio({
                         </span>
                       </>
                     ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-[7px] md:text-[9px] font-bold opacity-30">
+                      <div className="w-full h-full flex flex-col items-center justify-center text-[7px] md:text-[9px] font-bold">
                         <span>EMPTY</span>
-                        <span className="text-[5px] md:text-[6px] text-gray-500">SLOT</span>
+                        <span className="text-[5px] md:text-[6px] text-gray-700">SLOT</span>
                       </div>
                     )}
                   </div>
