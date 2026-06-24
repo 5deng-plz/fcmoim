@@ -185,7 +185,7 @@ function DraggablePlayerAvatar({
       aria-label={player.name}
       aria-pressed={isSelected}
       className={`group relative -m-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 bg-white shadow-sm ${
-        isField ? 'transition-[box-shadow,opacity]' : 'transition-[box-shadow,transform,opacity]'
+        isField ? 'transition-none!' : 'transition-[box-shadow,transform,opacity]'
       } ${getAvatarBorderClass(zone)} ${
         disabled ? 'cursor-default' : 'cursor-grab active:cursor-grabbing active:scale-105'
       } ${
