@@ -144,7 +144,7 @@
       "attend", "result", "matchst", "award", "fee", "skill", "trend", "feedback",
       "gray", "slate", "green", "white", "black",
       "red-team", "blue-team", "background", "foreground", "transparent", "current", "event",
-      "highlight", "metric", "social", "glass"
+      "highlight", "metric", "social", "glass", "logo", "login"
     ],
     "modeProfiles": {
       "maintenance": { "disallowedTailwindColorSeverity": "blocker", "enforceSemanticSlots": true },

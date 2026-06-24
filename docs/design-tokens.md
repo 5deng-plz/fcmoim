@@ -39,6 +39,8 @@
 - `stamina-*` — 체력 게이지 (full/mid/low)
 - `foot-*` — 주발 아이콘 (active/inactive/stroke)
 - `icon-*` CSS 변수 — `src/components/icons/**` 공유 SVG 내부 색상 전용
+- `logo-*` CSS 변수 — `src/components/brand/FcmoimLogo.tsx` 로고 렌더링 전용 변수 (bg, field, field-from/to, post-from/to, text, border, support 등)
+- `login-*` CSS 변수 — 로그인 전용 타이틀 그라데이션 변수 (text-gradient-from/to)
 - `viz-*` — 데이터 시각화 (primary/secondary/tertiary/danger, fill, grid, label)
 - `event-*` — 카테고리별 일정 이벤트 테마 (`match`, `vote`, `seminar`, `etc` 카테고리 및 하부의 `-bg`, `-border`, `-text`, `-icon-bg`, `-icon-text`, `-detail-border`, `-meta-icon`, `-map-accent` 등)
 
@@ -88,7 +90,7 @@
 - 컴포넌트(`.tsx`) 내 직접 rgba/hex 하드코딩 (`globals.css` 토큰 참조만 허용)
 - 인라인 SVG path 직접 작성 (`lucide-react` 또는 `src/components/ui/` 공유 컴포넌트 사용)
 - 커스텀 SVG는 `src/components/ui/**`, `src/components/brand/**`, `src/components/icons/**`의 공유 컴포넌트로만 둡니다.
-- `src/components/icons/**`의 SVG 내부 색상은 `globals.css`의 `--icon-*` CSS 변수를 참조해야 하며, 컴포넌트에 hex를 직접 쓰지 않습니다.
+- `src/components/icons/**` 및 `src/components/brand/**` 등의 SVG 내부 색상은 `globals.css`의 `--icon-*`, `--logo-*` CSS 변수를 참조해야 하며, 컴포넌트에 hex를 직접 쓰지 않습니다.
 - SVGRepo asset은 원본 URL을 `next/image`로 참조하거나 원본 파일을 `public/icons/**`에 보관해 사용합니다. 출처가 명시된 외부 SVG를 임의로 재제작하거나 inline path로 붙여 넣지 않습니다.
 
 ## 의미 슬롯 계약

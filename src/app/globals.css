@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @config "../../tailwind.config.ts";
 
+@variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* ========================================
  * FC Moim — Global Design Tokens
  * 디자인 시스템의 핵심. 모든 컴포넌트가 이 변수를 참조합니다.
@@ -322,6 +324,24 @@
     --social-like: #e11d48;
     --social-reply: #3b82f6;
     --social-mention: rgba(124, 58, 237, 0.1);
+
+    /* ── brand logo theme styles ── */
+    --logo-bg: #ffffff;
+    --logo-field: url(#logo-net-field);
+    --logo-field-from: #00b872;
+    --logo-field-to: #00995e;
+    --logo-field-from-opacity: 1;
+    --logo-field-to-opacity: 1;
+    --logo-post: url(#logo-net-post);
+    --logo-post-from: #497897;
+    --logo-post-to: #31556d;
+    --logo-text: #1b2a36;
+    --logo-border: #1b2a36;
+    --logo-support: #1b2a36;
+
+    /* ── login text styling variables ── */
+    --login-text-gradient-from: #111827;
+    --login-text-gradient-to: #4b5563;
   }
 
   html, body {
@@ -567,6 +587,24 @@
       --social-like: #f43f5e;
       --social-reply: #60a5fa;
       --social-mention: rgba(168, 85, 247, 0.2);
+
+      /* ── brand logo theme styles (Dark) ── */
+      --logo-bg: #141624;
+      --logo-field: url(#logo-net-field);
+      --logo-field-from: #00ffa3;
+      --logo-field-to: #00b872;
+      --logo-field-from-opacity: 0.8;
+      --logo-field-to-opacity: 0.9;
+      --logo-post: url(#logo-net-post);
+      --logo-post-from: #00e58f;
+      --logo-post-to: #00ffa3;
+      --logo-text: #ffffff;
+      --logo-border: #25283e;
+      --logo-support: #00ffa3;
+
+      /* ── login text styling variables (Dark) ── */
+      --login-text-gradient-from: #ffffff;
+      --login-text-gradient-to: #cbd5e1;
   }
 }
 
@@ -1149,5 +1187,14 @@
   :root[data-theme="dark"] .text-fcgreen-500, 
   :root[data-theme="dark"] .text-fcgreen-600 {
     text-shadow: 0 0 1px rgba(0, 0, 0, 0.5); /* 어두운 배경에서만 텍스트 주변 대비 조절 */
+  }
+
+  /* 로그인 화면 타이틀 텍스트 그라데이션 (테마 변수 기반) */
+  .login-title-gradient {
+    background: linear-gradient(to right, var(--login-text-gradient-from), var(--login-text-gradient-to));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: transparent;
   }
 

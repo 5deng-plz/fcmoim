@@ -96,7 +96,7 @@ export default function LoginScreen() {
         <div className="mx-auto mb-2 h-20 w-20">
           <FcmoimLogo size="100%" className="block h-full w-full" />
         </div>
-        <h1 className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 tracking-tight">FC moim</h1>
+        <h1 className="text-2xl font-black login-title-gradient tracking-tight">FC moim</h1>
       </div>
 
       {isDevTestEnabled ? (
