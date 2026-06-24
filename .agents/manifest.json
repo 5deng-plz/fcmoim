@@ -24,6 +24,7 @@
     "Only the orchestrator may update project state.",
     "Worker agents emit statePatchSuggestion instead of editing project state.",
     "Run configured guard profiles before handoff.",
-    "Respect loop counters: escalate to user when maxGuardRetries or maxReviewRounds exceeded."
+    "Respect loop counters: escalate to user when maxGuardRetries or maxReviewRounds exceeded.",
+    "Commit changes at the end of every turn to ensure clean state and easy rollback (turn end commit policy)."
   ]
 }
