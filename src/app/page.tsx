@@ -942,11 +942,8 @@ function DesktopTacticsStudio({
                         </span>
                       </>
                     ) : (
-                      // draggingPlayerId가 있을 때만 EMPTY SLOT 텍스트를 아주 은은하게 표시, 평소엔 숨김
-                      <div className={`w-full h-full flex flex-col items-center justify-center text-[7px] md:text-[9px] font-bold ${draggingPlayerId ? 'opacity-40' : 'opacity-0'}`}>
-                        <span>EMPTY</span>
-                        <span className="text-[5px] md:text-[6px] text-gray-500">SLOT</span>
-                      </div>
+                      // EMPTY SLOT 텍스트 렌더링 제거 (투명 빈 영역만 제공)
+                      <div className="w-full h-full" />
                     )}
                   </div>
                 </div>
