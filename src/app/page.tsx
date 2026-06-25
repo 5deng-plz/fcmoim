@@ -895,21 +895,13 @@ function DesktopTacticsStudio({
               const { top, left } = getPlayerCoordinate(teamNumber, formationSlot);
               const isDraggingThis = draggingPlayerId === player?.id;
               
-              // 드래그 중인 다른 플레이어가 있고, 이 슬롯이 비어 있을 때 강조 표시할 클래스
-              const isTargetSlotEmpty = !player;
-              const highlightSlot = draggingPlayerId && isTargetSlotEmpty 
-                ? 'border-dashed border-[#00ffa3] bg-[#00ffa3]/5 shadow-[0_0_10px_rgba(0,255,163,0.35)] animate-pulse' 
-                : '';
-
               const cardTierClass = player 
                 ? (player.ovr ?? 0) >= 80 
                   ? 'border-yellow-500 bg-yellow-950/70 text-yellow-200 shadow-[0_0_8px_rgba(234,179,8,0.2)]' 
                   : (player.ovr ?? 0) >= 70 
                     ? 'border-slate-400 bg-slate-900/70 text-slate-200' 
                     : 'border-amber-700 bg-amber-950/70 text-amber-200'
-                : draggingPlayerId
-                  ? `border-dashed border-[#00ffa3]/30 bg-[#00ffa3]/5 text-[#00ffa3]/30 shadow-[0_0_8px_rgba(0,255,163,0.15)] animate-pulse ${highlightSlot}`
-                  : 'border-transparent bg-transparent text-transparent pointer-events-auto'; // 평소엔 완전 투명
+                : 'border-transparent bg-transparent text-transparent pointer-events-auto';
 
               return (
                 <div 
