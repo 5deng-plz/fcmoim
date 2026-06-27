@@ -906,7 +906,7 @@ function DesktopTacticsStudio({
               return (
                 <div 
                   key={`${teamNumber}-${formationSlot}`} 
-                  className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center w-14 h-16 md:w-16 md:h-[76px] transition-all duration-500 ease-out pointer-events-auto"
+                  className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center w-[7.5%] h-[35%] transition-all duration-500 ease-out pointer-events-auto"
                   style={{ top: `${top}%`, left: `${left}%` }}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, teamNumber, formationSlot)}
