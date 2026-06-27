@@ -614,8 +614,8 @@ function serializeLineupTeam(entries: Array<{
 
 function normalizeFormationSlot(value: unknown) {
   if (value === null || value === undefined) return null;
-  if (!Number.isInteger(value) || Number(value) < 0 || Number(value) > 17) {
-    throw new AppError('bad_request', 'Formation slot must be between 0 and 17.');
+  if (!Number.isInteger(value) || Number(value) < 0 || Number(value) > 35) {
+    throw new AppError('bad_request', 'Formation slot must be between 0 and 35.');
   }
   return Number(value);
 }
