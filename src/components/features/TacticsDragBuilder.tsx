@@ -1112,14 +1112,36 @@ const slotFirstCollisionDetection: CollisionDetection = (args) => {
   return centerSlot ? [centerSlot] : centerCollisions;
 };
 
+function convertToMobileSlot(slot: number | null): number | null {
+  if (typeof slot !== 'number') return null;
+  if (slot >= 18) {
+    return Math.floor(slot / 12) * 6 + (slot % 6);
+  }
+  return slot;
+}
+
+function convertToDesktopSlot(slot: number | null): number | null {
+  if (typeof slot !== 'number') return null;
+  if (slot < 18) {
+    return Math.floor(slot / 6) * 12 + (slot % 6);
+  }
+  return slot;
+}
+
 function buildInitialTeams(lineup: MatchLineupEntry[]): TeamState[] {
   const redPlayers = lineup.filter((entry) => entry.teamNumber === 1).map((entry, index) => ({
     ...mapLineupEntryToPlayer(entry),
-    slotIndex: getInitialFormationSlot(entry, index),
+    slotIndex: getInitialFormationSlot(
+      { ...entry, formationSlot: convertToMobileSlot(entry.formationSlot) },
+      index
+    ),
   }));
   const bluePlayers = lineup.filter((entry) => entry.teamNumber === 2).map((entry, index) => ({
     ...mapLineupEntryToPlayer(entry),
-    slotIndex: getInitialFormationSlot(entry, index),
+    slotIndex: getInitialFormationSlot(
+      { ...entry, formationSlot: convertToMobileSlot(entry.formationSlot) },
+      index
+    ),
   }));
 
   return [
@@ -1287,7 +1309,7 @@ function mapTeamToSaveEntries(team: TeamState) {
     teamNumber: team.id === 'red' ? 1 as const : 2 as const,
     isLeader: Boolean(player.isLeader),
     position: 'MF' as const,
-    formationSlot: player.slotIndex ?? null,
+    formationSlot: convertToDesktopSlot(player.slotIndex ?? null),
   }));
 }
 

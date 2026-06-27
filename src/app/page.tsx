@@ -878,10 +878,10 @@ function DesktopTacticsStudio({
               <div className="absolute right-[11%] top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#00ffa3]/55 shadow-[0_0_4px_rgba(0,255,163,0.8)]" />
             </div>
 
-            {/* Render Slots (Red: 18, Blue: 18) */}
-            {Array.from({ length: 36 }).map((_, index) => {
-              const teamNumber = index < 18 ? 1 : 2;
-              const formationSlot = index < 18 ? index : index - 18;
+            {/* Render Slots (Red: 36, Blue: 36) */}
+            {Array.from({ length: 72 }).map((_, index) => {
+              const teamNumber = index < 36 ? 1 : 2;
+              const formationSlot = index < 36 ? index : index - 36;
               
               // 해당 슬롯에 배치된 라인업 정보가 있는지 확인
               const slot = data.lineup.find(
@@ -906,7 +906,7 @@ function DesktopTacticsStudio({
               return (
                 <div 
                   key={`${teamNumber}-${formationSlot}`} 
-                  className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center w-[7.5%] h-[35%] transition-all duration-500 ease-out pointer-events-auto"
+                  className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center w-[7.5%] h-[16%] transition-all duration-500 ease-out pointer-events-auto"
                   style={{ top: `${top}%`, left: `${left}%` }}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, teamNumber, formationSlot)}
@@ -955,7 +955,7 @@ function DesktopTacticsStudio({
 function getPlayerCoordinate(teamNumber: number, slotIndex: number) {
   const row = Math.floor(slotIndex / 6);
   const col = slotIndex % 6;
-  const top = 15 + row * 35;
+  const top = 10 + row * 16;
   let left = 0;
   if (teamNumber === 1) {
     left = 7 + col * 7.5;
