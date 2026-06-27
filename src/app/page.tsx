@@ -905,7 +905,13 @@ function DesktopTacticsStudio({
               );
               
               const player = slot 
-                ? data.players.find((p) => p.id === slot.membershipId)
+                ? (data.players.find((p) => p.id === slot.membershipId) || {
+                    id: slot.membershipId,
+                    name: slot.playerName,
+                    ovr: slot.playerOvr,
+                    matchPoints: slot.playerMatchPoints,
+                    photo: slot.playerPhotoUrl || slot.playerName
+                  })
                 : null;
                 
               const { top, left } = getPlayerCoordinate(teamNumber, formationSlot);
