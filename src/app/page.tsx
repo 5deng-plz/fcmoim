@@ -894,10 +894,10 @@ function DesktopTacticsStudio({
               <div className="absolute right-[11%] top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#00ffa3]/55 shadow-[0_0_4px_rgba(0,255,163,0.8)]" />
             </div>
 
-            {/* Render Slots (Red: 18, Blue: 18) */}
-            {Array.from({ length: 36 }).map((_, index) => {
-              const teamNumber = index < 18 ? 1 : 2;
-              const formationSlot = index < 18 ? index : index - 18;
+            {/* Render Slots (Red: 24, Blue: 24) */}
+            {Array.from({ length: 48 }).map((_, index) => {
+              const teamNumber = index < 24 ? 1 : 2;
+              const formationSlot = index < 24 ? index : index - 24;
               
               // 해당 슬롯에 배치된 라인업 정보가 있는지 확인
               const slot = data.lineup.find((l, idx) => {
@@ -985,15 +985,15 @@ function DesktopTacticsStudio({
 function getLineupSlot(player: MatchLineupEntry, teamNumber: number, fallbackIndex: number) {
   if (typeof player.formationSlot === 'number') return player.formationSlot;
   const slots = teamNumber === 1
-    ? [6, 0, 12, 7, 13, 1, 8, 14, 2, 9, 15, 3, 10, 16, 4, 11, 17, 5]
-    : [11, 5, 17, 10, 16, 4, 9, 15, 3, 8, 14, 2, 7, 13, 1, 6, 12, 0];
+    ? [6, 12, 0, 18, 7, 13, 1, 19, 8, 14, 2, 20, 9, 15, 3, 21, 10, 16, 4, 22, 11, 17, 5, 23]
+    : [11, 17, 5, 23, 10, 16, 4, 22, 9, 15, 3, 21, 8, 14, 2, 20, 7, 13, 1, 19, 6, 12, 0, 18];
   return slots[fallbackIndex] ?? fallbackIndex;
 }
 
 function getPlayerCoordinate(teamNumber: number, slotIndex: number) {
   const row = Math.floor(slotIndex / 6);
   const col = slotIndex % 6;
-  const top = 18 + row * 32;
+  const top = 12 + row * 24;
   let left = 0;
   if (teamNumber === 1) {
     left = 6 + col * 6.5;

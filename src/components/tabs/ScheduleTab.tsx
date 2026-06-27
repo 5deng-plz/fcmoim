@@ -792,7 +792,7 @@ function SelectedMatchPanel({
                         </div>
                       ) : null}
                       {detailStatus === 'ready' ? (
-                        <div className="space-y-3 transition-all duration-300 ease-in-out">
+                        <div className="space-y-3 transition-all duration-300 ease-in-out lg:hidden">
                           <div
                             data-smart-focus-zone="true"
                             onPointerDown={onDetailFocusStart}
@@ -857,12 +857,14 @@ function SelectedMatchPanel({
             </div>
           ) : null}
           {detailStatus === 'ready' ? (
-            <MatchResultPanel
-              match={match}
-              lineup={lineup}
-              clubId={clubId}
-              currentMembershipId={currentMembershipId}
-            />
+            <div className="lg:hidden">
+              <MatchResultPanel
+                match={match}
+                lineup={lineup}
+                clubId={clubId}
+                currentMembershipId={currentMembershipId}
+              />
+            </div>
           ) : null}
         </>
       ) : null}
@@ -1357,8 +1359,8 @@ function ResultFieldSide({
         isLoser ? 'bg-surface-card/20 opacity-60 saturate-50' : ''
       }`}
     >
-      <div className={`grid h-full grid-cols-6 grid-rows-3 content-start p-1.5 ${teamNumber === 1 ? 'justify-items-start' : 'justify-items-end'}`}>
-        {Array.from({ length: 18 }, (_, index) => {
+      <div className={`grid h-full grid-cols-6 grid-rows-4 content-start p-1.5 ${teamNumber === 1 ? 'justify-items-start' : 'justify-items-end'}`}>
+        {Array.from({ length: 24 }, (_, index) => {
           const player = getLineupInSlot(players, teamNumber, index);
           return (
             <div key={`${teamId}-result-${index}`} className="flex h-9 w-8 items-center justify-center rounded-full">
@@ -1537,8 +1539,8 @@ function getLineupInSlot(players: MatchLineupEntry[], teamNumber: 1 | 2, slotInd
 function getLineupSlot(player: MatchLineupEntry, teamNumber: 1 | 2, fallbackIndex: number) {
   if (typeof player.formationSlot === 'number') return player.formationSlot;
   const slots = teamNumber === 1
-    ? [6, 0, 12, 7, 13, 1, 8, 14, 2, 9, 15, 3, 10, 16, 4, 11, 17, 5]
-    : [11, 5, 17, 10, 16, 4, 9, 15, 3, 8, 14, 2, 7, 13, 1, 6, 12, 0];
+    ? [6, 12, 0, 18, 7, 13, 1, 19, 8, 14, 2, 20, 9, 15, 3, 21, 10, 16, 4, 22, 11, 17, 5, 23]
+    : [11, 17, 5, 23, 10, 16, 4, 22, 9, 15, 3, 21, 8, 14, 2, 20, 7, 13, 1, 19, 6, 12, 0, 18];
   return slots[fallbackIndex] ?? fallbackIndex;
 }
 

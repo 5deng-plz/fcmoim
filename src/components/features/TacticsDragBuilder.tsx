@@ -47,7 +47,7 @@ export interface Player {
 export type TacticsAvatarTeam = 'red' | 'blue' | 'bench';
 
 const initialPlayers: Player[] = [];
-const TACTICS_SLOT_COUNT = 18;
+const TACTICS_SLOT_COUNT = 24;
 const TACTICS_COLUMNS = 6;
 const LOCAL_ICONS = {
   tactics: '/icons/tactics.svg',
@@ -388,10 +388,10 @@ function TeamDropZone({
     >
       <SortableContext items={team.players.map((p) => p.id)} strategy={rectSortingStrategy}>
         <div
-          className={`grid h-full min-h-[92px] grid-cols-6 grid-rows-3 content-start gap-x-0 gap-y-0 rounded-xl p-1.5 ${
+          className={`grid h-full min-h-[92px] grid-cols-6 grid-rows-4 content-start gap-x-0 gap-y-0 rounded-xl p-1.5 ${
             team.id === 'red' ? 'justify-items-start' : 'justify-items-end'
           }`}
-          aria-label={`${team.name} 6x3 배치 구획`}
+          aria-label={`${team.name} 6x4 배치 구획`}
         >
           {Array.from({ length: TACTICS_SLOT_COUNT }, (_, index) => (
             <TacticsSlot
@@ -1114,7 +1114,7 @@ const slotFirstCollisionDetection: CollisionDetection = (args) => {
 
 function convertToMobileSlot(slot: number | null): number | null {
   if (typeof slot !== 'number') return null;
-  if (slot >= 18) {
+  if (slot >= 24) {
     return Math.floor(slot / 12) * 6 + (slot % 6);
   }
   return slot;
@@ -1122,7 +1122,7 @@ function convertToMobileSlot(slot: number | null): number | null {
 
 function convertToDesktopSlot(slot: number | null): number | null {
   if (typeof slot !== 'number') return null;
-  if (slot < 18) {
+  if (slot < 24) {
     return Math.floor(slot / 6) * 12 + (slot % 6);
   }
   return slot;
