@@ -1,61 +1,87 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 107,
-  "updatedAt": "2026-06-24T18:19:29+09:00",
+  "updateVersion": 110,
+  "updatedAt": "2026-06-27T18:01:37+09:00",
   "updatedBy": "codex",
   "currentPhase": "harness-lightweight-profiles",
   "activeWork": {
     "taskId": "update-agents-md",
-    "status": "complete",
+    "status": "blocked",
     "designMode": "maintenance",
-    "baselineCommit": "0094b409c3e2106b0bbf121aa4d71e01fec54c33",
+    "baselineCommit": "8d6460d9b9a2ad78e9bcec991d3e06dfbb5961a9",
     "changedFiles": [
-      "docs/project-context.json"
+      "docs/project-context.json",
+      "src/components/features/TacticsDragBuilder.tsx"
     ],
     "changedSurfaces": [
-      "docs"
+      "docs",
+      "ui"
     ],
     "allowedPaths": [
-      "docs/project-context.json"
+      "docs/project-context.json",
+      "src/components/features/TacticsDragBuilder.tsx"
     ],
     "evidence": {
       "scopeReview": {
         "status": "completed",
         "provider": "Manual review",
-        "command": "Read automation memory, AGENT.md, docs/agent-feedback.md, docs/user/design-harness-workflow.md, docs/agent-rules.json, docs/project-context.json, role prompts, package scripts, and recent commits.",
-        "summary": "Recent candidate failures were product/UI implementation details or test stabilization work, not reusable Agent-process failures. No AGENT.md or harness policy edit qualified."
+        "command": "Checked automation memory, AGENT.md, docs/agent-feedback.md, docs/user/design-harness-workflow.md, docs/agent-rules.json, docs/project-context.json, .agents manifest/contracts/guard files, package scripts, git status, and recent commits.",
+        "summary": "Automation memory existed and matched the current blocked state. No commits landed after 8d6460d9b9a2ad78e9bcec991d3e06dfbb5961a9 as of 2026-06-27; recent candidates remain product UI/DnD details or already-covered harness adjustments, not new reusable Agent-process failures."
       },
       "harnessValidate": {
         "status": "passed",
         "provider": "Harness",
         "command": "npm run harness:validate",
-        "summary": "Harness structure, project rules, documentation line limits, and purity checks passed for this state-only update."
+        "summary": "Harness structure, project rules, documentation line limits, and purity checks passed for this automation sync plus narrow verification unblock."
+      },
+      "verificationUnblock": {
+        "status": "passed",
+        "type": "deterministic",
+        "provider": "ESLint",
+        "command": "npx eslint src/components/features/TacticsDragBuilder.tsx --quiet",
+        "summary": "Reproduced the prefer-const blocker from the latest tactics DnD work and fixed it with a one-line const change."
       },
       "verifyAlias": {
-        "status": "passed",
+        "status": "blocked",
         "provider": "Harness guard",
         "command": "npm run harness:guard:verify",
-        "summary": "Full policy profile passed after temporarily isolating unrelated pre-existing src worktree changes from this automation scope."
+        "summary": "Blocked in projectVerify: lint and typecheck passed, but Vitest failed in tests/frontend-auth-and-schedule-ui.test.tsx."
+      },
+      "frontendTestReproduction": {
+        "status": "blocked",
+        "provider": "Vitest",
+        "command": "npx vitest run tests/frontend-auth-and-schedule-ui.test.tsx --reporter=dot",
+        "summary": "Reproduced the same 10 failures again on 2026-06-27 through the full guard in the existing frontend auth/schedule UI test file; failures concern product UI copy/classes/attendance expectations outside this automation scope."
       }
     },
     "retrospective": {
       "issuesObserved": [
-        "Recent completed work included product/UI styling, icon, theme, and test-stability changes.",
-        "No recent evidence showed a reusable Agent planning, scope, verification, review, documentation, or synchronization failure that should become durable harness policy."
+        "No new commits landed after the previous automation memory entry as of 2026-06-27; HEAD remains 8d6460d9b9a2ad78e9bcec991d3e06dfbb5961a9.",
+        "The latest completed product work ended at 8d6460d9b9a2ad78e9bcec991d3e06dfbb5961a9 and showed implementation/styling iteration, not a new reusable Agent-process failure.",
+        "Final verification reproduced one narrow prefer-const lint blocker in src/components/features/TacticsDragBuilder.tsx; it was fixed as a verification unblock, not promoted into harness policy.",
+        "The existing frontend auth/schedule UI test blocker was reproduced again on 2026-06-27 and remains outside the automation scope."
       ],
-      "missedEvidence": [],
+      "missedEvidence": [
+        "npm run harness:guard:verify did not pass because tests/frontend-auth-and-schedule-ui.test.tsx has 10 reproducible failures unrelated to AGENT.md/Harness policy sync."
+      ],
       "harnessImprovementProposal": [],
       "promotionRecommendation": "none",
-      "reason": "Candidate issues were project-local or implementation-specific. The only required action was project-context synchronization for the automation run."
+      "reason": "Candidate issues were already addressed by existing harness guidance or were project-local implementation details. The only required action was project-context synchronization for the automation run."
     },
-    "reviewStatus": "ready",
+    "reviewStatus": "blocked",
     "loopCounters": {
       "reviewRounds": 0,
-      "guardRetries": 0
+      "guardRetries": 1
     }
   },
   "workstreams": [
+    {
+      "id": "desktop-tactics-studio-dnd-polish",
+      "status": "complete",
+      "completedAt": "2026-06-25T09:09:13+09:00",
+      "commit": "8d6460d9b9a2ad78e9bcec991d3e06dfbb5961a9"
+    },
     {
       "id": "light-mode-font-ovr-subtab-icons",
       "status": "complete",
@@ -87,6 +113,8 @@
       "commit": "a1ede07bc849a82749853401aeacc70dc0054fc3"
     }
   ],
-  "blockers": [],
+  "blockers": [
+    "npm run harness:guard:verify is blocked by 10 reproducible failures in tests/frontend-auth-and-schedule-ui.test.tsx after lint/typecheck pass."
+  ],
   "nextActions": []
 }

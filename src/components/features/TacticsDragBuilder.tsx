@@ -1165,7 +1165,7 @@ function buildOperatorLineupDraft(input: {
     ...t,
     players: t.players.filter((p) => p.id !== input.playerId),
   }));
-  let nextBench = input.bench.filter((p) => p.id !== input.playerId);
+  const nextBench = input.bench.filter((p) => p.id !== input.playerId);
 
   const targetIndex = input.targetIndex;
   const isTargetSlotValid = typeof targetIndex === 'number' && targetIndex >= 0 && targetIndex < TACTICS_SLOT_COUNT;
