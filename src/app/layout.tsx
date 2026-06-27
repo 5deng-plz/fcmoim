@@ -42,13 +42,7 @@ export default function RootLayout({
           __html: `
             (function() {
               try {
-                var theme = localStorage.getItem('theme') || 'light';
-                if (theme === 'system') {
-                  var isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-                } else {
-                  document.documentElement.setAttribute('data-theme', theme);
-                }
+                document.documentElement.setAttribute('data-theme', 'dark');
               } catch (e) {}
             })();
           `

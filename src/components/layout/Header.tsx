@@ -32,24 +32,16 @@ export default function Header() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('theme') as 'light' | 'dark';
-      if (saved) return saved;
-      const isDark = typeof window.matchMedia === 'function'
-        ? window.matchMedia('(prefers-color-scheme: dark)').matches
-        : false;
-      return isDark ? 'dark' : 'light';
-    }
-    return 'light';
-  });
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
-  const toggleTheme = () => {
-    const nextTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(nextTheme);
-    localStorage.setItem('theme', nextTheme);
-    document.documentElement.setAttribute('data-theme', nextTheme);
-  };
+  const toggleTheme = () => {};
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('theme', 'dark');
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  }, []);
 
   const isGuestMode = userStatus === 'guest' || userStatus === 'pending' || userStatus === 'withdrawn';
   const displayedTeamName = isGuestMode ? 'FC Guppy' : teamName;
@@ -123,31 +115,13 @@ export default function Header() {
           <h1 className="text-base font-bold text-primary select-none">
             {subPageTitle}
           </h1>
-          <div className="absolute right-0">
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="p-1.5 hover:bg-surface-hover rounded-full active:scale-90 transition-all text-secondary"
-              aria-label={theme === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환'}
-              title={theme === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환'}
-            >
-              {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-            </button>
-          </div>
+
         </div>
       ) : showCommunity ? (
         <>
           <LogoHomeButton teamName={displayedTeamName} logoUrl={teamLogoUrl} onClick={handleLogoHome} isGuestMode={isGuestMode} />
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="p-1.5 hover:bg-surface-hover rounded-full active:scale-90 transition-all text-secondary"
-              aria-label={theme === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환'}
-              title={theme === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환'}
-            >
-              {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-            </button>
+
             <button
               type="button"
               aria-label="커뮤니티 뒤로가기"
@@ -162,15 +136,7 @@ export default function Header() {
         <>
           <LogoHomeButton teamName={displayedTeamName} logoUrl={teamLogoUrl} onClick={handleLogoHome} isGuestMode={isGuestMode} />
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="p-1.5 hover:bg-surface-hover rounded-full active:scale-90 transition-all text-secondary"
-              aria-label={theme === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환'}
-              title={theme === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환'}
-            >
-              {theme === 'light' ? <Moon size={22} /> : <Sun size={22} />}
-            </button>
+
 
             {shouldShowProfile && (
               <>
