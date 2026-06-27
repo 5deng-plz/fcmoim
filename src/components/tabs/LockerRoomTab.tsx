@@ -61,7 +61,6 @@ export default function LockerRoomTab() {
   );
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
   const [photoMember, setPhotoMember] = useState<ApprovedMembership | null>(null);
-  const [cardMember, setCardMember] = useState<ApprovedMembership | null>(null);
   const [memberActionModal, setMemberActionModal] = useState<MemberActionModalState>(null);
   const [withdrawConfirmName, setWithdrawConfirmName] = useState('');
 
@@ -338,7 +337,6 @@ export default function LockerRoomTab() {
                       setWithdrawConfirmName('');
                       setMemberActionModal({ mode: 'withdraw', member: target });
                     }}
-                    onCardOpen={setCardMember}
                   />
                 ) : null}
               </div>
@@ -568,11 +566,7 @@ export default function LockerRoomTab() {
           </div>
         ) : null}
       </Modal>
-      <PlayerCardModal
-        member={cardMember}
-        onClose={() => setCardMember(null)}
-        onToast={showToast}
-      />
+
     </div>
   );
 }
@@ -645,7 +639,6 @@ function MemberProfileAccordion({
   withdrawingId,
   onRoleAction,
   onWithdrawAction,
-  onCardOpen,
 }: {
   member: ApprovedMembership;
   seasonRecord: PlayerAbilityPanelSeasonRecord | null;
@@ -655,7 +648,6 @@ function MemberProfileAccordion({
   withdrawingId: string | null;
   onRoleAction: (member: ApprovedMembership, mode: Extract<MemberActionMode, 'grant-operator' | 'revoke-operator'>) => void;
   onWithdrawAction: (member: ApprovedMembership) => void;
-  onCardOpen: (member: ApprovedMembership) => void;
 }) {
   const canChangeRole = canManageMembers && member.role !== 'admin';
   const canWithdraw = canManageMembers && member.role !== 'admin' && !isSelf;
@@ -674,14 +666,7 @@ function MemberProfileAccordion({
         heightCm={member.heightCm}
         weightKg={member.weightKg}
       >
-        <button
-          type="button"
-          onClick={() => onCardOpen(member)}
-          className="mb-3 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-tier-gold/30 bg-tier-gold/10 px-3 py-2 text-xs font-black text-tier-gold transition-all hover:brightness-110 active:scale-95"
-        >
-          <Share2 size={15} aria-hidden="true" />
-          카드 보기
-        </button>
+
         {canChangeRole || canWithdraw ? (
           <div className="grid grid-cols-2 gap-2">
             {canChangeRole ? (
@@ -717,74 +702,7 @@ function MemberProfileAccordion({
   );
 }
 
-function PlayerCardModal({
-  member,
-  onClose,
-  onToast,
-}: {
-  member: ApprovedMembership | null;
-  onClose: () => void;
-  onToast: (message: string) => void;
-}) {
-  const shareText = member
-    ? `${member.nickname} FUT 카드 · OVR ${member.ovr}`
-    : '';
-  const handleShare = async () => {
-    if (!member) return;
-    try {
-      if (typeof navigator.share === 'function') {
-        await navigator.share({
-          title: `${member.nickname} FUT 카드`,
-          text: shareText,
-        });
-        return;
-      }
-      await navigator.clipboard?.writeText(shareText);
-      onToast('카드 공유 문구를 복사했어요.');
-    } catch {
-      onToast('카드를 공유하지 못했어요.');
-    }
-  };
 
-  return (
-    <Modal
-      title={member?.nickname ?? '선수 카드'}
-      isOpen={member !== null}
-      onClose={onClose}
-      presentation="dialog"
-    >
-      {member ? (
-        <div className="space-y-3">
-          <PlayerAbilityPanel
-            layout="fut-card"
-            stats={member.stats}
-            ovr={member.ovr}
-            preferredFoot={member.preferredFoot}
-            position={member.position === 'FW' || member.position === 'MF' || member.position === 'DF' || member.position === 'GK' ? member.position : undefined}
-            selectedTraitId={member.selectedTraitId}
-            playerName={member.nickname}
-            photoUrl={member.photoUrl}
-            seasonRecord={{
-              appearances: 0,
-              goals: 0,
-              assists: 0,
-              momCount: 0,
-              avgRating: null,
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => void handleShare()}
-            className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-action-primary px-4 py-3 text-sm font-black text-white transition-all hover:brightness-110 active:scale-95"
-          >
-            <Share2 size={16} aria-hidden="true" />
-            공유
-          </button>
-        </div>
-      ) : null}
-    </Modal>
-  );
-}
 
 function getMemberActionModalTitle(modal: MemberActionModalState) {
   if (!modal) return '팀원 관리';

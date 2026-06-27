@@ -693,33 +693,7 @@ function FeedComposer({
 
   return (
     <div className="rounded-xl border border-glass-border bg-glass-bg p-3 shadow-glass-shadow backdrop-blur-md" data-testid="feed-inline-composer">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="flex gap-1.5" role="group" aria-label="피드 유형">
-          {([
-            { type: 'text' as const, label: '글', icon: <MessageSquare size={14} aria-hidden="true" /> },
-            { type: 'image' as const, label: '사진', icon: <ImageIcon size={14} aria-hidden="true" /> },
-            { type: 'video' as const, label: '영상', icon: <Video size={14} aria-hidden="true" /> },
-          ]).map((option) => {
-            const selected = composeType === option.type;
-
-            return (
-              <button
-                key={option.type}
-                type="button"
-                onClick={() => onComposeTypeChange(option.type)}
-                aria-pressed={selected}
-                className={`inline-flex h-8 items-center justify-center gap-1 rounded-lg border px-2 text-[11px] font-black transition-all ${
-                  selected
-                    ? 'border-brand-primary bg-brand-primary-bg text-brand-primary'
-                    : 'border-border bg-surface-bg text-secondary'
-                }`}
-              >
-                {option.icon}
-                {option.label}
-              </button>
-            );
-          })}
-        </div>
+      <div className="mb-2 flex items-center justify-end">
         <button
           type="button"
           onClick={onCancelCompose}
@@ -878,6 +852,11 @@ function FeedReactions({ post, onReaction }: { post: FeedPost; onReaction: (post
     <div className="flex flex-wrap gap-1">
       {FEED_REACTIONS.map(({ type, label, emoji }) => {
         const selected = post.myReactions.includes(type);
+        const count = post.reactionCounts[type] ?? 0;
+        
+        // 0인 이모지는 표시하지 않음 (다만 내가 클릭한 상태이거나 카운트가 0보다 클 때만 노출)
+        if (count === 0 && !selected) return null;
+
         return (
           <button
             key={type}
@@ -891,7 +870,7 @@ function FeedReactions({ post, onReaction }: { post: FeedPost; onReaction: (post
             aria-label={label}
           >
             <span aria-hidden="true">{emoji}</span>
-            {post.reactionCounts[type]}
+            {count}
           </button>
         );
       })}
