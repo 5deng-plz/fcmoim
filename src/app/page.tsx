@@ -554,6 +554,7 @@ function DesktopTacticsStudio({
     lineup: MatchLineupEntry[];
   }>({ players: [], lineup: [] });
   const [draggingPlayerId, setDraggingPlayerId] = useState<string | null>(null);
+  const [draggedOverSlot, setDraggedOverSlot] = useState<{ teamNumber: number; formationSlot: number } | null>(null);
 
   const { userRole } = useAppStore();
   const memberProfile = useAuthStore((state) => state.memberProfile);
@@ -623,14 +624,24 @@ function DesktopTacticsStudio({
 
   const handleDragEnd = () => {
     setDraggingPlayerId(null);
+    setDraggedOverSlot(null);
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent, teamNumber: number, formationSlot: number) => {
     e.preventDefault();
+    if (!canEdit) return;
+    if (draggedOverSlot?.teamNumber !== teamNumber || draggedOverSlot?.formationSlot !== formationSlot) {
+      setDraggedOverSlot({ teamNumber, formationSlot });
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDraggedOverSlot(null);
   };
 
   const handleDrop = async (e: React.DragEvent, targetTeamNumber: number, targetFormationSlot: number) => {
     e.preventDefault();
+    setDraggedOverSlot(null);
     const playerId = e.dataTransfer.getData("text/plain");
     if (!playerId || !canEdit) return;
 
@@ -894,21 +905,27 @@ function DesktopTacticsStudio({
                 
               const { top, left } = getPlayerCoordinate(teamNumber, formationSlot);
               const isDraggingThis = draggingPlayerId === player?.id;
+              const isHoveredSlot = draggedOverSlot?.teamNumber === teamNumber && draggedOverSlot?.formationSlot === formationSlot;
               
               const cardTierClass = player 
-                ? (player.ovr ?? 0) >= 80 
-                  ? 'border-yellow-500 bg-yellow-950/70 text-yellow-200 shadow-[0_0_8px_rgba(234,179,8,0.2)]' 
-                  : (player.ovr ?? 0) >= 70 
-                    ? 'border-slate-400 bg-slate-900/70 text-slate-200' 
-                    : 'border-amber-700 bg-amber-950/70 text-amber-200'
-                : 'border-transparent bg-transparent text-transparent pointer-events-auto';
+                ? `${
+                    (player.ovr ?? 0) >= 80 
+                      ? 'border-yellow-500 bg-yellow-950/70 text-yellow-200 shadow-[0_0_8px_rgba(234,179,8,0.2)]' 
+                      : (player.ovr ?? 0) >= 70 
+                        ? 'border-slate-400 bg-slate-900/70 text-slate-200' 
+                        : 'border-amber-700 bg-amber-950/70 text-amber-200'
+                  } ${isHoveredSlot ? 'ring-2 ring-offset-2 ring-offset-black ring-[#00ffa3] scale-[1.03]' : ''}`
+                : isHoveredSlot
+                  ? 'border-dashed border-[#00ffa3]/60 bg-[#00ffa3]/5 text-[#00ffa3] shadow-[0_0_10px_rgba(0,255,163,0.15)] scale-[1.03] transition-all duration-200'
+                  : 'border-transparent bg-transparent text-transparent pointer-events-auto';
 
               return (
                 <div 
                   key={`${teamNumber}-${formationSlot}`} 
                   className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center w-[7.5%] h-[16%] transition-all duration-500 ease-out pointer-events-auto"
                   style={{ top: `${top}%`, left: `${left}%` }}
-                  onDragOver={handleDragOver}
+                  onDragOver={(e) => handleDragOver(e, teamNumber, formationSlot)}
+                  onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, teamNumber, formationSlot)}
                 >
                   <div 
