@@ -21,6 +21,7 @@ import JoinRequestForm from '@/components/features/JoinRequestForm';
 import Toast from '@/components/ui/Toast';
 import Modal from '@/components/ui/Modal';
 import ScrollPositionRail from '@/components/ui/ScrollPositionRail';
+import DesktopLiveScreen from '@/components/layout/DesktopLiveScreen';
 import { useAppStore } from '@/stores/useAppStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useModalStore } from '@/stores/useModalStore';
@@ -32,92 +33,96 @@ import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import type { Player } from '@/components/features/TacticsDragBuilder';
 
 function PhoneFrame({ children, surface = 'white' }: { children: ReactNode; surface?: 'white' | 'soft' }) {
-  const { focusedMatchId, setFocusedMatchId, activeClubId } = useAppStore();
+  const { focusedMatchId, setFocusedMatchId, activeClubId, activeTab } = useAppStore();
 
   return (
     <div className="app-viewport chzzk-layout text-primary">
       {/* Chzzk Live Stream Player Area (Visible only on Desktop) */}
-      <div className="flex-1 h-full relative bg-black flex flex-col justify-between hidden lg:flex overflow-hidden select-none border-r border-[#25283e]" data-exempt=":// design-exempt(reason: chzzk layout border, expires: 2026-12-31)">
-        
-        {focusedMatchId ? (
-          <DesktopTacticsStudio 
-            matchId={focusedMatchId} 
-            activeClubId={activeClubId} 
-            onClose={() => setFocusedMatchId(null)} 
-          />
-        ) : (
-          <>
-            {/* Stream Header */}
-            <div className="p-4 bg-gradient-to-b from-black/95 to-transparent flex items-center justify-between z-20">
-              <div className="flex items-center gap-3">
-                <span className="flex h-5 items-center justify-center rounded bg-[#00ffa3] px-2.5 text-[10px] font-black text-black gap-1 shadow-[0_0_8px_rgba(0,255,163,0.4)]" data-exempt=":// design-exempt(reason: chzzk header badge, expires: 2026-12-31)">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" data-exempt=":// design-exempt(reason: red live status dot, expires: 2026-12-31)" />
-                  실시간 중계
-                </span>
-                <span className="text-sm font-black text-white tracking-wide">
-                  [라이브] 🏟️ FC Guppy 주말 아침 친선 매치 & 전술 전광판 (땀 흘리고 막걸리 내기)
-                </span>
-              </div>
-              <div className="flex items-center gap-4 text-[11px] font-black text-gray-400">
-                <span className="flex items-center gap-1.5">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00ffa3] opacity-75" data-exempt=":// design-exempt(reason: chzzk green live ping, expires: 2026-12-31)"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00ffa3]" data-exempt=":// design-exempt(reason: chzzk green live dot, expires: 2026-12-31)"></span>
+      {activeTab === 'home' || activeTab === 'schedule' ? (
+        <div className="flex-1 h-full relative bg-black flex flex-col justify-between hidden lg:flex overflow-hidden select-none border-r border-[#25283e]" data-exempt=":// design-exempt(reason: chzzk layout border, expires: 2026-12-31)">
+          
+          {focusedMatchId ? (
+            <DesktopTacticsStudio 
+              matchId={focusedMatchId} 
+              activeClubId={activeClubId} 
+              onClose={() => setFocusedMatchId(null)} 
+            />
+          ) : (
+            <>
+              {/* Stream Header */}
+              <div className="p-4 bg-gradient-to-b from-black/95 to-transparent flex items-center justify-between z-20">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-5 items-center justify-center rounded bg-[#00ffa3] px-2.5 text-[10px] font-black text-black gap-1 shadow-[0_0_8px_rgba(0,255,163,0.4)]" data-exempt=":// design-exempt(reason: chzzk header badge, expires: 2026-12-31)">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" data-exempt=":// design-exempt(reason: red live status dot, expires: 2026-12-31)" />
+                    실시간 중계
                   </span>
-                  <span className="text-[#00ffa3] font-bold" data-exempt=":// design-exempt(reason: chzzk green text, expires: 2026-12-31)">송출 양호 (1080p)</span>
-                </span>
-                <span className="border-l border-gray-800 pl-3">참석회원 10명 (풀방)</span>
+                  <span className="text-sm font-black text-white tracking-wide">
+                    [라이브] 🏟️ FC Guppy 주말 아침 친선 매치 & 전술 전광판 (땀 흘리고 막걸리 내기)
+                  </span>
+                </div>
+                <div className="flex items-center gap-4 text-[11px] font-black text-gray-400">
+                  <span className="flex items-center gap-1.5">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00ffa3] opacity-75" data-exempt=":// design-exempt(reason: chzzk green live ping, expires: 2026-12-31)"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00ffa3]" data-exempt=":// design-exempt(reason: chzzk green live dot, expires: 2026-12-31)"></span>
+                    </span>
+                    <span className="text-[#00ffa3] font-bold" data-exempt=":// design-exempt(reason: chzzk green text, expires: 2026-12-31)">송출 양호 (1080p)</span>
+                  </span>
+                  <span className="border-l border-gray-800 pl-3">참석회원 10명 (풀방)</span>
+                </div>
               </div>
-            </div>
-     
-            {/* Video Player Display (Winning Eleven Intro Theme + Danmaku Chat) */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#070914] winning-bg-grid z-0" data-exempt=":// design-exempt(reason: chzzk player background, expires: 2026-12-31)">
-              {/* Neon Glow Effects */}
-              <div className="absolute inset-0 bg-gradient-to-tr from-[#00ffa3]/10 via-transparent to-[#00b872]/15 mix-blend-color-dodge animate-pulse" style={{ animationDuration: '4s' }} data-exempt=":// design-exempt(reason: chzzk glow effects, expires: 2026-12-31)" />
-              
-              {/* Winning Eleven Title Card */}
-              <div className="text-center space-y-5 z-10 animate-fadeIn">
-                <div className="inline-block bg-gradient-to-r from-[#00b872] to-[#00ffa3] text-black font-black text-6xl tracking-wider px-8 py-3.5 transform -skew-x-12 border-[5px] border-black shadow-[0_0_30px_rgba(0,255,163,0.25)]" data-exempt=":// design-exempt(reason: chzzk winning eleven title card, expires: 2026-12-31)">
-                  WINNING MOIM
+       
+              {/* Video Player Display (Winning Eleven Intro Theme + Danmaku Chat) */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#070914] winning-bg-grid z-0" data-exempt=":// design-exempt(reason: chzzk player background, expires: 2026-12-31)">
+                {/* Neon Glow Effects */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-[#00ffa3]/10 via-transparent to-[#00b872]/15 mix-blend-color-dodge animate-pulse" style={{ animationDuration: '4s' }} data-exempt=":// design-exempt(reason: chzzk glow effects, expires: 2026-12-31)" />
+                
+                {/* Winning Eleven Title Card */}
+                <div className="text-center space-y-5 z-10 animate-fadeIn">
+                  <div className="inline-block bg-gradient-to-r from-[#00b872] to-[#00ffa3] text-black font-black text-6xl tracking-wider px-8 py-3.5 transform -skew-x-12 border-[5px] border-black shadow-[0_0_30px_rgba(0,255,163,0.25)]" data-exempt=":// design-exempt(reason: chzzk winning eleven title card, expires: 2026-12-31)">
+                    WINNING MOIM
+                  </div>
+                  <div className="text-md font-black text-[#00ffa3] tracking-widest uppercase" data-exempt=":// design-exempt(reason: chzzk green text, expires: 2026-12-31)">
+                    FC GUPPY 2026 SEASON
+                  </div>
+                  <div className="pt-8">
+                    <button className="flex items-center gap-2 mx-auto rounded-full bg-[#00e58f] hover:bg-[#00ffa3] active:scale-95 transition-all px-8 py-3.5 text-xs font-black text-black shadow-lg shadow-[#00ffa3]/25" data-exempt=":// design-exempt(reason: chzzk play button, expires: 2026-12-31)">
+                      ▶ 인트로 재생
+                    </button>
+                  </div>
                 </div>
-                <div className="text-md font-black text-[#00ffa3] tracking-widest uppercase" data-exempt=":// design-exempt(reason: chzzk green text, expires: 2026-12-31)">
-                  FC GUPPY 2026 SEASON
-                </div>
-                <div className="pt-8">
-                  <button className="flex items-center gap-2 mx-auto rounded-full bg-[#00e58f] hover:bg-[#00ffa3] active:scale-95 transition-all px-8 py-3.5 text-xs font-black text-black shadow-lg shadow-[#00ffa3]/25" data-exempt=":// design-exempt(reason: chzzk play button, expires: 2026-12-31)">
-                    ▶ 인트로 재생
+       
+                {/* Clean video screen without floating chat text */}
+              </div>
+       
+              {/* Video Player Controls */}
+              <div className="p-4 bg-gradient-to-t from-black/95 to-transparent flex items-center justify-between z-20">
+                <div className="flex items-center gap-4 text-white">
+                  <button className="text-xs font-black text-gray-400 hover:text-white transition-colors">
+                    ⏸ 일시정지
                   </button>
+                  <div className="text-[11px] font-black text-gray-400">
+                    02:12 / 03:00
+                  </div>
+                  <div className="text-xs text-[#00ffa3] font-black flex items-center gap-1.5" data-exempt=":// design-exempt(reason: chzzk live indicator text, expires: 2026-12-31)">
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00ffa3] opacity-75" data-exempt=":// design-exempt(reason: chzzk live indicator ping, expires: 2026-12-31)"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#00ffa3]" data-exempt=":// design-exempt(reason: chzzk live indicator dot, expires: 2026-12-31)"></span>
+                    </span>
+                    LIVE
+                  </div>
+                </div>
+                <div className="flex items-center gap-5 text-[11px] font-black text-gray-400">
+                  <span className="hover:text-white transition-colors cursor-pointer">1080P SOURCE</span>
+                  <span className="hover:text-white transition-colors cursor-pointer">SCREEN 16:9</span>
                 </div>
               </div>
-     
-              {/* Clean video screen without floating chat text */}
-            </div>
-     
-            {/* Video Player Controls */}
-            <div className="p-4 bg-gradient-to-t from-black/95 to-transparent flex items-center justify-between z-20">
-              <div className="flex items-center gap-4 text-white">
-                <button className="text-xs font-black text-gray-400 hover:text-white transition-colors">
-                  ⏸ 일시정지
-                </button>
-                <div className="text-[11px] font-black text-gray-400">
-                  02:12 / 03:00
-                </div>
-                <div className="text-xs text-[#00ffa3] font-black flex items-center gap-1.5" data-exempt=":// design-exempt(reason: chzzk live indicator text, expires: 2026-12-31)">
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00ffa3] opacity-75" data-exempt=":// design-exempt(reason: chzzk live indicator ping, expires: 2026-12-31)"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#00ffa3]" data-exempt=":// design-exempt(reason: chzzk live indicator dot, expires: 2026-12-31)"></span>
-                  </span>
-                  LIVE
-                </div>
-              </div>
-              <div className="flex items-center gap-5 text-[11px] font-black text-gray-400">
-                <span className="hover:text-white transition-colors cursor-pointer">1080P SOURCE</span>
-                <span className="hover:text-white transition-colors cursor-pointer">SCREEN 16:9</span>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+            </>
+          )}
+        </div>
+      ) : (
+        <DesktopLiveScreen />
+      )}
  
       {/* PWA App Sidebar (Acts as Chzzk Chat Panel on Desktops) */}
       <div className={`phone-shell chzzk-chat-panel ${surface === 'soft' ? 'bg-surface-bg' : 'bg-surface-card'}`}>

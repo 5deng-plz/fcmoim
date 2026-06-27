@@ -35,7 +35,7 @@ export default function CommunityPage({
   setActiveTab?: (tab: CommunityTab) => void;
   hideHeaderTabs?: boolean;
 }) {
-  const { activeClubId, userRole } = useAppStore();
+  const { activeClubId, userRole, setFocusedPostId } = useAppStore();
   const { showToast } = useToastStore();
   const {
     announcements,
@@ -313,11 +313,23 @@ export default function CommunityPage({
           return (
             <article
               key={announcement.id}
-              className="overflow-hidden rounded-xl border border-border bg-surface-card shadow-sm transition-all duration-200"
+              onClick={() => {
+                if (window.innerWidth >= 1024) {
+                  setFocusedPostId(announcement.id);
+                }
+              }}
+              className="overflow-hidden rounded-xl border border-border bg-surface-card shadow-sm transition-all duration-200 cursor-pointer lg:hover:border-[#00ffa3]"
             >
               <button
                 type="button"
-                onClick={() => setExpandedId(isExpanded ? null : announcement.id)}
+                onClick={(e) => {
+                  if (window.innerWidth >= 1024) {
+                    e.stopPropagation();
+                    setFocusedPostId(announcement.id);
+                  } else {
+                    setExpandedId(isExpanded ? null : announcement.id);
+                  }
+                }}
                 aria-expanded={isExpanded}
                 aria-controls={`announcement-${announcement.id}`}
                 className="flex w-full items-center gap-3 p-4 text-left hover:shadow-md active:scale-[0.98] transition-all duration-200"
@@ -338,11 +350,11 @@ export default function CommunityPage({
                     운영진 · {formatRelativeDate(announcement.createdAt)}
                   </p>
                 </div>
-                {isExpanded ? <ChevronUp size={18} className="text-tertiary" /> : <ChevronDown size={18} className="text-tertiary" />}
+                {isExpanded ? <ChevronUp size={18} className="text-tertiary lg:hidden" /> : <ChevronDown size={18} className="text-tertiary lg:hidden" />}
               </button>
 
               {isExpanded ? (
-                <div id={`announcement-${announcement.id}`} className="border-t border-border px-4 py-3">
+                <div id={`announcement-${announcement.id}`} className="border-t border-border px-4 py-3 lg:hidden">
                   <p className="whitespace-pre-wrap text-sm font-medium leading-relaxed text-secondary">
                     {announcement.content}
                   </p>
@@ -582,33 +594,52 @@ function FeedGallery({
       {status === 'error' ? <FeedStatus label="갤러리를 불러오지 못했어요" /> : null}
       {status === 'ready' && posts.length === 0 ? <FeedStatus label="아직 미디어 피드가 없어요" /> : null}
       <div className="grid grid-cols-2 gap-2">
-        {posts.map((post) => (
-          <div key={post.id} className="overflow-hidden rounded-xl border border-border bg-surface-card">
-            <FeedMedia post={post} compact />
-            <div className="p-2">
-              <FeedReactions post={post} onReaction={onReaction} />
-              <button
-                type="button"
-                onClick={() => setCommentsPostId(commentsPostId === post.id ? null : post.id)}
-                className="mt-2 inline-flex items-center gap-1 text-[11px] font-black text-secondary"
-                aria-label={`댓글 ${post.commentCount}개`}
-              >
-                <MessageCircle size={13} aria-hidden="true" />
-                {post.commentCount}
-              </button>
-              {commentsPostId === post.id ? (
-                <EventComments
-                  clubId={clubId}
-                  targetType="feed_post"
-                  targetId={post.id}
-                  showPhase={false}
-                  embedded
-                  onCommentCountChange={(count) => onCommentCountChange(post.id, count)}
-                />
-              ) : null}
+        {posts.map((post) => {
+          const { setFocusedPostId } = useAppStore();
+          return (
+            <div 
+              key={post.id} 
+              onClick={() => {
+                if (window.innerWidth >= 1024) {
+                  setFocusedPostId(post.id);
+                }
+              }}
+              className="overflow-hidden rounded-xl border border-border bg-surface-card cursor-pointer lg:hover:border-[#00ffa3] transition-all"
+            >
+              <FeedMedia post={post} compact />
+              <div className="p-2" onClick={(e) => e.stopPropagation()}>
+                <FeedReactions post={post} onReaction={onReaction} />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.innerWidth >= 1024) {
+                      setFocusedPostId(post.id);
+                    } else {
+                      setCommentsPostId(commentsPostId === post.id ? null : post.id);
+                    }
+                  }}
+                  className="mt-2 inline-flex items-center gap-1 text-[11px] font-black text-secondary"
+                  aria-label={`댓글 ${post.commentCount}개`}
+                >
+                  <MessageCircle size={13} aria-hidden="true" />
+                  {post.commentCount}
+                </button>
+                {commentsPostId === post.id ? (
+                  <div className="lg:hidden mt-2">
+                    <EventComments
+                      clubId={clubId}
+                      targetType="feed_post"
+                      targetId={post.id}
+                      showPhase={false}
+                      embedded
+                      onCommentCountChange={(count) => onCommentCountChange(post.id, count)}
+                    />
+                  </div>
+                ) : null}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
@@ -753,8 +784,19 @@ function FeedPostCard({
   onCommentCountChange: (count: number) => void;
   clubId: string;
 }) {
+  const { setFocusedPostId } = useAppStore();
+
+  const handleCardClick = () => {
+    if (window.innerWidth >= 1024) {
+      setFocusedPostId(post.id);
+    }
+  };
+
   return (
-    <article className="rounded-xl border border-border bg-surface-card p-4 shadow-sm">
+    <article 
+      onClick={handleCardClick}
+      className="rounded-xl border border-border bg-surface-card p-4 shadow-sm cursor-pointer lg:hover:border-[#00ffa3] transition-all"
+    >
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-black text-primary">{post.authorName}</p>
@@ -762,8 +804,11 @@ function FeedPostCard({
         </div>
         <button
           type="button"
-          onClick={() => onDelete(post)}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-feedback-error-border bg-feedback-error-bg text-feedback-error"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(post);
+          }}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-feedback-error-border bg-feedback-error-bg text-feedback-error relative z-10"
           aria-label="피드 삭제"
         >
           <Trash2 size={14} aria-hidden="true" />
@@ -771,11 +816,17 @@ function FeedPostCard({
       </div>
       {post.textContent ? <p className="mb-3 whitespace-pre-wrap text-sm font-medium leading-relaxed text-primary">{post.textContent}</p> : null}
       <FeedMedia post={post} />
-      <div className="mt-3 flex items-center justify-between gap-3">
+      <div className="mt-3 flex items-center justify-between gap-3" onClick={(e) => e.stopPropagation()}>
         <FeedReactions post={post} onReaction={onReaction} />
         <button
           type="button"
-          onClick={() => setCommentsOpen(!commentsOpen)}
+          onClick={() => {
+            if (window.innerWidth >= 1024) {
+              setFocusedPostId(post.id);
+            } else {
+              setCommentsOpen(!commentsOpen);
+            }
+          }}
           className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-bg px-2 py-1 text-[11px] font-black text-secondary"
           aria-label={`댓글 ${post.commentCount}개`}
         >
@@ -784,14 +835,16 @@ function FeedPostCard({
         </button>
       </div>
       {commentsOpen ? (
-        <EventComments
-          clubId={clubId}
-          targetType="feed_post"
-          targetId={post.id}
-          showPhase={false}
-          embedded
-          onCommentCountChange={onCommentCountChange}
-        />
+        <div className="lg:hidden mt-3" onClick={(e) => e.stopPropagation()}>
+          <EventComments
+            clubId={clubId}
+            targetType="feed_post"
+            targetId={post.id}
+            showPhase={false}
+            embedded
+            onCommentCountChange={onCommentCountChange}
+          />
+        </div>
       ) : null}
     </article>
   );

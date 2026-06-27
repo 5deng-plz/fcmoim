@@ -128,7 +128,7 @@ export default function RecordsTab() {
             </div>
           ) : null}
 
-          <div className="overflow-hidden rounded-3xl border border-glass-border bg-glass-bg shadow-glass-shadow backdrop-blur-md">
+          <div className="overflow-hidden rounded-3xl border border-glass-border bg-glass-bg shadow-glass-shadow backdrop-blur-md lg:hidden">
             <div className="grid min-h-[40px] grid-cols-[24px_34px_minmax(92px,1fr)_74px_40px_50px] items-center border-b border-glass-border/50 bg-glass-bg/60 px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-secondary">
               <div className="text-center">#</div>
               <div className="text-center font-mono font-black italic text-brand-primary text-[10px]">OVR</div>
@@ -185,7 +185,18 @@ export default function RecordsTab() {
             )}
           </div>
 
-          <SeasonSummaryCard summary={records?.seasonSummary ?? createEmptySummary()} />
+          {/* Desktop Dashboard Shortcut Info Card */}
+          <div className="hidden lg:block rounded-3xl border border-[#25283e] bg-[#141624]/40 p-5 text-center space-y-3">
+            <Trophy className="mx-auto text-[#00ffa3] animate-bounce" size={32} />
+            <p className="text-sm font-black text-white">시즌 상세 랭킹 대시보드 송출 중</p>
+            <p className="text-xs text-gray-400 font-bold leading-relaxed">
+              클럽의 OVR 순위표, 시즌 성적 히트맵 및 부문별 MVP 상세 차트는 좌측 라이브 와이드 스크린에서 화려하게 스트리밍 중입니다!
+            </p>
+          </div>
+
+          <div className="lg:hidden">
+            <SeasonSummaryCard summary={records?.seasonSummary ?? createEmptySummary()} />
+          </div>
         </div>
       ) : (
         <CommunityPage

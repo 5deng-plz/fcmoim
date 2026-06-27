@@ -85,9 +85,11 @@ interface AppState {
   availableClubs: ClubOption[];
   setAvailableClubs: (clubs: ClubOption[]) => void;
   
-  // ─── 데스크탑 전술 분석 ───
+  // ─── 데스크탑 전술 분석 & 커뮤니티 ───
   focusedMatchId: string | null;
   setFocusedMatchId: (id: string | null) => void;
+  focusedPostId: string | null;
+  setFocusedPostId: (id: string | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -169,9 +171,11 @@ export const useAppStore = create<AppState>((set) => ({
   availableClubs: [],
   setAvailableClubs: (clubs) => set({ availableClubs: clubs }),
 
-  // ─── 데스크탑 전술 분석 ───
+  // ─── 데스크탑 전술 분석 & 커뮤니티 ───
   focusedMatchId: null,
   setFocusedMatchId: (id) => set({ focusedMatchId: id }),
+  focusedPostId: null,
+  setFocusedPostId: (id) => set({ focusedPostId: id }),
 }));
 
 function readSelectedJoinClubId() {
