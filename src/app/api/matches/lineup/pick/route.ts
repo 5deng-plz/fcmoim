@@ -1,4 +1,5 @@
 import { appErrorResponse } from '../../../../../types/api';
+import { getServerTeamId } from '@/config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../../../lib/supabase-server';
 import { createMatchService } from '../../../../../services/matches';
 import { createSupabaseMatchRepositories } from '../../../../../services/supabase-repositories';
@@ -12,7 +13,7 @@ export async function POST(request: Request) {
 
     return Response.json(await service.pickLineupPlayer({
       auth,
-      clubId: body.clubId,
+      clubId: getServerTeamId(),
       matchId: body.matchId,
       membershipId: body.membershipId,
     }));

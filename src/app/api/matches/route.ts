@@ -1,4 +1,5 @@
 import { appErrorResponse } from '../../../types/api';
+import { getServerTeamId } from '@/config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../lib/supabase-server';
 import { fireAndForgetPush, sendPushToClubMembers } from '../../../lib/push-sender';
 import { createMatchService } from '../../../services/matches';
@@ -7,13 +8,10 @@ import { createSupabaseMatchRepositories } from '../../../services/supabase-repo
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const clubId = searchParams.get('clubId');
+    searchParams.get('clubId');
+    const clubId = getServerTeamId();
     const from = searchParams.get('from');
     const to = searchParams.get('to');
-    if (!clubId) {
-      return Response.json({ error: { code: 'bad_request', message: 'clubId is required.' } }, { status: 400 });
-    }
-
     const supabase = await createSupabaseServerClient();
     const auth = await getRequiredServerAuthContext(supabase);
     const service = createMatchService(createSupabaseMatchRepositories(supabase));
@@ -41,7 +39,7 @@ export async function POST(request: Request) {
 
     const match = await service.createMatch({
       auth,
-      clubId: body.clubId,
+      clubId: getServerTeamId(),
       type: body.type,
       title: body.title,
       date: body.date,

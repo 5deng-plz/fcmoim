@@ -1,4 +1,5 @@
 import { appErrorResponse } from '../../../../../types/api';
+import { getServerTeamId } from '@/config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../../../lib/supabase-server';
 import { createMatchService } from '../../../../../services/matches';
 import { createSupabaseMatchRepositories } from '../../../../../services/supabase-repositories';
@@ -9,9 +10,9 @@ export async function POST(request: Request) {
       clubId?: string;
       matchId?: string;
     };
-    if (!body.clubId || !body.matchId) {
+    if (!body.matchId) {
       return Response.json(
-        { error: { code: 'bad_request', message: 'clubId and matchId are required.' } },
+        { error: { code: 'bad_request', message: 'matchId is required.' } },
         { status: 400 },
       );
     }
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
 
     return Response.json(await service.publishMatchLineup({
       auth,
-      clubId: body.clubId,
+      clubId: getServerTeamId(),
       matchId: body.matchId,
     }));
   } catch (error) {

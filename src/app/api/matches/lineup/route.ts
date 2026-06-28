@@ -1,4 +1,5 @@
 import { appErrorResponse } from '../../../../types/api';
+import { getServerTeamId } from '@/config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../../lib/supabase-server';
 import { createMatchService } from '../../../../services/matches';
 import { createSupabaseMatchRepositories } from '../../../../services/supabase-repositories';
@@ -6,10 +7,11 @@ import { createSupabaseMatchRepositories } from '../../../../services/supabase-r
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const clubId = searchParams.get('clubId');
+    searchParams.get('clubId');
+    const clubId = getServerTeamId();
     const matchId = searchParams.get('matchId');
-    if (!clubId || !matchId) {
-      return Response.json({ error: { code: 'bad_request', message: 'clubId and matchId are required.' } }, { status: 400 });
+    if (!matchId) {
+      return Response.json({ error: { code: 'bad_request', message: 'matchId is required.' } }, { status: 400 });
     }
 
     const supabase = await createSupabaseServerClient();
@@ -29,8 +31,8 @@ export async function POST(request: Request) {
       matchId?: string;
       entries?: unknown;
     };
-    if (!body.clubId || !body.matchId || !Array.isArray(body.entries)) {
-      return Response.json({ error: { code: 'bad_request', message: 'clubId, matchId, and entries are required.' } }, { status: 400 });
+    if (!body.matchId || !Array.isArray(body.entries)) {
+      return Response.json({ error: { code: 'bad_request', message: 'matchId and entries are required.' } }, { status: 400 });
     }
 
     const supabase = await createSupabaseServerClient();
@@ -39,7 +41,7 @@ export async function POST(request: Request) {
 
     return Response.json(await service.saveMatchLineup({
       auth,
-      clubId: body.clubId,
+      clubId: getServerTeamId(),
       matchId: body.matchId,
       entries: body.entries as Parameters<typeof service.saveMatchLineup>[0]['entries'],
     }));

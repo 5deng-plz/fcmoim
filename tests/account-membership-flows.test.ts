@@ -150,7 +150,7 @@ async function loadService(repositories: {
   const serviceModulePath = '../src/services/account-membership';
   const { createAccountMembershipService } = await import(serviceModulePath);
 
-  return createAccountMembershipService(repositories);
+  return createAccountMembershipService(repositories, { teamId: 'club-1' });
 }
 
 function createRepositories(options?: {

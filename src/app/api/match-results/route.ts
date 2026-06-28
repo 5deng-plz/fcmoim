@@ -1,5 +1,6 @@
 import { appErrorResponse } from '../../../types/api';
 import { AppError } from '../../../types/api';
+import { getServerTeamId } from '@/config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../lib/supabase-server';
 import { createMatchResultService } from '../../../services/match-results';
 import { createSupabaseMatchResultRepositories } from '../../../services/supabase-repositories';
@@ -28,10 +29,9 @@ function parseSaveMatchResultBody(body: unknown) {
     throw new AppError('bad_request', 'Request body is required.');
   }
 
-  const clubId = typeof body.clubId === 'string' ? body.clubId.trim() : '';
   const matchId = typeof body.matchId === 'string' ? body.matchId.trim() : '';
-  if (!clubId || !matchId) {
-    throw new AppError('bad_request', 'clubId and matchId are required.');
+  if (!matchId) {
+    throw new AppError('bad_request', 'matchId is required.');
   }
   if (!isRecord(body.score)) {
     throw new AppError('bad_request', 'score is required.');
@@ -41,7 +41,7 @@ function parseSaveMatchResultBody(body: unknown) {
   }
 
   return {
-    clubId,
+    clubId: getServerTeamId(),
     matchId,
     score: {
       home: parseCount(body.score.home, 'score.home'),

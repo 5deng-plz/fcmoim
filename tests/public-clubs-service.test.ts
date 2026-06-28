@@ -2,9 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { createPublicClubService, type PublicClubRepositories } from '../src/services/public-clubs';
 import type { PublicClubDetailRow, PublicClubSummaryRow } from '../src/types/domain';
 
+const teamContext = { teamId: '00000000-0000-0000-0000-000000000001' } as const;
+
 function createRepositories(overrides: Partial<PublicClubRepositories['clubs']> = {}): PublicClubRepositories {
   const clubSummary: PublicClubSummaryRow = {
-    id: 'club-1',
+    id: teamContext.teamId,
     name: 'FC Guppy',
     slug: 'fc-guppy',
     description: 'Default club',
@@ -43,8 +45,7 @@ function createRepositories(overrides: Partial<PublicClubRepositories['clubs']> 
 
   return {
     clubs: {
-      listPublic: vi.fn(async () => [clubSummary]),
-      findPublicDetail: vi.fn(async (clubId: string) => clubId === 'club-1' ? clubDetail : null),
+      findPublicDetail: vi.fn(async (clubId: string) => clubId === teamContext.teamId ? clubDetail : null),
       ...overrides,
     },
   };
@@ -53,9 +54,9 @@ function createRepositories(overrides: Partial<PublicClubRepositories['clubs']> 
 describe('public club service', () => {
   it('returns public club summaries without membership identities', async () => {
     const repositories = createRepositories();
-    const service = createPublicClubService(repositories);
+    const service = createPublicClubService(repositories, teamContext);
 
-    const clubs = await service.listClubs();
+    const clubs = await service.listCompatibleClubs();
 
     expect(clubs).toHaveLength(1);
     expect(clubs[0]).toMatchObject({
@@ -67,24 +68,24 @@ describe('public club service', () => {
     expect(clubs[0]).not.toHaveProperty('pendingMembers');
   });
 
-  it('trims clubId and loads public detail', async () => {
+  it('loads only the server-owned FC Guppy detail', async () => {
     const repositories = createRepositories();
-    const service = createPublicClubService(repositories);
+    const service = createPublicClubService(repositories, teamContext);
 
-    await expect(service.getClub({ clubId: ' club-1 ' })).resolves.toMatchObject({
-      id: 'club-1',
+    await expect(service.getTeam()).resolves.toMatchObject({
+      id: teamContext.teamId,
       upcomingMatches: [{ title: 'Round 1', attendeeCount: 0, attendeeTotal: 12 }],
     });
-    expect(repositories.clubs.findPublicDetail).toHaveBeenCalledWith('club-1');
+    expect(repositories.clubs.findPublicDetail).toHaveBeenCalledWith(teamContext.teamId);
   });
 
-  it('rejects missing or unknown clubs', async () => {
-    const service = createPublicClubService(createRepositories());
+  it('rejects a missing canonical team', async () => {
+    const service = createPublicClubService(
+      createRepositories({ findPublicDetail: vi.fn(async () => null) }),
+      teamContext,
+    );
 
-    await expect(service.getClub({ clubId: ' ' })).rejects.toMatchObject({
-      code: 'bad_request',
-    });
-    await expect(service.getClub({ clubId: 'missing-club' })).rejects.toMatchObject({
+    await expect(service.getTeam()).rejects.toMatchObject({
       code: 'not_found',
     });
   });

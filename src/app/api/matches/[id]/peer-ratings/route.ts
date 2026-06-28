@@ -1,5 +1,6 @@
 import { appErrorResponse } from '../../../../../types/api';
 import { AppError } from '../../../../../types/api';
+import { getServerTeamId } from '@/config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../../../lib/supabase-server';
 import { createMatchFeedbackService } from '../../../../../services/match-feedback';
 import { createSupabaseMatchFeedbackRepositories } from '../../../../../services/supabase-repositories';
@@ -11,7 +12,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (!isRecord(body)) {
       throw new AppError('bad_request', 'Request body is required.');
     }
-    const clubId = readRequiredText(body.clubId, 'clubId is required.');
+    const clubId = getServerTeamId();
     if (!Array.isArray(body.ratings)) {
       throw new AppError('bad_request', 'ratings must be an array.');
     }

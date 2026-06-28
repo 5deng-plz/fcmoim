@@ -99,17 +99,6 @@ async function deleteMembershipForAccountId(accountId: string, clubId: string) {
   }
 }
 
-async function ensureAccount(accountId: string) {
-  const admin = createAdminClient();
-  const { error } = await admin
-    .from('accounts')
-    .upsert({ id: accountId });
-
-  if (error) {
-    throw new Error(`Failed to ensure account ${accountId}: ${error.message}`);
-  }
-}
-
 async function deleteFcmTokens(tokens: string[]) {
   const admin = createAdminClient();
   const { error } = await admin
@@ -119,34 +108,6 @@ async function deleteFcmTokens(tokens: string[]) {
 
   if (error) {
     throw new Error(`Failed to clean FCM tokens: ${error.message}`);
-  }
-}
-
-async function deleteClubsBySlugs(slugs: string[]) {
-  const admin = createAdminClient();
-  const { error } = await admin
-    .from('clubs')
-    .delete()
-    .in('slug', slugs);
-
-  if (error) {
-    throw new Error(`Failed to clean clubs by slugs: ${error.message}`);
-  }
-}
-
-async function insertOwnedClub(input: { accountId: string; slug: string; name: string }) {
-  const admin = createAdminClient();
-  const { error } = await admin
-    .from('clubs')
-    .insert({
-      created_by: input.accountId,
-      slug: input.slug,
-      name: input.name,
-      description: 'Owned club for creation limit test',
-    });
-
-  if (error) {
-    throw new Error(`Failed to insert owned club ${input.slug}: ${error.message}`);
   }
 }
 
@@ -349,20 +310,22 @@ describeLocal('local Supabase API integration', () => {
     await signIn('qa-operator@fcmoim.test');
   });
 
-  it('serves three public clubs without exposing member-private data', async () => {
+  it('serves only FC Guppy through canonical and compatibility public APIs', async () => {
     authorization = '';
     const listRoute = await import('../src/app/api/public/clubs/route');
     const detailRoute = await import('../src/app/api/public/clubs/[clubId]/route');
+    const teamRoute = await import('../src/app/api/team/route');
 
     const listResponse = await listRoute.GET();
     const clubs = await listResponse.json();
+    const teamResponse = await teamRoute.GET();
+    const team = await teamResponse.json();
 
     expect(listResponse.status).toBe(200);
-    expect(clubs).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: clubIds.guppy, name: 'FC Guppy' }),
-      expect.objectContaining({ id: clubIds.orca, name: 'FC Orca' }),
-      expect.objectContaining({ id: clubIds.lynx, name: 'FC Lynx' }),
-    ]));
+    expect(teamResponse.status).toBe(200);
+    expect(clubs).toHaveLength(1);
+    expect(clubs[0]).toEqual(expect.objectContaining({ id: clubIds.guppy, name: 'FC Guppy' }));
+    expect(team).toEqual(expect.objectContaining({ id: clubIds.guppy, name: 'FC Guppy' }));
     for (const club of clubs) {
       expect(Object.keys(club).sort()).toEqual([...publicClubSummaryKeys].sort());
     }
@@ -376,8 +339,8 @@ describeLocal('local Supabase API integration', () => {
     expect(detailResponse.status).toBe(200);
     expect(Object.keys(detail).sort()).toEqual([...publicClubDetailKeys].sort());
     expect(detail).toEqual(expect.objectContaining({
-      id: clubIds.lynx,
-      name: 'FC Lynx',
+      id: clubIds.guppy,
+      name: 'FC Guppy',
       recentMatches: expect.any(Array),
       upcomingMatches: expect.any(Array),
     }));
@@ -386,117 +349,15 @@ describeLocal('local Supabase API integration', () => {
     expect(detail).not.toHaveProperty('pendingMembers');
   });
 
-  it('checks club slug availability through the public API route', async () => {
-    authorization = '';
-    const route = await import('../src/app/api/clubs/check-slug/route');
-
-    const availableResponse = await route.GET(new Request('http://localhost/api/clubs/check-slug?slug=qa-unused-club'));
-    const available = await availableResponse.json();
-    const existingResponse = await route.GET(new Request('http://localhost/api/clubs/check-slug?slug=fc-guppy'));
-    const existing = await existingResponse.json();
-    const invalidResponse = await route.GET(new Request('http://localhost/api/clubs/check-slug?slug=aa'));
-
-    expect(availableResponse.status).toBe(200);
-    expect(available).toEqual({ exists: false });
-    expect(existingResponse.status).toBe(200);
-    expect(existing).toEqual({ exists: true });
-    expect(invalidResponse.status).toBe(400);
-  });
-
-  it('creates a club and approved admin membership atomically for an authenticated guest account', async () => {
-    const accountId = await signIn('qa-new@fcmoim.test');
-    const slug = 'qa-created-club';
-    await deleteClubsBySlugs([slug]);
-    const route = await import('../src/app/api/clubs/route');
-
-    try {
-      const response = await route.POST(new Request('http://localhost/api/clubs', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: 'QA 생성팀',
-          slug,
-          description: '로컬 API 테스트에서 생성한 팀입니다.',
-        }),
-      }));
-      const body = await response.json();
-
-      expect(response.status).toBe(201);
-      expect(body).toEqual(expect.objectContaining({ success: true, clubId: expect.any(String) }));
-
-      const admin = createAdminClient();
-      const { data: club } = await admin
-        .from('clubs')
-        .select('id, created_by, slug')
-        .eq('slug', slug)
-        .single();
-      const { data: membership } = await admin
-        .from('team_memberships')
-        .select('account_id, club_id, role, status')
-        .eq('account_id', accountId)
-        .eq('club_id', body.clubId)
-        .single();
-      const { data: seasons } = await admin
-        .from('seasons')
-        .select('club_id, name, is_active')
-        .eq('club_id', body.clubId)
-        .eq('is_active', true);
-
-      expect(club).toEqual(expect.objectContaining({
-        id: body.clubId,
-        created_by: accountId,
-        slug,
-      }));
-      expect(membership).toEqual(expect.objectContaining({
-        account_id: accountId,
-        club_id: body.clubId,
-        role: 'admin',
-        status: 'approved',
-      }));
-      expect(seasons).toEqual([
-        expect.objectContaining({
-          club_id: body.clubId,
-          name: `${new Date().getFullYear()} 시즌`,
-          is_active: true,
-        }),
-      ]);
-    } finally {
-      await deleteClubsBySlugs([slug]);
-    }
-  });
-
-  it('blocks club creation after two owned clubs for the authenticated account', async () => {
-    const accountId = await signIn('qa-new@fcmoim.test');
-    const slugs = ['qa-limit-one', 'qa-limit-two', 'qa-limit-three'];
-    await deleteClubsBySlugs(slugs);
-    await ensureAccount(accountId);
-    await insertOwnedClub({ accountId, slug: slugs[0], name: 'QA 한도팀 하나' });
-    await insertOwnedClub({ accountId, slug: slugs[1], name: 'QA 한도팀 둘' });
-    const route = await import('../src/app/api/clubs/route');
-
-    try {
-      const response = await route.POST(new Request('http://localhost/api/clubs', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: 'QA 한도팀 셋',
-          slug: slugs[2],
-          description: '생성 한도를 넘는 요청입니다.',
-        }),
-      }));
-      const body = await response.json();
-
-      expect(response.status).toBe(400);
-      expect(body.error.message).toBe('계정당 최대 2개의 팀만 생성할 수 있습니다.');
-    } finally {
-      await deleteClubsBySlugs(slugs);
-    }
-  });
-
   it('serves club memberships through the authenticated API route and real RLS-backed repositories', async () => {
     await signIn('qa-operator@fcmoim.test');
     const route = await import('../src/app/api/membership/clubs/route');
+    const currentRoute = await import('../src/app/api/membership/current/route');
 
     const response = await route.GET();
     const body = await response.json();
+    const currentResponse = await currentRoute.GET();
+    const current = await currentResponse.json();
 
     expect(response.status).toBe(200);
     expect(body).toEqual(
@@ -508,9 +369,14 @@ describeLocal('local Supabase API integration', () => {
         }),
       ]),
     );
+    expect(currentResponse.status).toBe(200);
+    expect(current).toEqual(expect.objectContaining({
+      membershipState: 'approved',
+      membership: expect.objectContaining({ clubId: clubIds.guppy, role: 'operator' }),
+    }));
   });
 
-  it('serves multiple approved clubs for a multi-team member', async () => {
+  it('filters compatibility memberships to FC Guppy', async () => {
     await signIn('qa-member2@fcmoim.test');
     const route = await import('../src/app/api/membership/clubs/route');
 
@@ -518,10 +384,9 @@ describeLocal('local Supabase API integration', () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual(expect.arrayContaining([
+    expect(body).toEqual([
       expect.objectContaining({ clubId: clubIds.guppy, clubName: 'FC Guppy', status: 'approved' }),
-      expect.objectContaining({ clubId: clubIds.orca, clubName: 'FC Orca', status: 'approved' }),
-    ]));
+    ]);
   });
 
   it('patches profile stats, recalculates ovr, persists valid stats, and rejects invalid stats', async () => {
@@ -612,51 +477,35 @@ describeLocal('local Supabase API integration', () => {
     }
   });
 
-  it('serves approved and pending clubs together for additional join monitoring', async () => {
-    const accountId = await signIn('qa-member2@fcmoim.test');
-    await deleteMembershipForAccountId(accountId, clubIds.lynx);
+  it('ignores a foreign join target and keeps the existing FC Guppy membership', async () => {
+    await signIn('qa-member2@fcmoim.test');
     const membershipRoute = await import('../src/app/api/membership/route');
     const clubsRoute = await import('../src/app/api/membership/clubs/route');
 
-    try {
-      const joinResponse = await membershipRoute.POST(new Request('http://localhost/api/membership', {
-        method: 'POST',
-        body: JSON.stringify({
-          clubId: clubIds.lynx,
-          profile: {
-            nickname: '추가대기',
-            position: 'MF',
-            heightCm: null,
-            weightKg: null,
-            birthDate: null,
-            residence: null,
-            photoUrl: null,
-            preferredFoot: 'right',
-            stats: null,
-            ovr: null,
-          },
-        }),
-      }));
+    const joinResponse = await membershipRoute.POST(new Request('http://localhost/api/membership', {
+      method: 'POST',
+      body: JSON.stringify({
+        clubId: clubIds.lynx,
+        profile: {
+          nickname: '추가대기',
+          position: 'MF',
+        },
+      }),
+    }));
+    expect(joinResponse.status).toBe(409);
 
-      expect(joinResponse.status).toBe(201);
+    const listResponse = await clubsRoute.GET();
+    const body = await listResponse.json();
 
-      const listResponse = await clubsRoute.GET();
-      const body = await listResponse.json();
-
-      expect(listResponse.status).toBe(200);
-      expect(body).toEqual(expect.arrayContaining([
-        expect.objectContaining({ clubId: clubIds.guppy, clubName: 'FC Guppy', status: 'approved' }),
-        expect.objectContaining({ clubId: clubIds.orca, clubName: 'FC Orca', status: 'approved' }),
-        expect.objectContaining({ clubId: clubIds.lynx, clubName: 'FC Lynx', status: 'pending' }),
-      ]));
-    } finally {
-      await deleteMembershipForAccountId(accountId, clubIds.lynx);
-    }
+    expect(listResponse.status).toBe(200);
+    expect(body).toEqual([
+      expect.objectContaining({ clubId: clubIds.guppy, clubName: 'FC Guppy', status: 'approved' }),
+    ]);
   });
 
-  it('creates a selected-team pending membership, blocks duplicate joins, and enters approved after operator review', async () => {
+  it('ignores foreign clubId throughout join, review, and bootstrap flows', async () => {
     const newAccountId = await signIn('qa-new@fcmoim.test');
-    await deleteMembershipForAccountId(newAccountId, clubIds.lynx);
+    await deleteMembershipForAccountId(newAccountId, clubIds.guppy);
     const membershipRoute = await import('../src/app/api/membership/route');
     const pendingRoute = await import('../src/app/api/membership/pending/route');
     const reviewRoute = await import('../src/app/api/membership/review/route');
@@ -692,7 +541,7 @@ describeLocal('local Supabase API integration', () => {
 
       expect(createResponse.status, JSON.stringify(created)).toBe(201);
       expect(created).toEqual(expect.objectContaining({
-        clubId: clubIds.lynx,
+        clubId: clubIds.guppy,
         status: 'pending',
         nickname: '오현우',
       }));
@@ -725,7 +574,7 @@ describeLocal('local Supabase API integration', () => {
 
       expect(pendingResponse.status).toBe(200);
       expect(pending).toEqual(expect.arrayContaining([
-        expect.objectContaining({ id: created.id, clubId: clubIds.lynx, nickname: '오현우' }),
+        expect.objectContaining({ id: created.id, clubId: clubIds.guppy, nickname: '오현우' }),
       ]));
 
       const reviewResponse = await reviewRoute.PATCH(new Request('http://localhost/api/membership/review', {
@@ -741,7 +590,7 @@ describeLocal('local Supabase API integration', () => {
       expect(reviewResponse.status).toBe(200);
       expect(reviewed).toEqual(expect.objectContaining({
         id: created.id,
-        clubId: clubIds.lynx,
+        clubId: clubIds.guppy,
         status: 'approved',
       }));
 
@@ -755,11 +604,11 @@ describeLocal('local Supabase API integration', () => {
       expect(approved.membershipState).toBe('approved');
       expect(approved.membership).toEqual(expect.objectContaining({
         id: created.id,
-        clubId: clubIds.lynx,
+        clubId: clubIds.guppy,
         status: 'approved',
       }));
     } finally {
-      await deleteMembershipForAccountId(newAccountId, clubIds.lynx);
+      await deleteMembershipForAccountId(newAccountId, clubIds.guppy);
     }
   });
 
@@ -1342,7 +1191,7 @@ describeLocal('local Supabase API integration', () => {
     }
   });
 
-  it('rejects member, future, cancelled, finished, and cross-club match result saves', async () => {
+  it('rejects invalid match result saves and ignores a foreign clubId for a valid FC Guppy match', async () => {
     const operatorAccountId = await signIn('qa-operator@fcmoim.test');
     const memberAccountId = await signIn('qa-member1@fcmoim.test');
     const route = await import('../src/app/api/match-results/route');
@@ -1403,7 +1252,7 @@ describeLocal('local Supabase API integration', () => {
           playerStats: [],
         }),
       }));
-      expect(crossClubResponse.status).toBe(404);
+      expect(crossClubResponse.status).toBe(200);
     } finally {
       await signIn('qa-operator@fcmoim.test');
       await Promise.all(matchIds.map((matchId) => deleteMatchResultFixture(matchId)));

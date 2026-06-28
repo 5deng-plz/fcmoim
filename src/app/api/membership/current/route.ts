@@ -1,13 +1,11 @@
-import { appErrorResponse } from '../../../../types/api';
 import { getServerTeamContext } from '../../../../config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../../lib/supabase-server';
 import { createAccountMembershipService } from '../../../../services/account-membership';
 import { createSupabaseAccountMembershipRepositories } from '../../../../services/supabase-repositories';
+import { appErrorResponse } from '../../../../types/api';
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    new URL(request.url).searchParams.get('clubId');
-
     const supabase = await createSupabaseServerClient();
     const auth = await getRequiredServerAuthContext(supabase);
     const service = createAccountMembershipService(
@@ -15,7 +13,7 @@ export async function GET(request: Request) {
       getServerTeamContext(),
     );
 
-    return Response.json(await service.listApprovedMemberships({ auth }));
+    return Response.json(await service.bootstrapProfile({ auth }));
   } catch (error) {
     return appErrorResponse(error);
   }

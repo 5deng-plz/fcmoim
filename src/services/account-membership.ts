@@ -1,4 +1,5 @@
 import { AppError } from '../types/api';
+import type { TeamContext } from '../config/server-team';
 import type {
   AccountRow,
   ApprovedMemberAction,
@@ -64,7 +65,12 @@ export type AccountMembershipRepositories = {
   memberships: MembershipRepository;
 };
 
-export function createAccountMembershipService(repositories: AccountMembershipRepositories) {
+export function createAccountMembershipService(
+  repositories: AccountMembershipRepositories,
+  teamContext: TeamContext,
+) {
+  const { teamId } = teamContext;
+
   function assertCanManageMembership(membership: TeamMembershipRow | Pick<TeamMembershipRow, 'role' | 'status'> | null) {
     if (
       !membership ||
@@ -77,18 +83,17 @@ export function createAccountMembershipService(repositories: AccountMembershipRe
 
   async function changeMembershipRole(input: {
     auth: AuthContext;
-    clubId: string;
     membershipId: string;
     role: 'operator' | 'member';
   }) {
     const adminMembership = await repositories.memberships.findByAccountAndClub(
       input.auth.user.id,
-      input.clubId,
+      teamId,
     );
     assertCanAssignOperatorRole(adminMembership);
 
     const target = await repositories.memberships.findById(input.membershipId);
-    if (!target || target.clubId !== input.clubId) {
+    if (!target || target.clubId !== teamId) {
       throw new AppError('not_found', 'Membership was not found for this club.');
     }
     if (target.status !== 'approved') {
@@ -108,14 +113,14 @@ export function createAccountMembershipService(repositories: AccountMembershipRe
   }
 
   return {
-    async bootstrapProfile(input: { auth: AuthContext; clubId: string }) {
+    async bootstrapProfile(input: { auth: AuthContext }) {
       const account = await repositories.accounts.upsertFromAuthUser({
         id: input.auth.user.id,
         email: input.auth.user.email,
       });
       const membership = await repositories.memberships.findByAccountAndClub(
         input.auth.user.id,
-        input.clubId,
+        teamId,
       );
       const membershipWithTraits = membership
         ? {
@@ -131,40 +136,40 @@ export function createAccountMembershipService(repositories: AccountMembershipRe
       };
     },
 
-    async listClubMemberships(input: { auth: AuthContext }) {
-      return repositories.memberships.listClubMemberships(input.auth.user.id);
+    async listCompatibleMemberships(input: { auth: AuthContext }) {
+      const memberships = await repositories.memberships.listClubMemberships(input.auth.user.id);
+      return memberships.filter((membership) => membership.clubId === teamId);
     },
 
-    async listPendingMemberships(input: { auth: AuthContext; clubId: string }) {
+    async listPendingMemberships(input: { auth: AuthContext }) {
       const reviewerMembership = await repositories.memberships.findByAccountAndClub(
         input.auth.user.id,
-        input.clubId,
+        teamId,
       );
       assertCanReviewMembership(reviewerMembership);
 
-      return repositories.memberships.listPendingByClub(input.clubId);
+      return repositories.memberships.listPendingByClub(teamId);
     },
 
-    async listApprovedMemberships(input: { auth: AuthContext; clubId: string }) {
+    async listApprovedMemberships(input: { auth: AuthContext }) {
       const membership = await repositories.memberships.findByAccountAndClub(
         input.auth.user.id,
-        input.clubId,
+        teamId,
       );
       assertApprovedMembership(membership);
 
-      return repositories.memberships.listApprovedByClub(input.clubId);
+      return repositories.memberships.listApprovedByClub(teamId);
     },
 
     async joinClub(input: {
       auth: AuthContext;
-      clubId: string;
       authUid?: string;
       profile: JoinProfileInput;
     }) {
       void input.authUid;
       const existingMembership = await repositories.memberships.findByAccountAndClub(
         input.auth.user.id,
-        input.clubId,
+        teamId,
       );
       if (existingMembership) {
         throw new AppError('conflict', getExistingJoinMessage(existingMembership.status));
@@ -174,14 +179,13 @@ export function createAccountMembershipService(repositories: AccountMembershipRe
 
       return repositories.memberships.createPending({
         accountId: input.auth.user.id,
-        clubId: input.clubId,
+        clubId: teamId,
         profile,
       });
     },
 
     async reviewMembership(input: {
       auth: AuthContext;
-      clubId: string;
       membershipId: string;
       decision: Exclude<MembershipStatus, 'pending'>;
       authUid?: string;
@@ -193,12 +197,12 @@ export function createAccountMembershipService(repositories: AccountMembershipRe
 
       const reviewerMembership = await repositories.memberships.findByAccountAndClub(
         input.auth.user.id,
-        input.clubId,
+        teamId,
       );
       assertCanReviewMembership(reviewerMembership);
 
       const target = await repositories.memberships.findById(input.membershipId);
-      if (!target || target.clubId !== input.clubId) {
+      if (!target || target.clubId !== teamId) {
         throw new AppError('not_found', 'Membership was not found for this club.');
       }
       if (target.status !== 'pending') {
@@ -216,7 +220,6 @@ export function createAccountMembershipService(repositories: AccountMembershipRe
 
     async assignOperatorRole(input: {
       auth: AuthContext;
-      clubId: string;
       membershipId: string;
     }) {
       return changeMembershipRole({ ...input, role: 'operator' });
@@ -224,24 +227,21 @@ export function createAccountMembershipService(repositories: AccountMembershipRe
 
     async updateMembershipPhoto(input: {
       auth: AuthContext;
-      clubId: string;
       photoUrl: string | null;
     }) {
       return this.updateMembershipProfile({
         auth: input.auth,
-        clubId: input.clubId,
         profile: { photoUrl: input.photoUrl },
       });
     },
 
     async updateMembershipProfile(input: {
       auth: AuthContext;
-      clubId: string;
       profile: MembershipProfilePatch;
     }) {
       const membership = await repositories.memberships.findByAccountAndClub(
         input.auth.user.id,
-        input.clubId,
+        teamId,
       );
 
       if (!membership) {
@@ -257,11 +257,10 @@ export function createAccountMembershipService(repositories: AccountMembershipRe
 
     async withdrawMembership(input: {
       auth: AuthContext;
-      clubId: string;
       membershipId: string;
     }) {
       const target = await repositories.memberships.findById(input.membershipId);
-      if (!target || target.clubId !== input.clubId) {
+      if (!target || target.clubId !== teamId) {
         throw new AppError('not_found', 'Membership was not found for this club.');
       }
 
@@ -283,7 +282,7 @@ export function createAccountMembershipService(repositories: AccountMembershipRe
       // If the caller is withdrawing someone else's membership:
       const managerMembership = await repositories.memberships.findByAccountAndClub(
         input.auth.user.id,
-        input.clubId,
+        teamId,
       );
       assertCanManageMembership(managerMembership);
 
@@ -306,13 +305,12 @@ export function createAccountMembershipService(repositories: AccountMembershipRe
 
     async assertApprovedMemberAction(input: {
       auth: AuthContext;
-      clubId: string;
       action: ApprovedMemberAction;
     }) {
       void input.action;
       const membership = await repositories.memberships.findByAccountAndClub(
         input.auth.user.id,
-        input.clubId,
+        teamId,
       );
 
       if (!membership || membership.status !== 'approved') {

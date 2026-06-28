@@ -1,5 +1,6 @@
 import { appErrorResponse } from '../../../types/api';
 import { AppError } from '../../../types/api';
+import { getServerTeamId } from '@/config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../lib/supabase-server';
 import { createFeedPostService } from '../../../services/feed-posts';
 import { createSupabaseFeedPostRepositories } from '../../../services/supabase-repositories';
@@ -7,10 +8,8 @@ import { createSupabaseFeedPostRepositories } from '../../../services/supabase-r
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const clubId = searchParams.get('clubId');
-    if (!clubId) {
-      return Response.json({ error: { code: 'bad_request', message: 'clubId is required.' } }, { status: 400 });
-    }
+    searchParams.get('clubId');
+    const clubId = getServerTeamId();
 
     const supabase = await createSupabaseServerClient();
     const auth = await getRequiredServerAuthContext(supabase);
@@ -41,7 +40,7 @@ export async function POST(request: Request) {
 
     return Response.json(await service.createPost({
       auth,
-      clubId: readRequiredText(body.clubId, 'clubId is required.'),
+      clubId: getServerTeamId(),
       contentType: readRequiredText(body.contentType, 'contentType is required.'),
       textContent: readOptionalText(body.textContent),
       mediaUrl: readOptionalText(body.mediaUrl),

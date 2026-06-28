@@ -1,13 +1,12 @@
 import { AppError, appErrorResponse } from '../../../types/api';
+import { getServerTeamId } from '@/config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../lib/supabase-server';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const clubId = searchParams.get('clubId');
-    if (!clubId) {
-      return Response.json({ error: { code: 'bad_request', message: 'clubId is required.' } }, { status: 400 });
-    }
+    searchParams.get('clubId');
+    const clubId = getServerTeamId();
 
     const supabase = await createSupabaseServerClient();
     const auth = await getRequiredServerAuthContext(supabase);
@@ -50,10 +49,7 @@ export async function PATCH(request: Request) {
     const auth = await getRequiredServerAuthContext(supabase);
 
     if (body.markAllRead === true) {
-      const clubId = typeof body.clubId === 'string' ? body.clubId : '';
-      if (!clubId) {
-        return Response.json({ error: { code: 'bad_request', message: 'clubId is required.' } }, { status: 400 });
-      }
+      const clubId = getServerTeamId();
 
       const membershipId = await getCurrentMembershipId(supabase, auth.user.id, clubId);
       const { error } = await supabase

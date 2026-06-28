@@ -1,4 +1,5 @@
 import { appErrorResponse } from '../../../../types/api';
+import { getServerTeamContext } from '../../../../config/server-team';
 import { createPrivilegedSupabaseClient, createSupabaseServerClient, getRequiredServerAuthContext } from '../../../../lib/supabase-server';
 import { createAccountMembershipService } from '../../../../services/account-membership';
 import { createSupabaseAccountMembershipRepositories } from '../../../../services/supabase-repositories';
@@ -10,6 +11,7 @@ export async function PATCH(request: Request) {
     const auth = await getRequiredServerAuthContext(supabase);
     const service = createAccountMembershipService(
       createSupabaseAccountMembershipRepositories(createPrivilegedSupabaseClient()),
+      getServerTeamContext(),
     );
 
     if (body.role !== 'operator' && body.role !== 'member') {
@@ -21,7 +23,6 @@ export async function PATCH(request: Request) {
 
     const membership = await service.changeMembershipRole({
       auth,
-      clubId: body.clubId,
       membershipId: body.membershipId,
       role: body.role,
     });

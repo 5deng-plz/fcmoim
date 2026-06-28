@@ -1,4 +1,5 @@
 import { AppError, appErrorResponse } from '../../../../../types/api';
+import { getServerTeamId } from '@/config/server-team';
 import { createPrivilegedSupabaseClient, createSupabaseServerClient, getRequiredServerAuthContext } from '../../../../../lib/supabase-server';
 import { fetchMembershipTraitState, fetchUnlockedTraitIds } from '../trait-route-helpers';
 
@@ -13,18 +14,19 @@ export async function PATCH(request: Request) {
       traitId?: string | null;
     };
 
-    if (!body.clubId || !('traitId' in body)) {
-      return Response.json({ error: { code: 'bad_request', message: 'clubId and traitId are required.' } }, { status: 400 });
+    if (!('traitId' in body)) {
+      return Response.json({ error: { code: 'bad_request', message: 'traitId is required.' } }, { status: 400 });
     }
 
     const supabase = await createSupabaseServerClient();
     const auth = await getRequiredServerAuthContext(supabase);
     const privileged = createPrivilegedSupabaseClient();
+    const teamId = getServerTeamId();
     const { data: membership, error: membershipError } = await privileged
       .from('team_memberships')
       .select('id')
       .eq('account_id', auth.user.id)
-      .eq('club_id', body.clubId)
+      .eq('club_id', teamId)
       .eq('status', 'approved')
       .single<MembershipIdRow>();
 
@@ -50,7 +52,7 @@ export async function PATCH(request: Request) {
       throw new AppError('internal_error', 'Failed to equip trait.', { cause: updateError });
     }
 
-    return Response.json(await fetchMembershipTraitState(privileged, auth.user.id, body.clubId));
+    return Response.json(await fetchMembershipTraitState(privileged, auth.user.id, teamId));
   } catch (error) {
     return appErrorResponse(error);
   }

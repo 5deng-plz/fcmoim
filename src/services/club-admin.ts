@@ -1,4 +1,5 @@
 import { AppError } from '../types/api';
+import type { TeamContext } from '../config/server-team';
 import type { AuthContext, PublicClubSummaryRow, TeamMembershipRow } from '../types/domain';
 
 export type ClubAdminRepositories = {
@@ -19,39 +20,33 @@ export type ClubAdminRepositories = {
   };
 };
 
-export function createClubAdminService(repositories: ClubAdminRepositories) {
+export function createClubAdminService(
+  repositories: ClubAdminRepositories,
+  teamContext: TeamContext,
+) {
+  const { teamId } = teamContext;
+
   return {
     async updateClubSettings(input: {
       auth: AuthContext;
-      clubId: string;
       description: string | null;
       isPublic: boolean;
     }) {
-      const clubId = input.clubId.trim();
-      if (!clubId) {
-        throw new AppError('bad_request', 'clubId is required.');
-      }
-
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, clubId);
+      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, teamId);
       assertCanManageClub(membership);
 
       return repositories.clubs.updateSettings({
-        clubId,
+        clubId: teamId,
         description: normalizeDescription(input.description),
         isPublic: input.isPublic,
       });
     },
 
-    async getClubSettings(input: { auth: AuthContext; clubId: string }) {
-      const clubId = input.clubId.trim();
-      if (!clubId) {
-        throw new AppError('bad_request', 'clubId is required.');
-      }
-
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, clubId);
+    async getClubSettings(input: { auth: AuthContext }) {
+      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, teamId);
       assertCanManageClub(membership);
 
-      const club = await repositories.clubs.findSettings(clubId);
+      const club = await repositories.clubs.findSettings(teamId);
       if (!club) {
         throw new AppError('not_found', 'Club was not found.');
       }
@@ -61,19 +56,13 @@ export function createClubAdminService(repositories: ClubAdminRepositories) {
 
     async updateClubLogo(input: {
       auth: AuthContext;
-      clubId: string;
       logoUrl: string | null;
     }) {
-      const clubId = input.clubId.trim();
-      if (!clubId) {
-        throw new AppError('bad_request', 'clubId is required.');
-      }
-
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, clubId);
+      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, teamId);
       assertCanManageClub(membership);
 
       return repositories.clubs.updateLogo({
-        clubId,
+        clubId: teamId,
         logoUrl: normalizeLogoUrl(input.logoUrl),
       });
     },

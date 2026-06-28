@@ -1,4 +1,5 @@
 import { appErrorResponse } from '../../../../types/api';
+import { getServerTeamId } from '@/config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../../lib/supabase-server';
 import { createSchedulePollService } from '../../../../services/schedule-polls';
 import { createSupabaseSchedulePollRepositories } from '../../../../services/supabase-repositories';
@@ -12,7 +13,7 @@ export async function POST(request: Request) {
 
     const poll = await service.votePoll({
       auth,
-      clubId: body.clubId,
+      clubId: getServerTeamId(),
       pollId: body.pollId,
       selectedOptionIds: body.selectedOptionIds,
     });

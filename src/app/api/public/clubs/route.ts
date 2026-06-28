@@ -1,4 +1,5 @@
 import { appErrorResponse } from '../../../../types/api';
+import { getServerTeamContext } from '../../../../config/server-team';
 import { createSupabaseServerClient } from '../../../../lib/supabase-server';
 import { createPublicClubService } from '../../../../services/public-clubs';
 import { createSupabasePublicClubRepositories } from '../../../../services/supabase-repositories';
@@ -8,9 +9,10 @@ export async function GET() {
     const supabase = await createSupabaseServerClient();
     const service = createPublicClubService(
       createSupabasePublicClubRepositories(supabase),
+      getServerTeamContext(),
     );
 
-    return Response.json(await service.listClubs());
+    return Response.json(await service.listCompatibleClubs());
   } catch (error) {
     return appErrorResponse(error);
   }

@@ -1,4 +1,5 @@
 import { appErrorResponse } from '../../../../types/api';
+import { getServerTeamId } from '@/config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../../lib/supabase-server';
 import { createMatchService } from '../../../../services/matches';
 import { createSupabaseMatchRepositories } from '../../../../services/supabase-repositories';
@@ -12,7 +13,7 @@ export async function POST(request: Request) {
 
     const match = await service.cancelMatch({
       auth,
-      clubId: body.clubId,
+      clubId: getServerTeamId(),
       matchId: body.matchId,
       cancellationReason: body.cancellationReason,
     });

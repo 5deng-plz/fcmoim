@@ -1,4 +1,5 @@
 import { appErrorResponse } from '../../../types/api';
+import { getServerTeamId } from '@/config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../lib/supabase-server';
 import { createCommentService } from '../../../services/comments';
 import { createSupabaseCommentRepositories } from '../../../services/supabase-repositories';
@@ -6,11 +7,12 @@ import { createSupabaseCommentRepositories } from '../../../services/supabase-re
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const clubId = searchParams.get('clubId');
+    searchParams.get('clubId');
+    const clubId = getServerTeamId();
     const targetType = searchParams.get('targetType');
     const targetId = searchParams.get('targetId');
-    if (!clubId || !targetType || !targetId) {
-      return Response.json({ error: { code: 'bad_request', message: 'clubId, targetType, and targetId are required.' } }, { status: 400 });
+    if (!targetType || !targetId) {
+      return Response.json({ error: { code: 'bad_request', message: 'targetType and targetId are required.' } }, { status: 400 });
     }
 
     const supabase = await createSupabaseServerClient();
@@ -31,8 +33,8 @@ export async function POST(request: Request) {
       targetId?: string;
       content?: string;
     };
-    if (!body.clubId || !body.targetType || !body.targetId || typeof body.content !== 'string') {
-      return Response.json({ error: { code: 'bad_request', message: 'clubId, targetType, targetId, and content are required.' } }, { status: 400 });
+    if (!body.targetType || !body.targetId || typeof body.content !== 'string') {
+      return Response.json({ error: { code: 'bad_request', message: 'targetType, targetId, and content are required.' } }, { status: 400 });
     }
 
     const supabase = await createSupabaseServerClient();
@@ -41,7 +43,7 @@ export async function POST(request: Request) {
 
     return Response.json(await service.createComment({
       auth,
-      clubId: body.clubId,
+      clubId: getServerTeamId(),
       targetType: body.targetType,
       targetId: body.targetId,
       content: body.content,

@@ -1,4 +1,5 @@
 import { appErrorResponse } from '../../../../types/api';
+import { getServerTeamContext } from '../../../../config/server-team';
 import { createPrivilegedSupabaseClient, createSupabaseServerClient, getRequiredServerAuthContext } from '../../../../lib/supabase-server';
 import { fireAndForgetPush, sendPushToMembership } from '../../../../lib/push-sender';
 import { createAccountMembershipService } from '../../../../services/account-membership';
@@ -11,11 +12,11 @@ export async function PATCH(request: Request) {
     const auth = await getRequiredServerAuthContext(supabase);
     const service = createAccountMembershipService(
       createSupabaseAccountMembershipRepositories(createPrivilegedSupabaseClient()),
+      getServerTeamContext(),
     );
 
     const membership = await service.reviewMembership({
       auth,
-      clubId: body.clubId,
       membershipId: body.membershipId,
       decision: body.decision,
       authUid: body.authUid,

@@ -44,6 +44,10 @@ const defaultClubId =
   process.env.NEXT_PUBLIC_DEFAULT_CLUB_ID ||
   dotenvEnv.NEXT_PUBLIC_DEFAULT_CLUB_ID ||
   '00000000-0000-0000-0000-000000000001';
+const serverTeamId =
+  process.env.FC_GUPPY_CLUB_ID ||
+  dotenvEnv.FC_GUPPY_CLUB_ID ||
+  '00000000-0000-0000-0000-000000000001';
 
 const child = spawnSync(command, args, {
   env: {
@@ -60,6 +64,7 @@ const child = spawnSync(command, args, {
     SUPABASE_SECRET_KEY: localEnv.SECRET_KEY,
     SUPABASE_SERVICE_ROLE_KEY: localEnv.SERVICE_ROLE_KEY || localEnv.SECRET_KEY,
     QA_LOCAL_ACCOUNT_PASSWORD: qaLocalAccountPassword,
+    FC_GUPPY_CLUB_ID: serverTeamId,
     NEXT_PUBLIC_DEFAULT_CLUB_ID: defaultClubId,
   },
   stdio: 'inherit',

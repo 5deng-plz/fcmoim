@@ -1,4 +1,5 @@
 import { appErrorResponse } from '../../../types/api';
+import { getServerTeamId } from '@/config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../lib/supabase-server';
 import { fireAndForgetPush, sendPushToClubMembers } from '../../../lib/push-sender';
 import { createAnnouncementService } from '../../../services/announcements';
@@ -7,10 +8,8 @@ import { createSupabaseAnnouncementRepositories } from '../../../services/supaba
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const clubId = searchParams.get('clubId');
-    if (!clubId) {
-      return Response.json({ error: { code: 'bad_request', message: 'clubId is required.' } }, { status: 400 });
-    }
+    searchParams.get('clubId');
+    const clubId = getServerTeamId();
 
     const supabase = await createSupabaseServerClient();
     const auth = await getRequiredServerAuthContext(supabase);
@@ -31,7 +30,7 @@ export async function POST(request: Request) {
 
     const announcement = await service.createAnnouncement({
       auth,
-      clubId: body.clubId,
+      clubId: getServerTeamId(),
       seasonId: body.seasonId,
       title: body.title,
       content: body.content,

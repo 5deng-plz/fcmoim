@@ -1,78 +1,182 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 110,
-  "updatedAt": "2026-06-27T18:01:37+09:00",
+  "updateVersion": 112,
+  "updatedAt": "2026-06-28T16:35:04+09:00",
   "updatedBy": "codex",
-  "currentPhase": "harness-lightweight-profiles",
+  "currentPhase": "single-team-api-contract",
   "activeWork": {
-    "taskId": "update-agents-md",
+    "taskId": "single-team-api-contract",
     "status": "blocked",
     "designMode": "maintenance",
-    "baselineCommit": "8d6460d9b9a2ad78e9bcec991d3e06dfbb5961a9",
+    "baselineCommit": "7de9abb20303783a8d86eb9bb25fdd130d620a41",
     "changedFiles": [
+      ".env.local.example",
+      "docs/README.md",
+      "docs/decisions.md",
       "docs/project-context.json",
-      "src/components/features/TacticsDragBuilder.tsx"
+      "scripts/with-local-supabase-env.mjs",
+      "src/app/api/announcements/route.ts",
+      "src/app/api/clubs/check-slug/route.ts",
+      "src/app/api/clubs/logo/route.ts",
+      "src/app/api/clubs/route.ts",
+      "src/app/api/clubs/settings/route.ts",
+      "src/app/api/comments/route.ts",
+      "src/app/api/feed-posts/[id]/react/route.ts",
+      "src/app/api/feed-posts/[id]/route.ts",
+      "src/app/api/feed-posts/route.ts",
+      "src/app/api/match-results/route.ts",
+      "src/app/api/matches/[id]/feedback/route.ts",
+      "src/app/api/matches/[id]/peer-ratings/route.ts",
+      "src/app/api/matches/[id]/vote-mvp/route.ts",
+      "src/app/api/matches/attendees/route.ts",
+      "src/app/api/matches/cancel/route.ts",
+      "src/app/api/matches/lineup/confirm/route.ts",
+      "src/app/api/matches/lineup/pick/route.ts",
+      "src/app/api/matches/lineup/publish/route.ts",
+      "src/app/api/matches/lineup/route.ts",
+      "src/app/api/matches/route.ts",
+      "src/app/api/membership/approved/route.ts",
+      "src/app/api/membership/clubs/route.ts",
+      "src/app/api/membership/current/route.ts",
+      "src/app/api/membership/pending/route.ts",
+      "src/app/api/membership/points/route.ts",
+      "src/app/api/membership/profile/route.ts",
+      "src/app/api/membership/review/route.ts",
+      "src/app/api/membership/role/route.ts",
+      "src/app/api/membership/route.ts",
+      "src/app/api/membership/status/route.ts",
+      "src/app/api/membership/traits/equip/route.ts",
+      "src/app/api/membership/traits/purchase/route.ts",
+      "src/app/api/notifications/route.ts",
+      "src/app/api/public/clubs/[clubId]/route.ts",
+      "src/app/api/public/clubs/route.ts",
+      "src/app/api/records/season-summary/route.ts",
+      "src/app/api/schedule-polls/cancel/route.ts",
+      "src/app/api/schedule-polls/promote/route.ts",
+      "src/app/api/schedule-polls/route.ts",
+      "src/app/api/schedule-polls/vote/route.ts",
+      "src/app/api/team/logo/route.ts",
+      "src/app/api/team/route.ts",
+      "src/app/api/team/settings/route.ts",
+      "src/config/server-team.ts",
+      "src/services/account-membership.ts",
+      "src/services/club-admin.ts",
+      "src/services/club-create.ts",
+      "src/services/public-clubs.ts",
+      "src/services/supabase-repositories.ts",
+      "tests/account-membership-flows.test.ts",
+      "tests/club-admin-service.test.ts",
+      "tests/local-supabase-api.test.ts",
+      "tests/public-clubs-service.test.ts",
+      "tests/server-team.test.ts",
+      "tests/single-team-api-contract.test.ts"
     ],
     "changedSurfaces": [
+      "api",
       "docs",
-      "ui"
+      "tests",
+      "infra"
     ],
     "allowedPaths": [
+      ".env.local.example",
       "docs/project-context.json",
-      "src/components/features/TacticsDragBuilder.tsx"
+      "docs/README.md",
+      "docs/decisions.md",
+      "scripts/with-local-supabase-env.mjs",
+      "src/app/api/**",
+      "src/config/server-team.ts",
+      "src/services/account-membership.ts",
+      "src/services/club-admin.ts",
+      "src/services/club-create.ts",
+      "src/services/public-clubs.ts",
+      "src/services/supabase-repositories.ts",
+      "src/types/domain.ts",
+      "tests/account-membership-flows.test.ts",
+      "tests/club-admin-service.test.ts",
+      "tests/local-supabase-api.test.ts",
+      "tests/public-clubs-service.test.ts",
+      "tests/server-team.test.ts",
+      "tests/single-team-api-contract.test.ts"
     ],
     "evidence": {
       "scopeReview": {
         "status": "completed",
         "provider": "Manual review",
-        "command": "Checked automation memory, AGENT.md, docs/agent-feedback.md, docs/user/design-harness-workflow.md, docs/agent-rules.json, docs/project-context.json, .agents manifest/contracts/guard files, package scripts, git status, and recent commits.",
-        "summary": "Automation memory existed and matched the current blocked state. No commits landed after 8d6460d9b9a2ad78e9bcec991d3e06dfbb5961a9 as of 2026-06-27; recent candidates remain product UI/DnD details or already-covered harness adjustments, not new reusable Agent-process failures."
+        "command": "Read AGENT.md, docs/agent-rules.json, docs/agent-feedback.md, docs/user/design-harness-workflow.md, docs/decisions.md, the stage-1 source-of-truth plan, builder prompt, current API routes/services/tests, git status, and recent commits.",
+        "summary": "Confirmed that client clubId reached membership, match, schedule, records, feed, comment, notification, public-club, and club-admin services. Stage 1 canonicalized it at every API boundary, added canonical team APIs, and removed team creation Backend code without touching Frontend-owned files."
       },
       "harnessValidate": {
         "status": "passed",
         "provider": "Harness",
         "command": "npm run harness:validate",
-        "summary": "Harness structure, project rules, documentation line limits, and purity checks passed for this automation sync plus narrow verification unblock."
+        "summary": "Harness structure, project rules, documentation policy, and reusable harness purity checks passed."
       },
-      "verificationUnblock": {
+      "backendStatic": {
         "status": "passed",
         "type": "deterministic",
-        "provider": "ESLint",
-        "command": "npx eslint src/components/features/TacticsDragBuilder.tsx --quiet",
-        "summary": "Reproduced the prefer-const blocker from the latest tactics DnD work and fixed it with a one-line const change."
+        "provider": "TypeScript and ESLint",
+        "command": "npm run typecheck && npx eslint src/app/api src/config/server-team.ts src/services/account-membership.ts src/services/club-admin.ts src/services/public-clubs.ts src/services/supabase-repositories.ts scripts/with-local-supabase-env.mjs tests/account-membership-flows.test.ts tests/club-admin-service.test.ts tests/local-supabase-api.test.ts tests/public-clubs-service.test.ts tests/server-team.test.ts tests/single-team-api-contract.test.ts --quiet",
+        "summary": "TypeScript and every changed Backend/API/test file passed. Full-project lint remains blocked only by pre-existing Frontend-owned errors."
       },
-      "verifyAlias": {
-        "status": "blocked",
-        "provider": "Harness guard",
-        "command": "npm run harness:guard:verify",
-        "summary": "Blocked in projectVerify: lint and typecheck passed, but Vitest failed in tests/frontend-auth-and-schedule-ui.test.tsx."
+      "backendTests": {
+        "status": "passed",
+        "type": "deterministic",
+        "provider": "Vitest",
+        "command": "npx vitest run tests/server-team.test.ts tests/single-team-api-contract.test.ts tests/public-clubs-service.test.ts tests/club-admin-service.test.ts tests/account-membership-flows.test.ts --reporter=dot",
+        "summary": "Five Backend test files passed with 41 tests, including server TeamContext, removed creation entrypoints, canonical public team, admin permissions, and membership flows."
       },
-      "frontendTestReproduction": {
+      "localSupabase": {
+        "status": "passed",
+        "type": "api",
+        "provider": "Local Supabase CLI",
+        "command": "npm run verify:db:local",
+        "summary": "Local database reset, seven QA Auth users, demo seed, and 17 real API integration tests passed. Foreign Lynx and Orca clubId inputs did not change the FC Guppy data scope."
+      },
+      "dbContract": {
+        "status": "passed",
+        "type": "database",
+        "provider": "tracked SQL",
+        "command": "npm run db:check",
+        "summary": "All 26 tracked Supabase SQL contract files passed the repository contract check."
+      },
+      "browserRuntime": {
+        "status": "passed",
+        "type": "runtime",
+        "provider": "npm run dev, in-app browser, server terminal log",
+        "command": "npm run dev; open http://localhost:3000/; refresh stale Local Supabase QA session; reload authenticated home",
+        "summary": "Dev server started, the first screen rendered, and a refreshed QA session loaded the FC Guppy home. Browser console had no new errors after session refresh, and server log showed successful membership, notifications, matches, schedule-polls, and announcements API responses."
+      },
+      "fullSuite": {
         "status": "blocked",
         "provider": "Vitest",
-        "command": "npx vitest run tests/frontend-auth-and-schedule-ui.test.tsx --reporter=dot",
-        "summary": "Reproduced the same 10 failures again on 2026-06-27 through the full guard in the existing frontend auth/schedule UI test file; failures concern product UI copy/classes/attendance expectations outside this automation scope."
+        "command": "npm test -- --reporter=dot",
+        "summary": "Backend and non-Frontend suites passed (22 files); tests/frontend-auth-and-schedule-ui.test.tsx still has 23 pre-existing UI expectation failures and 2 unhandled GuestDashboard errors."
+      },
+      "standardGuard": {
+        "status": "blocked",
+        "provider": "Harness guard",
+        "command": "npm run harness:guard:standard",
+        "summary": "Harness validation, token sync, design guard, and diff ownership passed after temporarily isolating the preserved user .swp file. projectVerify stopped at 15 pre-existing lint errors in Frontend-owned components."
       }
     },
     "retrospective": {
       "issuesObserved": [
-        "No new commits landed after the previous automation memory entry as of 2026-06-27; HEAD remains 8d6460d9b9a2ad78e9bcec991d3e06dfbb5961a9.",
-        "The latest completed product work ended at 8d6460d9b9a2ad78e9bcec991d3e06dfbb5961a9 and showed implementation/styling iteration, not a new reusable Agent-process failure.",
-        "Final verification reproduced one narrow prefer-const lint blocker in src/components/features/TacticsDragBuilder.tsx; it was fixed as a verification unblock, not promoted into harness policy.",
-        "The existing frontend auth/schedule UI test blocker was reproduced again on 2026-06-27 and remains outside the automation scope."
+        "The server previously trusted client clubId throughout all feature API routes.",
+        "The current Frontend still owns dead team-creation and multi-club state while the Backend capability has now been removed.",
+        "A Local Supabase reset invalidated the existing browser refresh token; re-authentication restored a clean runtime with no new console or server errors."
       ],
       "missedEvidence": [
-        "npm run harness:guard:verify did not pass because tests/frontend-auth-and-schedule-ui.test.tsx has 10 reproducible failures unrelated to AGENT.md/Harness policy sync."
+        "The mandatory standard guard cannot pass until Frontend-owned lint and frontend-auth-and-schedule-ui.test.tsx failures are corrected by the Frontend team."
       ],
       "harnessImprovementProposal": [],
       "promotionRecommendation": "none",
-      "reason": "Candidate issues were already addressed by existing harness guidance or were project-local implementation details. The only required action was project-context synchronization for the automation run."
+      "reason": "No reusable Harness-process improvement is proposed for this product-specific Backend contract migration."
     },
     "reviewStatus": "blocked",
     "loopCounters": {
-      "reviewRounds": 0,
-      "guardRetries": 1
+      "reviewRounds": 1,
+      "guardRetries": 2
     }
   },
   "workstreams": [
@@ -114,7 +218,12 @@
     }
   ],
   "blockers": [
-    "npm run harness:guard:verify is blocked by 10 reproducible failures in tests/frontend-auth-and-schedule-ui.test.tsx after lint/typecheck pass."
+    "npm run harness:guard:standard is blocked by 15 pre-existing lint errors in Frontend-owned DesktopLiveScreen, CommunityPage, LockerRoomTab, and RecordsTab files.",
+    "npm test is blocked by 23 failures and 2 unhandled errors in tests/frontend-auth-and-schedule-ui.test.tsx; Backend and Local Supabase tests pass."
   ],
-  "nextActions": []
+  "nextActions": [
+    "Frontend Engineer removes dead team creation/browse/switch state and updates frontend-auth-and-schedule-ui.test.tsx to the single-team contract.",
+    "Frontend Engineer resolves the 15 current lint errors without changing the Backend API contract.",
+    "Rerun npm run harness:guard:standard after the Frontend-owned blockers are resolved."
+  ]
 }

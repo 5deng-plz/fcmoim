@@ -508,19 +508,6 @@ export function createSupabasePublicClubRepositories(
 ): PublicClubRepositories {
   return {
     clubs: {
-      async listPublic() {
-        const { data, error } = await selectPublicClubs(supabase);
-
-        if (error) {
-          throw new AppError('internal_error', 'Failed to fetch public clubs.', { cause: error });
-        }
-
-        const clubIds = (data ?? []).map((club) => club.id);
-        const aggregates = await fetchPublicClubAggregates(getPrivilegedClient(), clubIds);
-
-        return (data ?? []).map((club) => mapPublicClubSummary(club, aggregates));
-      },
-
       async findPublicDetail(clubId) {
         const { data, error } = await selectPublicClubById(supabase, clubId);
 
@@ -2135,25 +2122,6 @@ type PublicClubAggregates = {
   recentMatchCounts: Map<string, number>;
   upcomingMatchCounts: Map<string, number>;
 };
-
-async function selectPublicClubs(supabase: SupabaseClient) {
-  const result = await supabase
-    .from('clubs')
-    .select('id, name, slug, description, logo_url, is_public')
-    .eq('is_public', true)
-    .order('name', { ascending: true })
-    .returns<PublicClubDbRow[]>();
-
-  if (!isMissingColumnError(result.error, 'is_public')) {
-    return result;
-  }
-
-  return supabase
-    .from('clubs')
-    .select('id, name, slug, description, logo_url')
-    .order('name', { ascending: true })
-    .returns<PublicClubDbRow[]>();
-}
 
 async function selectPublicClubById(supabase: SupabaseClient, clubId: string) {
   const result = await supabase

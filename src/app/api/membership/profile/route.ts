@@ -1,4 +1,5 @@
 import { appErrorResponse } from '../../../../types/api';
+import { getServerTeamContext } from '../../../../config/server-team';
 import { createPrivilegedSupabaseClient, createSupabaseServerClient, getRequiredServerAuthContext } from '../../../../lib/supabase-server';
 import { createAccountMembershipService } from '../../../../services/account-membership';
 import { createSupabaseAccountMembershipRepositories } from '../../../../services/supabase-repositories';
@@ -19,19 +20,15 @@ export async function PATCH(request: Request) {
       ovr?: number | null;
     };
 
-    if (!body.clubId) {
-      return Response.json({ error: { code: 'bad_request', message: 'clubId is required.' } }, { status: 400 });
-    }
-
     const supabase = await createSupabaseServerClient();
     const auth = await getRequiredServerAuthContext(supabase);
     const service = createAccountMembershipService(
       createSupabaseAccountMembershipRepositories(createPrivilegedSupabaseClient()),
+      getServerTeamContext(),
     );
 
     return Response.json(await service.updateMembershipProfile({
       auth,
-      clubId: body.clubId,
       profile: {
         ...('nickname' in body ? { nickname: body.nickname } : {}),
         ...('heightCm' in body ? { heightCm: body.heightCm } : {}),

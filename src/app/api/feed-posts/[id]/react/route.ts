@@ -1,5 +1,6 @@
 import { appErrorResponse } from '../../../../../types/api';
 import { AppError } from '../../../../../types/api';
+import { getServerTeamId } from '@/config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../../../lib/supabase-server';
 import { createFeedPostService } from '../../../../../services/feed-posts';
 import { createSupabaseFeedPostRepositories } from '../../../../../services/supabase-repositories';
@@ -18,7 +19,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     return Response.json(await service.toggleReaction({
       auth,
-      clubId: readRequiredText(body.clubId, 'clubId is required.'),
+      clubId: getServerTeamId(),
       postId,
       reactionType: readRequiredText(body.reactionType, 'reactionType is required.'),
     }));

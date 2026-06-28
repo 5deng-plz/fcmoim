@@ -57,3 +57,10 @@ This file starts clean for `prototype v0.1`.
 
 - Human-read harness 기준 문서는 200줄 이하로 유지하고, 초과하면 삭제가 아니라 분리, 요약, 참조 구조로 해결합니다.
 - 트러블슈팅 완료 기준은 증상 우회가 아니라 근본 원인 확인, 클린 아키텍처 경계에 맞는 수정, 재검증 evidence입니다.
+
+### FC Guppy Single-Team Backend
+
+- FC Guppy is the only product team; users cannot create, browse, or switch teams.
+- The server-only `TeamContext` owns the canonical FC Guppy UUID and is the sole Backend data-scope authority.
+- Legacy `clubId` request fields and club-shaped response fields are compatibility adapters only and must not influence authorization or repository scope.
+- `clubs` and `club_id` remain internal persistence anchors until the dedicated schema cleanup phase.
