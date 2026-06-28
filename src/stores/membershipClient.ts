@@ -215,7 +215,7 @@ export async function fetchPublicClubs(): Promise<PublicClubSummary[]> {
   });
 
   if (!response.ok) {
-    throw new Error(await getApiErrorMessage(response, '팀 목록을 불러오지 못했습니다.'));
+    throw new Error(await getApiErrorMessage(response, '클럽 정보를 불러오지 못했습니다.'));
   }
 
   return response.json() as Promise<PublicClubSummary[]>;
@@ -228,7 +228,7 @@ export async function fetchPublicClubDetail(clubId: string): Promise<PublicClubD
   });
 
   if (!response.ok) {
-    throw new Error(await getApiErrorMessage(response, '팀 정보를 불러오지 못했습니다.'));
+    throw new Error(await getApiErrorMessage(response, '클럽 정보를 불러오지 못했습니다.'));
   }
 
   return response.json() as Promise<PublicClubDetail>;
@@ -330,7 +330,7 @@ export async function fetchClubMemberships(): Promise<ClubOption[]> {
   });
 
   if (!response.ok) {
-    throw new Error(await getApiErrorMessage(response, '소속 팀 목록을 불러오지 못했습니다.'));
+    throw new Error(await getApiErrorMessage(response, '소속 클럽 정보를 불러오지 못했습니다.'));
   }
 
   const memberships = await response.json() as ClubMembershipSummary[];

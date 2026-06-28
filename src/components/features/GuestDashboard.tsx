@@ -213,96 +213,46 @@ export default function GuestDashboard({
           </button>
         ) : null}
 
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-black text-gray-900">팀 둘러보기</h2>
-            <span className="text-[11px] font-bold text-gray-400">{clubs.length}개 팀</span>
+        <section className="space-y-4">
+          <div className="text-center py-5">
+            <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-green-50 shadow-sm">
+              <TeamEmblem teamName={clubDetail?.name || 'FC Guppy'} size={38} />
+            </div>
+            <h1 className="mt-3 text-xl font-black text-gray-900">{clubDetail?.name || 'FC Guppy'}</h1>
+            <p className="mt-1 text-xs font-medium leading-relaxed text-gray-500">
+              {clubDetail?.description || 'FC Guppy 공식 클럽에 오신 것을 환영합니다.'}
+            </p>
           </div>
 
-          {clubs.map((club) => (
-            <button
-              key={club.id}
-              type="button"
-              onClick={() => void handleSelectClub(club.id)}
-              className={`w-full rounded-2xl border bg-glass-bg/70 p-3 text-left shadow-sm backdrop-blur-xl transition-all active:scale-[0.99] ${
-                selectedClub?.id === club.id ? 'border-green-300 ring-2 ring-green-100' : 'border-glass-border'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-green-50">
-                  <TeamEmblem teamName={club.name} size={28} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-black text-gray-900">{club.name}</p>
-                  <p className="mt-0.5 line-clamp-1 text-xs font-medium text-gray-400">
-                    {club.description || '공개 소개가 준비 중입니다.'}
-                  </p>
-                </div>
-                <ChevronRight size={18} className="text-gray-300" />
+          {isLoading ? (
+            <div className="py-16 text-center text-sm font-bold text-gray-400">클럽 정보를 불러오는 중입니다</div>
+          ) : clubDetail ? (
+            <>
+              <div className="grid grid-cols-3 gap-2">
+                <Metric icon={<Users size={16} />} label="현재 멤버" value={`${clubDetail.memberCount}`} />
+                <Metric icon={<Trophy size={16} />} label="시즌 경기" value={`${clubDetail.recentMatchCount}`} />
+                <Metric icon={<CalendarDays size={16} />} label="최근 경기" value={formatRecentMatchDate(clubDetail.recentMatches[0]?.date)} />
               </div>
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => void handleOpenCreateClub()}
-            className="flex w-full items-center justify-center gap-3 rounded-2xl border border-dashed border-glass-border bg-glass-bg/60 p-4 text-center shadow-sm backdrop-blur-xl transition-all hover:border-green-500 hover:bg-glass-bg-hover active:scale-[0.99]"
-          >
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-green-600">
-              <Plus size={20} />
-            </span>
-            <span className="min-w-0 text-left">
-              <span className="block text-sm font-black text-gray-900">새로운 팀 만들기</span>
-              <span className="mt-0.5 block text-xs font-medium text-gray-400">직접 모임을 시작해요</span>
-            </span>
-          </button>
-          {!isLoading && clubs.length === 0 ? (
-            <div className="rounded-2xl border border-glass-border bg-glass-bg/70 px-4 py-10 text-center shadow-sm backdrop-blur-xl">
-              <p className="text-sm font-black text-gray-900">공개된 팀이 아직 없어요</p>
-              <p className="mt-1 text-xs font-medium text-gray-400">
-                입단신청은 공개 팀이 등록된 뒤 시작할 수 있습니다.
-              </p>
-            </div>
+
+              <div className="rounded-2xl border border-glass-border bg-glass-bg/70 p-4 shadow-sm backdrop-blur-xl">
+                <div className="mb-3 flex items-center gap-2">
+                  <Shield size={16} className="text-green-600" />
+                  <h3 className="text-sm font-black text-gray-900">최근 경기 요약</h3>
+                </div>
+                <div className="space-y-2">
+                  {clubDetail.recentMatches.slice(0, 3).map((match) => (
+                    <RecentMatchSummaryCard key={match.id} match={match} />
+                  ))}
+                  {clubDetail.recentMatches.length === 0 ? (
+                    <p className="rounded-lg bg-gray-50 px-3 py-4 text-center text-xs font-bold text-gray-400">
+                      공개 가능한 최근 경기가 아직 없어요
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            </>
           ) : null}
         </section>
-
-        {isLoading ? (
-          <div className="py-16 text-center text-sm font-bold text-gray-400">팀 정보를 불러오는 중입니다</div>
-        ) : clubDetail ? (
-          <section className="space-y-4">
-            <div className="text-center py-3">
-              <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-green-50">
-                <TeamEmblem teamName={clubDetail.name} size={38} />
-              </div>
-              <h1 className="mt-3 text-xl font-black text-gray-900">{clubDetail.name}</h1>
-              <p className="mt-1 text-xs font-medium leading-relaxed text-gray-500">
-                {clubDetail.description || '팀 소개가 준비 중입니다.'}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              <Metric icon={<Users size={16} />} label="현재 멤버" value={`${clubDetail.memberCount}`} />
-              <Metric icon={<Trophy size={16} />} label="시즌 경기" value={`${clubDetail.recentMatchCount}`} />
-              <Metric icon={<CalendarDays size={16} />} label="최근 경기" value={formatRecentMatchDate(clubDetail.recentMatches[0]?.date)} />
-            </div>
-
-            <div className="rounded-2xl border border-glass-border bg-glass-bg/70 p-4 shadow-sm backdrop-blur-xl">
-              <div className="mb-3 flex items-center gap-2">
-                <Shield size={16} className="text-green-600" />
-                <h3 className="text-sm font-black text-gray-900">최근 경기 요약</h3>
-              </div>
-              <div className="space-y-2">
-                {clubDetail.recentMatches.slice(0, 3).map((match) => (
-                  <RecentMatchSummaryCard key={match.id} match={match} />
-                ))}
-                {clubDetail.recentMatches.length === 0 ? (
-                  <p className="rounded-lg bg-gray-50 px-3 py-4 text-center text-xs font-bold text-gray-400">
-                    공개 가능한 최근 경기가 아직 없어요
-                  </p>
-                ) : null}
-              </div>
-            </div>
-          </section>
-        ) : null}
       </div>
 
       {selectedClub && selectedMembership?.status !== 'approved' ? (
@@ -315,11 +265,6 @@ export default function GuestDashboard({
           </button>
         </div>
       ) : null}
-      <ClubCreateModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onCreated={handleCreatedClub}
-      />
     </div>
   );
 }

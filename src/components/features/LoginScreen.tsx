@@ -139,7 +139,7 @@ export default function LoginScreen() {
         className="inline-flex items-center justify-center gap-1.5 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-500 shadow-sm transition-all hover:border-gray-300 hover:text-gray-700 active:scale-[0.98]"
       >
         <Eye size={16} />
-        팀 둘러보기
+        FC Guppy 둘러보기
       </button>
 
       <div className="flex items-center justify-center gap-8">

@@ -850,7 +850,7 @@ function DesktopLockerRoomPanel() {
               </label>
 
               <label className="flex items-center justify-between rounded-xl bg-white/5 border border-white/5 px-4 py-3 cursor-pointer select-none">
-                <span className="text-xs font-black text-white">클럽 둘러보기 페이지에 공개</span>
+                <span className="text-xs font-black text-white">비회원에게 클럽 프로필 공개</span>
                 <input
                   type="checkbox"
                   checked={isClubPublic}
