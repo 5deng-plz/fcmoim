@@ -7,9 +7,9 @@ export const metadata: Metadata = {
   description: "아마추어 풋살 동호회 전용 매니지먼트 PWA",
   manifest: "/manifest.json",
   icons: {
-    icon: "/icons/svgrepo-fish.svg",
-    shortcut: "/icons/svgrepo-fish.svg",
-    apple: "/icons/svgrepo-fish.svg",
+    icon: "/brand/fcmoimLogo.svg",
+    shortcut: "/brand/fcmoimLogo.svg",
+    apple: "/brand/fcmoimLogo.svg",
   },
 };
 

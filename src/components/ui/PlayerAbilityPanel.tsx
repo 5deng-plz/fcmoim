@@ -148,20 +148,20 @@ const traitIconOverrideMap: Partial<Record<string, typeof Shield>> = {
   'roaming-flank': Shuffle,
 };
 
-const COMPACT_TRAIT_CARD_CLASSES = 'flex h-[88px] w-full flex-col items-center justify-center rounded-xl border px-1 py-1.5 text-center shadow-inner';
-const COMPACT_TRAIT_ICON_CLASSES = 'mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-brand-primary/15 bg-surface-card/80 text-secondary';
+const COMPACT_TRAIT_CARD_CLASSES = 'flex h-[88px] w-full flex-col items-center justify-center rounded-2xl border px-1.5 py-2 text-center transition-all duration-200 shadow-sm backdrop-blur-md bg-black/20';
+const COMPACT_TRAIT_ICON_CLASSES = 'mb-1.5 flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-xl border border-white/5 bg-black/40 text-secondary transition-colors';
 
 function getTraitSurfaceClasses(trait: TraitCard) {
   if (trait.positionGroup === 'FW') {
-    return 'border-highlight-amber/60 bg-gradient-to-br from-highlight-amber-bg via-highlight-amber-bg to-surface-card text-primary';
+    return 'border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-transparent text-primary';
   }
   if (trait.positionGroup === 'MF') {
-    return 'border-brand-primary/45 bg-gradient-to-br from-brand-primary-bg via-brand-primary-bg to-surface-card text-primary';
+    return 'border-[#00ffa3]/20 bg-gradient-to-br from-[#00ffa3]/5 to-transparent text-primary';
   }
   if (trait.positionGroup === 'DF') {
-    return 'border-blue-team-border bg-gradient-to-br from-blue-team-bg via-blue-team-bg to-surface-card text-primary';
+    return 'border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-transparent text-primary';
   }
-  return 'border-highlight-purple/50 bg-gradient-to-br from-highlight-purple-bg via-highlight-purple-bg to-surface-card text-primary';
+  return 'border-purple-500/20 bg-gradient-to-br from-purple-500/5 to-transparent text-primary';
 }
 
 function getTraitIcon(trait: TraitCard) {
