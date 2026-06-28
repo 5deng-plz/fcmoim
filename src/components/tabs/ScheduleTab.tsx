@@ -26,6 +26,7 @@ import { useScheduleStore } from '@/stores/useScheduleStore';
 import { useAppStore } from '@/stores/useAppStore';
 import { useModalStore } from '@/stores/useModalStore';
 import { useToastStore } from '@/stores/useToastStore';
+import { useAuthStore } from '@/stores/useAuthStore';
 import PullToRefresh from '@/components/ui/PullToRefresh';
 import AttendeeList from '@/components/features/AttendeeList';
 import Badge from '@/components/ui/Badge';
@@ -53,7 +54,8 @@ export default function ScheduleTab() {
   } = useScheduleStore();
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
   const [nowMs] = useState(() => Date.now());
-  const { userRole, activeClubId, availableClubs, setSettlementNotification, setFocusedMatchId } = useAppStore();
+  const { userRole, activeClubId, setSettlementNotification, setFocusedMatchId } = useAppStore();
+  const memberProfile = useAuthStore((state) => state.memberProfile);
   const { openModal } = useModalStore();
   const { showToast } = useToastStore();
   const [matchDetail, setMatchDetail] = useState<{
@@ -83,7 +85,7 @@ export default function ScheduleTab() {
     releaseFocusSoon,
   } = useSmartFocus();
   const canManageSchedule = userRole === 'admin' || userRole === 'operator';
-  const currentMembershipId = availableClubs.find((club) => club.clubId === activeClubId)?.membershipId ?? null;
+  const currentMembershipId = memberProfile?.id ?? null;
   const scheduleMatches = calendarMatches.length > 0 ? calendarMatches : upcomingMatches;
   const visibleScheduleMatches = useMemo(
     () => collapseDuplicateMatchEvents(scheduleMatches),

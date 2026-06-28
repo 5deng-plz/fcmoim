@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Eye, Mail, MessageCircle } from 'lucide-react';
 import Image from 'next/image';
-import FcmoimLogo from '@/components/brand/FcmoimLogo';
+import TeamEmblem from '@/components/brand/TeamEmblem';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useAppStore } from '@/stores/useAppStore';
 
@@ -94,7 +94,7 @@ export default function LoginScreen() {
       {/* 로고 & 팀명 */}
       <div className="text-center space-y-2">
         <div className="mx-auto mb-2 h-20 w-20">
-          <FcmoimLogo size="100%" className="block h-full w-full" />
+          <TeamEmblem teamName="FC Guppy" size="100%" className="block h-full w-full" />
         </div>
         <h1 className="text-2xl font-black login-title-gradient tracking-tight">FC Guppy</h1>
       </div>

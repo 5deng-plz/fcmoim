@@ -4,7 +4,7 @@ import { useAppStore } from '@/stores/useAppStore';
 import UpcomingMatch from '@/components/features/UpcomingMatch';
 import SeasonStats from '@/components/features/SeasonStats';
 import RecentNotice from '@/components/features/RecentNotice';
-import FcmoimLogo from '@/components/brand/FcmoimLogo';
+import TeamEmblem from '@/components/brand/TeamEmblem';
 import { ClipboardList, Trophy, Users, TrendingUp } from 'lucide-react';
 
 // ─── 게스트 전용: 팀 소개 섹션 ───
@@ -12,10 +12,10 @@ function TeamIntro() {
   return (
     <section className="space-y-4">
       <div className="text-center py-6">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-primary-bg rounded-2xl mb-3">
-          <FcmoimLogo size={38} />
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-white/5 rounded-2xl border border-white/10 mb-3 shadow-sm">
+          <TeamEmblem teamName="FC Guppy" size={48} />
         </div>
-        <h2 className="text-xl font-extrabold text-primary mb-1">FC moim</h2>
+        <h2 className="text-xl font-extrabold text-primary mb-1">FC Guppy</h2>
         <p className="text-sm text-secondary">서울 · 매주 토요일 · 풋살 동호회</p>
       </div>
 
@@ -72,7 +72,7 @@ function TeamDescription() {
   return (
     <section className="space-y-3">
       <h3 className="text-sm font-bold text-primary flex items-center gap-1.5">
-        ⚽ FC moim은 이런 팀이에요!
+        ⚽ FC Guppy는 이런 팀이에요!
       </h3>
       <div className="bg-surface-bg rounded-xl p-5">
         <ul className="space-y-2 text-sm text-secondary">

@@ -29,6 +29,18 @@ export default function LockerRoomTab() {
   const [isLoadingSquad, setIsLoadingSquad] = useState(false);
   const squadCount = squadMembers.length;
 
+  const [prevActiveClubId, setPrevActiveClubId] = useState(activeClubId);
+  const [prevMemberProfileId, setPrevMemberProfileId] = useState(memberProfile?.id);
+
+  if (activeClubId !== prevActiveClubId || memberProfile?.id !== prevMemberProfileId) {
+    setPrevActiveClubId(activeClubId);
+    setPrevMemberProfileId(memberProfile?.id);
+    setIsLoadingSquad(Boolean(memberProfile));
+    if (!memberProfile) {
+      setSquadMembers([]);
+    }
+  }
+
   const topMatchPointRanks = useMemo(() => buildTopMatchPointRanks(squadMembers), [squadMembers]);
   const seasonRecordByMembershipId = useMemo(() => {
     if (!Array.isArray(records?.rankingRows)) return new Map();
@@ -53,7 +65,6 @@ export default function LockerRoomTab() {
     let isActive = true;
 
     if (memberProfile) {
-      setIsLoadingSquad(true);
       fetchApprovedMemberships(activeClubId)
         .then((members) => {
           if (isActive) setSquadMembers(members);
@@ -65,9 +76,6 @@ export default function LockerRoomTab() {
         .finally(() => {
           if (isActive) setIsLoadingSquad(false);
         });
-    } else {
-      setSquadMembers([]);
-      setIsLoadingSquad(false);
     }
 
     return () => {

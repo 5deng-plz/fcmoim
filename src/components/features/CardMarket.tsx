@@ -75,8 +75,8 @@ const traitIconOverrideMap: Partial<Record<string, LucideIcon>> = {
   'roaming-flank': Shuffle,
 };
 
-const COMPACT_TRAIT_CARD_CLASSES = 'flex h-[76px] w-[86px] shrink-0 snap-start flex-col items-center justify-center rounded-xl border px-1 py-1.5 text-center shadow-inner';
-const COMPACT_TRAIT_ICON_CLASSES = 'mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-brand-primary/15 bg-surface-card/80 text-secondary';
+const COMPACT_TRAIT_CARD_CLASSES = 'flex h-[82px] w-[88px] shrink-0 snap-start flex-col items-center justify-center rounded-2xl border px-1 py-2 text-center';
+const COMPACT_TRAIT_ICON_CLASSES = 'mb-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gray-300 transition-colors group-hover:text-white';
 const DEFAULT_SELECTED_TRAIT_ID = 'dummy-runner';
 const DEFAULT_FUTSAL_TRAIT = TRAIT_CATALOG.find((trait) => trait.id === DEFAULT_SELECTED_TRAIT_ID) ?? TRAIT_CATALOG.find((trait) => trait.positionGroup !== 'GK')!;
 
@@ -84,17 +84,35 @@ function isFutsalTrait(trait: TraitCard) {
   return trait.positionGroup !== 'GK';
 }
 
-function getTraitSurfaceClasses(trait: TraitCard) {
+function getTraitSurfaceClasses(trait: TraitCard, isSelected: boolean) {
+  const base = 'bg-[#12131e]/90 backdrop-blur-md text-white transition-all duration-300 border';
+  
   if (trait.positionGroup === 'FW') {
-    return 'border-highlight-amber/60 bg-gradient-to-br from-highlight-amber-bg via-highlight-amber-bg to-surface-card text-primary';
+    return `${base} ${
+      isSelected 
+        ? 'border-[#00ffa3] shadow-[0_0_12px_rgba(0,255,163,0.22)] bg-[#00ffa3]/5' 
+        : 'border-white/10 hover:border-[#00ffa3]/30'
+    }`;
   }
   if (trait.positionGroup === 'MF') {
-    return 'border-brand-primary/45 bg-gradient-to-br from-brand-primary-bg via-brand-primary-bg to-surface-card text-primary';
+    return `${base} ${
+      isSelected 
+        ? 'border-[#a855f7] shadow-[0_0_12px_rgba(168,85,247,0.22)] bg-[#a855f7]/5' 
+        : 'border-white/10 hover:border-[#a855f7]/30'
+    }`;
   }
   if (trait.positionGroup === 'DF') {
-    return 'border-blue-team-border bg-gradient-to-br from-blue-team-bg via-blue-team-bg to-surface-card text-primary';
+    return `${base} ${
+      isSelected 
+        ? 'border-[#3b82f6] shadow-[0_0_12px_rgba(59,130,246,0.22)] bg-[#3b82f6]/5' 
+        : 'border-white/10 hover:border-[#3b82f6]/30'
+    }`;
   }
-  return 'border-highlight-purple/50 bg-gradient-to-br from-highlight-purple-bg via-highlight-purple-bg to-surface-card text-primary';
+  return `${base} ${
+    isSelected 
+      ? 'border-gray-400 shadow-[0_0_12px_rgba(156,163,175,0.22)] bg-white/5' 
+      : 'border-white/10 hover:border-gray-500/30'
+  }`;
 }
 
 function getTraitIcon(trait: TraitCard) {
@@ -153,7 +171,7 @@ export default function CardMarket() {
         <TraitPreviewCard trait={previewTrait} />
 
         <div
-          className="mt-3 flex gap-2 snap-x snap-mandatory pb-1"
+          className="mt-3 flex gap-2 snap-x snap-mandatory pb-1 no-scrollbar"
           style={{ overflowX: 'auto' }}
           data-testid="locker-shop-carousel"
         >
@@ -176,17 +194,19 @@ export default function CardMarket() {
 
 function TraitPreviewCard({ trait }: { trait: TraitCard }) {
   return (
-    <div className={`${getTraitSurfaceClasses(trait)} rounded-xl border px-3 py-2.5 shadow-sm`} data-testid="locker-shop-preview">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-primary/15 bg-surface-card/80 text-secondary" data-testid={`locker-shop-preview-icon-${trait.id}`}>
+    <div className={`${getTraitSurfaceClasses(trait, true)} rounded-xl border px-3 py-2.5 shadow-sm relative overflow-hidden`} data-testid="locker-shop-preview">
+      <div className="flex items-center gap-3 relative z-10">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white" data-testid={`locker-shop-preview-icon-${trait.id}`}>
           {renderTraitIcon(trait, 22)}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-base font-black leading-tight text-primary">{trait.name}</p>
-          <p className="mt-1 truncate text-[11px] font-bold text-secondary">{trait.category}</p>
+          <p className="truncate text-base font-black leading-tight text-white">{trait.name}</p>
+          <span className="mt-0.5 inline-block text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/10 text-gray-300">
+            {trait.category}
+          </span>
         </div>
       </div>
-      <p className="mt-2 line-clamp-1 text-[11px] font-bold leading-relaxed text-secondary">{trait.description}</p>
+      <p className="mt-2.5 text-[11px] font-bold leading-relaxed text-gray-300 relative z-10">{trait.description}</p>
     </div>
   );
 }
@@ -196,13 +216,11 @@ function TraitShopCard({ trait, isSelected, onClick }: { trait: TraitCard; isSel
     <button
       type="button"
       onClick={onClick}
-      className={`${COMPACT_TRAIT_CARD_CLASSES} ${getTraitSurfaceClasses(trait)} transition-all active:scale-[0.98] ${
-        isSelected ? 'border-result-loss ring-2 ring-result-loss/30' : 'hover:border-result-loss/40'
-      }`}
+      className={`${COMPACT_TRAIT_CARD_CLASSES} ${getTraitSurfaceClasses(trait, isSelected)} transition-all active:scale-[0.98] group`}
       aria-pressed={isSelected}
       data-testid="locker-shop-trait-card"
     >
-      <span className={COMPACT_TRAIT_ICON_CLASSES} data-testid={`locker-shop-trait-icon-${trait.id}`}>
+      <span className={`${COMPACT_TRAIT_ICON_CLASSES} ${isSelected ? 'text-[#00ffa3] border-[#00ffa3]/25 bg-[#00ffa3]/5' : ''}`} data-testid={`locker-shop-trait-icon-${trait.id}`}>
         {renderTraitIcon(trait, 18)}
       </span>
       <span className="w-full truncate text-[10px] font-black leading-tight opacity-90">

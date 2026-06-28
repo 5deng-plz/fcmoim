@@ -239,7 +239,7 @@ function AppShell() {
             setTeamBrowseJoinStatus(status);
             setShowJoinForm(true);
           }}
-          onCreatedClub={async (clubId) => {
+          onCreatedClub={async (clubId: string) => {
             await switchClub(clubId);
             setShowTeamBrowse(false);
             setActiveTab('home');

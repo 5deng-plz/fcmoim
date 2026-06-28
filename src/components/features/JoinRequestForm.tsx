@@ -5,6 +5,7 @@ import type { FocusEvent, ReactNode } from 'react';
 import Image from 'next/image';
 import { ArrowLeft, Camera, Clock, LoaderCircle, Send } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
+import { appConfig } from '@/config/app.config';
 import { useToastStore } from '@/stores/useToastStore';
 import { buildJoinProfileRequest, submitJoinRequest, withdrawMembership, fetchMembershipSnapshot, fetchClubMemberships, type ApiMembership } from '@/stores/membershipClient';
 import type { Position, UserStats } from '@/types';
@@ -35,14 +36,13 @@ export default function JoinRequestForm({
   const maxStatsSum = 360 + ownedStatPoints;
   const {
     isAuthenticated,
-    selectedJoinClubId,
     clearJoinIntent,
     setAuthView,
     userStatus,
     setUserStatus,
     setShowJoinForm,
-    setAvailableClubs,
   } = useAppStore();
+  const selectedJoinClubId = appConfig.defaultClubId;
   const { showToast } = useToastStore();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -257,10 +257,6 @@ export default function JoinRequestForm({
       setIsSubmitting(true);
       const result = await submitJoinRequest(profile, selectedJoinClubId);
       setMembershipData(result);
-      const memberships = await fetchClubMemberships().catch(() => null);
-      if (memberships) {
-        setAvailableClubs(memberships);
-      }
       if (isSecondary) {
         onSecondaryClose?.();
       } else {
@@ -295,10 +291,6 @@ export default function JoinRequestForm({
         membershipId,
       });
       setMembershipData(null);
-      const memberships = await fetchClubMemberships().catch(() => null);
-      if (memberships) {
-        setAvailableClubs(memberships);
-      }
       if (isSecondary) {
         onSecondaryClose?.();
       } else {

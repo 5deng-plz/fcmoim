@@ -3,7 +3,6 @@
 import { create } from 'zustand';
 import { appConfig } from '@/config/app.config';
 import type { UserRole, UserStatus, Tab, AttendanceStatus } from '@/types';
-import type { MembershipStatus } from '@/types/domain';
 
 export interface ClubOption {
   membershipId: string;
@@ -11,7 +10,7 @@ export interface ClubOption {
   clubName: string;
   logoUrl?: string | null;
   role: UserRole;
-  status?: MembershipStatus;
+  status?: UserStatus;
 }
 
 export type SettlementNotification = {
@@ -19,7 +18,6 @@ export type SettlementNotification = {
   title: string;
 };
 
-const SELECTED_JOIN_CLUB_KEY = 'fcmoim.selectedJoinClubId';
 const JOIN_INTENT_KEY = 'fcmoim.joinIntent';
 
 export type JoinIntent = {
@@ -72,24 +70,24 @@ interface AppState {
   setAttendStatus: (status: AttendanceStatus) => void;
 
   // ─── 팀 정보 ───
-  // activeClubId drives the approved-member app shell; selectedJoinClubId/joinIntent
-  // drive browse-and-apply flows before a user is approved for that team.
   activeClubId: string;
   setActiveClubId: (clubId: string) => void;
-  selectedJoinClubId: string;
-  setSelectedJoinClubId: (clubId: string) => void;
   teamName: string;
   setTeamName: (name: string) => void;
   teamLogoUrl: string | null;
   setTeamLogoUrl: (logoUrl: string | null) => void;
-  availableClubs: ClubOption[];
-  setAvailableClubs: (clubs: ClubOption[]) => void;
   
   // ─── 데스크탑 전술 분석 & 커뮤니티 ───
   focusedMatchId: string | null;
   setFocusedMatchId: (id: string | null) => void;
   focusedPostId: string | null;
   setFocusedPostId: (id: string | null) => void;
+
+  // ─── 하위 호환용 더미 상태 (타입 컴파일 및 테스트 호환용) ───
+  availableClubs: ClubOption[];
+  selectedJoinClubId: string | null;
+  setSelectedJoinClubId: (id: string | null) => void;
+  setAvailableClubs: (clubs: ClubOption[]) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -159,40 +157,23 @@ export const useAppStore = create<AppState>((set) => ({
   // ─── 팀 정보 ───
   activeClubId: appConfig.defaultClubId,
   setActiveClubId: (clubId) => set({ activeClubId: clubId }),
-  selectedJoinClubId: readSelectedJoinClubId(),
-  setSelectedJoinClubId: (clubId) => {
-    persistSelectedJoinClubId(clubId);
-    set({ selectedJoinClubId: clubId });
-  },
   teamName: 'FC moim',
   setTeamName: (name) => set({ teamName: name }),
   teamLogoUrl: null,
   setTeamLogoUrl: (logoUrl) => set({ teamLogoUrl: logoUrl }),
-  availableClubs: [],
-  setAvailableClubs: (clubs) => set({ availableClubs: clubs }),
 
   // ─── 데스크탑 전술 분석 & 커뮤니티 ───
   focusedMatchId: null,
   setFocusedMatchId: (id) => set({ focusedMatchId: id }),
   focusedPostId: null,
   setFocusedPostId: (id) => set({ focusedPostId: id }),
+
+  // ─── 하위 호환용 더미 상태 (타입 컴파일 및 테스트 호환용) ───
+  availableClubs: [],
+  selectedJoinClubId: null,
+  setSelectedJoinClubId: (id) => set({ selectedJoinClubId: id }),
+  setAvailableClubs: (clubs) => set({ availableClubs: clubs }),
 }));
-
-function readSelectedJoinClubId() {
-  if (typeof window === 'undefined') {
-    return appConfig.defaultClubId;
-  }
-
-  return window.sessionStorage.getItem(SELECTED_JOIN_CLUB_KEY) || appConfig.defaultClubId;
-}
-
-function persistSelectedJoinClubId(clubId: string) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  window.sessionStorage.setItem(SELECTED_JOIN_CLUB_KEY, clubId);
-}
 
 function readJoinIntent(): JoinIntent | null {
   if (typeof window === 'undefined') {

@@ -41,56 +41,20 @@ function GuppyEmblem({ size, className, ...props }: Omit<TeamEmblemProps, 'teamN
       className={className}
       {...props}
     >
-      <defs>
-        <linearGradient id="fish-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#00ffa3" />
-          <stop offset="100%" stopColor="#005f3e" />
-        </linearGradient>
-        <linearGradient id="fish-ring" x1="0%" y1="100%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#1e293b" />
-          <stop offset="100%" stopColor="#00ffa3" />
-        </linearGradient>
-      </defs>
-
-      {/* Outer Futuristic Ring */}
-      <circle cx="64" cy="64" r="58" stroke="url(#fish-ring)" strokeWidth="3" fill="#141624" />
-      <circle cx="64" cy="64" r="52" stroke="#1e293b" strokeWidth="1" strokeDasharray="4 4" fill="none" />
-      
-      {/* Cybernetic Fish (Guppy) Path */}
-      {/* Body Curve */}
-      <path 
-        d="M 22 64 C 40 40 85 45 106 64 C 85 83 40 88 22 64 Z" 
-        fill="url(#fish-grad)" 
-      />
-      
-      {/* Tail Fin (Glow/Geometric) */}
-      <path 
-        d="M 22 64 L 6 45 C 12 55 12 73 6 83 Z" 
-        fill="#ffffff" 
-        opacity="0.85"
-      />
-      <path 
-        d="M 22 64 L 10 52 C 14 60 14 68 10 76 Z" 
-        fill="#00ffa3" 
-      />
-
-      {/* Cybernetic Scales / Neon Ribs (Lines) */}
-      <path 
-        d="M 42 53 L 38 75 M 54 50 L 50 78 M 66 50 L 62 78 M 78 52 L 74 76" 
-        stroke="#090a10" 
-        strokeWidth="2.5" 
-        strokeLinecap="round" 
-        opacity="0.6" 
-      />
-      
-      {/* Fish Eye (Neon Glow Point) */}
-      <circle cx="92" cy="60" r="4.5" fill="#ffffff" />
-      <circle cx="92" cy="60" r="2.5" fill="#090a10" />
-      <circle cx="95" cy="58" r="1.5" fill="#00ffa3" />
-
-      {/* Text label decoration inside the emblem */}
-      <path d="M 38 98 Q 64 106 90 98" stroke="#00ffa3" strokeWidth="1.5" fill="none" opacity="0.4" />
-      <text x="64" y="112" fill="#cbd5e1" fontSize="9" fontWeight="900" textAnchor="middle" letterSpacing="2">GUPPY</text>
+      <linearGradient id="IconifyId17ecdb2904d178eab8769" gradientUnits="userSpaceOnUse" x1="55.273" y1="43.106" x2="55.273" y2="106.9">
+        <stop offset=".079" stopColor="#1483bc" />
+        <stop offset=".189" stopColor="#1f8cc2" />
+        <stop offset=".381" stopColor="#3ca4d3" />
+        <stop offset=".585" stopColor="#62c2e8" />
+        <stop offset=".962" stopColor="#99d6ef" />
+      </linearGradient>
+      <path d="M102.92 75.96l-4.08-6.12L82.1 49.39s-15.07-6.58-25.28-6.23c-7.04.24-20.67-2.22-35.63 10.1c-11.21 9.23-13.56 19.9-13.56 19.9l11.09 6.16l-8.45 5.63s9.72 17.82 36.62 21.3c31.89 4.13 43.57-12.49 50.68-21.78c.74-.97 5.35-8.51 5.35-8.51z" fill="url(#IconifyId17ecdb2904d178eab8769)" />
+      <path d="M57.66 27.63c-.84.47-6.55 5.19-9.22 8.56c-2.36 2.98-4.86 7.32-4.86 7.32s12.67-.4 21.87 2.7s19.58 9.88 27.59 19.33c6.15 7.25 7.77 10.14 7.84 11.47c.07 1.34-5.07 7.81-10.65 13.4c-3.57 3.57-7.09 6.95-16.38 12.29c-4.37 2.51-7.81 3.38-7.81 3.38s10.16 1.77 15.13 1.83c5.54.07 8.78-.33 9.15-1.64c.38-1.31-5.82-6.01-5.82-6.01s6.62-5.35 11.31-10.86c1.86-2.19 6.71-8.38 6.71-8.38s5.18 5.39 8.14 7.88c3.1 2.6 10.42 8.17 11.57 7.7c1.32-.54-1.5-8.92-3.38-12.29c-1.88-3.38-6.76-7.98-6.76-7.98s6.17-4.74 8.42-10.09s3.97-12.34 2.56-13c-1.41-.66-10.68 8.87-12.55 10.75c-1.88 1.88-7.02 8.09-7.02 8.09s-4.36-4.58-5.39-5.8c-1.03-1.22-4.32-5.35-4.32-5.35s-7.03-14.3-19.62-24.31c-8.72-6.93-16.51-8.99-16.51-8.99z" fill="#1b65a6" />
+      <path d="M48.93 77.79c0 1.69-.77 7.34 4.22 11.05c5.81 4.31 14.55 5.04 17.83 4.86c5.04-.28 7.23-1.6 7.23-1.6s-5.16-6.48-14.27-10.89s-15.01-3.42-15.01-3.42z" fill="#1b65a6" />
+      <path d="M5.29 72.79c-.86 1.66.28 2.42 3.1 3.73c2.82 1.31 7.13 2.91 7.13 2.91s-2.72 1.13-4.13 2.06c-1.41.94-3.95 1.89-3.28 3.57c.49 1.24 1.69 1.13 3.94-.09s7.23-4.32 7.32-5.54s-3.21-3.24-5.77-4.6c-3.1-1.64-7.33-3.94-8.31-2.04z" fill="#1b65a6" />
+      <path d="M35.6 69.01c0 1.94-1.23 3.59-3.66 3.75c-2.82.19-3.94-1.86-3.94-3.8s1.83-3.47 3.61-3.64c2.33-.2 3.99 1.75 3.99 3.69z" fill="#262d33" />
+      <path d="M46.3 70.89c-.95.13-1.31 1.31-1.22 3.19c.09 1.88.56 3.38.28 4.41c-.28 1.03-4.22 6.48-4.97 7.51c-.75 1.03-1.69 2.53-.66 3.38s2.35-.28 3.1-1.03s5.82-7.41 6.01-8.92c.19-1.5-.47-5.16-.56-5.91c-.1-.75-.57-2.82-1.98-2.63z" fill="#e0ecf3" />
+      <path d="M51.18 70.89c-.09 1.6 1.78 1.69 3.94 1.69c1.97 0 13.38.52 19.57.84c6.62.35 15.58 1.95 19.54 2.63c2.35.4 4.6.94 4.6-.66c0-1.52-2.46-1.76-4.88-2.25c-2.04-.42-8.56-2.18-19.19-2.84c-7.97-.49-18.7-.82-19.92-.73c-1.22.1-3.57-.2-3.66 1.32z" fill="#e0ecf3" />
     </svg>
   );
 }

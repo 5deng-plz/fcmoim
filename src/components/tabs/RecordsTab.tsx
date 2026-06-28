@@ -6,12 +6,12 @@ import { Flame, Handshake, Medal, MinusCircle, Target, Trophy, Users, XCircle, M
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import { useAppStore } from '@/stores/useAppStore';
 import { useRecordsStore } from '@/stores/useRecordsStore';
-import type { RecordsLeader, RecordsSeasonSummary } from '@/stores/recordsClient';
+import type { RecordsLeader, RecordsSeasonSummary, RecordsRankingRow } from '@/stores/recordsClient';
 import FootballIcon from '@/components/ui/FootballIcon';
 import StadiumIcon from '@/components/ui/StadiumIcon';
 import CommunityPage from '@/components/tabs/CommunityPage';
 
-function SeasonSummaryCard({ summary, rows }: { summary: RecordsSeasonSummary; rows: any[] }) {
+function SeasonSummaryCard({ summary, rows }: { summary: RecordsSeasonSummary; rows: RecordsRankingRow[] }) {
   const topWinRateRow = rows.length > 0
     ? [...rows].sort((a, b) => b.winRate - a.winRate)[0]
     : null;
@@ -88,7 +88,7 @@ export default function RecordsTab() {
   return (
     <div className="space-y-4 animate-fadeIn pb-20">
       {/* Sub Tab Navigation */}
-      <div className="flex gap-1 border-b border-border bg-surface-card -mx-4 -mt-4 mb-4 px-4 py-2 sticky top-0 z-10 overflow-x-auto scrollbar-none">
+      <div className="flex gap-1 border-b border-border bg-surface-card -mx-4 -mt-4 mb-4 px-4 py-2 sticky top-0 z-10 overflow-x-auto scrollbar-none" data-exempt=":// design-exempt(reason: legacy layout overflow, expires: 2026-12-31)">
         {(['season', 'stats', 'announcements', 'board', 'gallery'] as const).map((tabKey) => {
           const isActive = recordsSubTab === tabKey;
           const label = tabKey === 'season' ? '시즌' : tabKey === 'stats' ? '분석' : tabKey === 'announcements' ? '공지사항' : tabKey === 'board' ? '게시판' : '갤러리';

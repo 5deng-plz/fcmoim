@@ -574,6 +574,7 @@ function FeedGallery({
   setCommentsPostId: (postId: string | null) => void;
   clubId: string;
 }) {
+  const { setFocusedPostId } = useAppStore();
   return (
     <section className="space-y-3">
       <FeedHeader title="갤러리" icon={<ImageIcon size={18} />} onCompose={onCompose} />
@@ -595,7 +596,6 @@ function FeedGallery({
       {status === 'ready' && posts.length === 0 ? <FeedStatus label="아직 미디어 피드가 없어요" /> : null}
       <div className="grid grid-cols-2 gap-2">
         {posts.map((post) => {
-          const { setFocusedPostId } = useAppStore();
           return (
             <div 
               key={post.id} 

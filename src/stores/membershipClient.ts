@@ -209,7 +209,7 @@ export function buildJoinProfileRequest(formData: JoinFormValues, stats?: UserSt
 }
 
 export async function fetchPublicClubs(): Promise<PublicClubSummary[]> {
-  const response = await fetch('/api/public/clubs', {
+  const response = await fetch('/api/team', {
     method: 'GET',
     headers: { Accept: 'application/json' },
   });
@@ -218,11 +218,12 @@ export async function fetchPublicClubs(): Promise<PublicClubSummary[]> {
     throw new Error(await getApiErrorMessage(response, '클럽 정보를 불러오지 못했습니다.'));
   }
 
-  return response.json() as Promise<PublicClubSummary[]>;
+  const detail = await response.json() as PublicClubSummary;
+  return [detail];
 }
 
 export async function fetchPublicClubDetail(clubId: string): Promise<PublicClubDetail> {
-  const response = await fetch(`/api/public/clubs/${encodeURIComponent(clubId)}`, {
+  const response = await fetch('/api/team', {
     method: 'GET',
     headers: { Accept: 'application/json' },
   });
@@ -234,51 +235,8 @@ export async function fetchPublicClubDetail(clubId: string): Promise<PublicClubD
   return response.json() as Promise<PublicClubDetail>;
 }
 
-export async function checkClubSlug(slug: string) {
-  const response = await fetch(`/api/clubs/check-slug?slug=${encodeURIComponent(slug)}`, {
-    method: 'GET',
-    headers: { Accept: 'application/json' },
-  });
-
-  if (!response.ok) {
-    throw new Error(await getApiErrorMessage(response, '팀 주소를 확인하지 못했습니다.'));
-  }
-
-  return response.json() as Promise<{ exists: boolean }>;
-}
-
-export async function fetchClubCreationEligibility() {
-  const response = await fetch('/api/clubs', {
-    method: 'GET',
-    headers: { Accept: 'application/json' },
-  });
-
-  if (!response.ok) {
-    throw new Error(await getApiErrorMessage(response, '팀 생성 가능 여부를 확인하지 못했습니다.'));
-  }
-
-  return response.json() as Promise<{ ownedClubCount: number; canCreate: boolean }>;
-}
-
-export async function createClub(input: ClubCreateRequest) {
-  const response = await fetch('/api/clubs', {
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(input),
-  });
-
-  if (!response.ok) {
-    throw new Error(await getApiErrorMessage(response, '팀을 생성하지 못했습니다.'));
-  }
-
-  return response.json() as Promise<ClubCreateResponse>;
-}
-
 export async function fetchMembershipSnapshot(clubId = appConfig.defaultClubId): Promise<MembershipSnapshot> {
-  const response = await fetch(`/api/membership?clubId=${encodeURIComponent(clubId)}`, {
+  const response = await fetch('/api/membership/current', {
     method: 'GET',
     headers: { Accept: 'application/json' },
   });
@@ -324,7 +282,7 @@ export async function submitJoinRequest(profile: JoinProfileRequest, clubId = ap
 }
 
 export async function fetchClubMemberships(): Promise<ClubOption[]> {
-  const response = await fetch('/api/membership/clubs', {
+  const response = await fetch('/api/membership/current', {
     method: 'GET',
     headers: { Accept: 'application/json' },
   });
@@ -333,24 +291,22 @@ export async function fetchClubMemberships(): Promise<ClubOption[]> {
     throw new Error(await getApiErrorMessage(response, '소속 클럽 정보를 불러오지 못했습니다.'));
   }
 
-  const memberships = await response.json() as ClubMembershipSummary[];
-  return memberships
-    .map((membership) => ({
-      membershipId: membership.membershipId,
-      clubId: membership.clubId,
-      clubName: membership.clubName,
-      logoUrl: membership.logoUrl ?? null,
-      role: membership.role,
-      status: membership.status,
-    }))
-    .sort((left, right) => {
-      const leftIsApproved = left.status === 'approved';
-      const rightIsApproved = right.status === 'approved';
-      if (leftIsApproved !== rightIsApproved) return leftIsApproved ? -1 : 1;
-      if (left.clubId === appConfig.defaultClubId) return -1;
-      if (right.clubId === appConfig.defaultClubId) return 1;
-      return left.clubName.localeCompare(right.clubName, 'ko');
-    });
+  const snapshot = await response.json() as MembershipSnapshot;
+  if (snapshot.membershipState === 'new' || !snapshot.membership) {
+    return [];
+  }
+
+  const m = snapshot.membership;
+  return [
+    {
+      membershipId: m.id,
+      clubId: m.clubId,
+      clubName: 'FC Guppy',
+      logoUrl: null,
+      role: m.role,
+      status: m.status,
+    }
+  ];
 }
 
 export async function patchMembershipPhoto(input: { clubId: string; photoUrl: string | null }) {

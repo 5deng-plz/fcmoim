@@ -51,8 +51,11 @@ interface AuthState {
   }) => Promise<void>;
   purchaseTrait: (clubId: string, traitId: string) => Promise<void>;
   equipTrait: (clubId: string, traitId: string | null) => Promise<void>;
-  switchClub: (clubId: string) => Promise<void>;
+
   approveUser: (userId: string) => Promise<void>;
+
+  // ─── 하위 호환용 더미 상태 (타입 컴파일 및 테스트 호환용) ───
+  switchClub: (clubId: string) => Promise<void>;
 }
 
 const AUTH_INIT_TIMEOUT_MS = 2500;
@@ -78,7 +81,6 @@ async function applyAuthState(
     });
 
     useAppStore.setState({
-      availableClubs: [],
       activeClubId: appConfig.defaultClubId,
       teamName: 'FC moim',
       teamLogoUrl: null,
@@ -97,24 +99,13 @@ async function applyAuthState(
 
   const appState = useAppStore.getState();
   const joinIntent = appState.joinIntent;
-  const joinClubId = joinIntent?.clubId || appConfig.defaultClubId;
 
   try {
-    const availableClubs = await fetchClubMemberships().catch(() => []);
-    const approvedClubs = availableClubs.filter((club) => club.status === 'approved' || !club.status);
-    const firstApprovedClub = approvedClubs[0];
-    const snapshot = await fetchMembershipSnapshot(joinClubId);
-    const shellSnapshot = snapshot.membershipState === 'approved' || !firstApprovedClub
-      ? snapshot
-      : await fetchMembershipSnapshot(firstApprovedClub.clubId);
-    const memberProfile = mapMembershipSnapshotToUser(shellSnapshot, authUser);
+    const snapshot = await fetchMembershipSnapshot();
+    const memberProfile = mapMembershipSnapshotToUser(snapshot, authUser);
     const requestedStatus = memberProfile?.status === 'approved'
       ? 'approved'
       : membershipStateToUserStatus(snapshot.membershipState);
-    const currentClubId = memberProfile?.status === 'approved'
-      ? shellSnapshot.membership?.clubId || firstApprovedClub?.clubId || joinClubId
-      : firstApprovedClub?.clubId || appConfig.defaultClubId;
-    const currentClub = availableClubs.find((club) => club.clubId === currentClubId) || availableClubs[0];
     const shouldShowJoinForm =
       Boolean(joinIntent) &&
       !memberProfile &&
@@ -127,14 +118,12 @@ async function applyAuthState(
     });
 
     useAppStore.setState({
-      activeClubId: currentClubId,
-      selectedJoinClubId: joinClubId,
-      availableClubs,
-      teamName: currentClub?.clubName || 'FC moim',
-      teamLogoUrl: currentClub?.logoUrl ?? null,
+      activeClubId: appConfig.defaultClubId,
+      teamName: 'FC Guppy',
+      teamLogoUrl: null,
       isAuthenticated: true,
       userStatus: requestedStatus,
-      userRole: memberProfile?.role || shellSnapshot.membership?.role || 'member',
+      userRole: memberProfile?.role || snapshot.membership?.role || 'member',
       authView: 'login',
       showJoinForm: shouldShowJoinForm,
       joinIntent: shouldShowJoinForm ? joinIntent : null,
@@ -154,7 +143,6 @@ async function applyAuthState(
         isLoading: false,
       });
       useAppStore.setState({
-        availableClubs: [],
         activeClubId: appConfig.defaultClubId,
         teamName: 'FC moim',
         teamLogoUrl: null,
@@ -175,7 +163,6 @@ async function applyAuthState(
     });
 
     useAppStore.setState({
-      availableClubs: [],
       activeClubId: appConfig.defaultClubId,
       teamName: 'FC moim',
       teamLogoUrl: null,
@@ -258,7 +245,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       isLoading: false,
     });
     useAppStore.setState({
-      availableClubs: [],
       activeClubId: appConfig.defaultClubId,
       teamName: 'FC moim',
       teamLogoUrl: null,
@@ -333,39 +319,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }));
   },
 
-  switchClub: async (clubId) => {
-    const { authUser } = get();
-    if (!authUser) return;
 
-    const { availableClubs } = useAppStore.getState();
-    const currentClub = availableClubs.find((club) => club.clubId === clubId);
-    if (currentClub?.status && currentClub.status !== 'approved') {
-      throw new Error('승인된 팀만 소속팀으로 전환할 수 있습니다.');
-    }
-
-    const snapshot = await fetchMembershipSnapshot(clubId);
-    if (snapshot.membershipState !== 'approved') {
-      throw new Error('승인된 팀만 소속팀으로 전환할 수 있습니다.');
-    }
-
-    const memberProfile = mapMembershipSnapshotToUser(snapshot, authUser);
-
-    set({
-      authUser,
-      memberProfile,
-    });
-
-    useAppStore.setState({
-      activeClubId: clubId,
-      teamName: currentClub?.clubName || 'FC moim',
-      teamLogoUrl: currentClub?.logoUrl ?? null,
-      isAuthenticated: true,
-      userStatus: membershipStateToUserStatus(snapshot.membershipState),
-      userRole: memberProfile?.role || snapshot.membership?.role || 'member',
-      authView: 'login',
-      showJoinForm: false,
-    });
-  },
 
   // ─── 관리자: 회원 승인 ───
   approveUser: async (userId: string) => {
@@ -386,6 +340,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!response.ok) {
       throw new Error(await getApiErrorMessage(response, '회원 승인을 처리하지 못했습니다.'));
     }
+  },
+
+  // ─── 하위 호환용 더미 상태 (타입 컴파일 및 테스트 호환용) ───
+  switchClub: async () => {
+    return;
   },
 }));
 

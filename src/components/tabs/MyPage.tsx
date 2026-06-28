@@ -1,41 +1,17 @@
 'use client';
 
-import { useMemo } from 'react';
-import { ChevronDown, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { useScheduleStore } from '@/stores/useScheduleStore';
-import { useToastStore } from '@/stores/useToastStore';
 import LockerProfile from '@/components/features/LockerProfile';
 import CardMarket from '@/components/features/CardMarket';
 
 export default function MyPage() {
   const {
     setShowMyPage,
-    setShowTeamBrowse,
     teamName,
-    activeClubId,
-    availableClubs,
   } = useAppStore();
-  const { signOut, switchClub } = useAuthStore();
-  const loadActivePolls = useScheduleStore((state) => state.loadActivePolls);
-  const { showToast } = useToastStore();
-  const approvedClubs = useMemo(
-    () => availableClubs.filter((club) => club.status === 'approved' || !club.status),
-    [availableClubs],
-  );
-
-  const handleClubChange = async (clubId: string) => {
-    try {
-      await switchClub(clubId);
-      await loadActivePolls(clubId).catch(() => {
-        // Header/team context should still update even if the poll refresh fails.
-      });
-    } catch (error) {
-      console.error('[FC Moim] Club switch failed:', error);
-      showToast('소속 팀을 바꾸지 못했어요.');
-    }
-  };
+  const { signOut } = useAuthStore();
 
   return (
     <div className="flex min-h-full flex-col animate-fadeIn pb-2">
