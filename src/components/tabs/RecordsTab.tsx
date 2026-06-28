@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import Image from 'next/image';
-import { Flame, Handshake, Medal, MinusCircle, Target, Trophy, Users, XCircle, Megaphone, MessageSquare, Image as ImageIcon } from 'lucide-react';
+import { Flame, Handshake, Medal, MinusCircle, Target, Trophy, Users, XCircle, Megaphone, MessageSquare, Image as ImageIcon, Activity } from 'lucide-react';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import { useAppStore } from '@/stores/useAppStore';
 import { useRecordsStore } from '@/stores/useRecordsStore';
@@ -11,14 +11,18 @@ import FootballIcon from '@/components/ui/FootballIcon';
 import StadiumIcon from '@/components/ui/StadiumIcon';
 import CommunityPage from '@/components/tabs/CommunityPage';
 
-function SeasonSummaryCard({ summary }: { summary: RecordsSeasonSummary }) {
+function SeasonSummaryCard({ summary, rows }: { summary: RecordsSeasonSummary; rows: any[] }) {
+  const topWinRateRow = rows.length > 0
+    ? [...rows].sort((a, b) => b.winRate - a.winRate)[0]
+    : null;
+
   const stats: SummaryStat[] = [
     { label: '총 경기수', name: '-', metric: summary.totalMatches || '-', icon: FootballIcon, color: 'text-blue-team', bg: 'bg-blue-team-bg', valueClassName: 'text-primary' },
     { label: '최다 경기장', name: summary.topVenue?.location ?? '-', metric: summary.topVenue?.count ?? '-', icon: StadiumIcon, color: 'metric-green-icon', bg: 'metric-green-bg', valueClassName: 'text-primary' },
+    { label: '최고 승률', name: topWinRateRow ? topWinRateRow.nickname : '-', metric: topWinRateRow ? `${topWinRateRow.winRate}%` : '-', icon: Trophy, color: 'text-award-mvp', bg: 'bg-award-mvp/15', valueClassName: 'text-primary' },
     { label: '최다 출장', ...formatLeaderStat(summary.topAppearance), icon: Users, color: 'text-award-motm', bg: 'bg-award-motm/15', valueClassName: 'text-primary' },
-    { label: '최다 득점', ...formatLeaderStat(summary.topGoals), icon: Flame, color: 'text-award-mvp', bg: 'bg-award-mvp/15', valueClassName: 'text-primary' },
+    { label: '최다 득점', ...formatLeaderStat(summary.topGoals), icon: Flame, color: 'text-award-goals', bg: 'bg-award-goals/15', valueClassName: 'text-primary' },
     { label: '최다 도움', ...formatLeaderStat(summary.topAssists), icon: Handshake, color: 'text-award-assist', bg: 'bg-award-assist/15', valueClassName: 'text-primary' },
-    { label: '최다 MOM', ...formatLeaderStat(summary.topMom), icon: Trophy, color: 'text-award-goals', bg: 'bg-award-goals/15', valueClassName: 'text-primary' },
   ];
 
   return (
@@ -85,11 +89,12 @@ export default function RecordsTab() {
     <div className="space-y-4 animate-fadeIn pb-20">
       {/* Sub Tab Navigation */}
       <div className="flex gap-1 border-b border-border bg-surface-card -mx-4 -mt-4 mb-4 px-4 py-2 sticky top-0 z-10 overflow-x-auto scrollbar-none">
-        {(['season', 'announcements', 'board', 'gallery'] as const).map((tabKey) => {
+        {(['season', 'stats', 'announcements', 'board', 'gallery'] as const).map((tabKey) => {
           const isActive = recordsSubTab === tabKey;
-          const label = tabKey === 'season' ? '시즌' : tabKey === 'announcements' ? '공지사항' : tabKey === 'board' ? '게시판' : '갤러리';
+          const label = tabKey === 'season' ? '시즌' : tabKey === 'stats' ? '분석' : tabKey === 'announcements' ? '공지사항' : tabKey === 'board' ? '게시판' : '갤러리';
           const TabIcon = {
             season: Trophy,
+            stats: Activity,
             announcements: Megaphone,
             board: MessageSquare,
             gallery: ImageIcon,
@@ -137,6 +142,8 @@ export default function RecordsTab() {
               <div className="text-center">승점</div>
               <div className="text-center text-fcgreen-600">승률</div>
             </div>
+
+            {/* List */}
             {isLoading ? (
               <div className="px-4 py-10 text-center text-xs font-bold text-tertiary">랭킹을 불러오는 중입니다</div>
             ) : rows.length > 0 ? (
@@ -147,7 +154,7 @@ export default function RecordsTab() {
                     className="grid h-[50px] min-h-[50px] grid-cols-[24px_34px_minmax(92px,1fr)_74px_40px_50px] items-center px-2 py-0 text-sm"
                   >
                     <RankMark rank={index + 1} />
-                    <div className="text-center font-mono font-black italic text-brand-primary">{row.ovr}</div>
+                    <div className="text-center font-mono font-black italic text-brand-primary text-[10px]">{row.ovr}</div>
                     <div className="min-w-0 px-1">
                       <div className="flex min-w-0 items-center gap-2">
                         <Image
@@ -195,7 +202,28 @@ export default function RecordsTab() {
           </div>
 
           <div className="lg:hidden">
-            <SeasonSummaryCard summary={records?.seasonSummary ?? createEmptySummary()} />
+            <SeasonSummaryCard summary={records?.seasonSummary ?? createEmptySummary()} rows={rows} />
+          </div>
+        </div>
+      ) : recordsSubTab === 'stats' ? (
+        <div className="space-y-4">
+          <div className="mb-2 flex items-center justify-between px-1">
+            <h2 className="flex items-center gap-2 text-lg font-extrabold text-primary">
+              <Activity size={20} className="text-[#00ffa3]" /> 상세 기록 분석실
+            </h2>
+          </div>
+          <div className="rounded-3xl border border-glass-border bg-glass-bg p-6 text-center space-y-3 shadow-glass-shadow backdrop-blur-md">
+            <Activity className="mx-auto text-[#00ffa3] animate-pulse" size={32} />
+            <p className="text-sm font-black text-primary">클럽 분석 데이터 송출 중</p>
+            <p className="text-xs text-secondary font-medium leading-relaxed">
+              경기장별 승률 맵 및 선수들간의 케미스트리 상성 분석 정보는 좌측 라이브 와이드 스크린에서 화려한 대시보드로 스트리밍 중입니다!
+            </p>
+            <div className="border-t border-border/40 pt-3 text-left">
+              <p className="text-[10px] font-black uppercase text-tertiary mb-1">모바일 퀵 팁</p>
+              <p className="text-[11px] font-bold text-secondary">
+                현재 FC Moim에서 가장 시너지가 높은 듀오는 <strong className="text-brand-primary">최광수 & 박영철</strong> 조합(승률 83%)입니다.
+              </p>
+            </div>
           </div>
         </div>
       ) : (

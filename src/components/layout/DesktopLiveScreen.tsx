@@ -1,17 +1,29 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import { useAppStore } from '@/stores/useAppStore';
 import { useRecordsStore } from '@/stores/useRecordsStore';
 import { useAnnouncementStore } from '@/stores/useAnnouncementStore';
 import { 
   Trophy, Flame, Handshake, X, Users, Award,
-  MessageCircle, Radio, Activity, LayoutGrid
+  MessageCircle, Radio, Activity, LayoutGrid,
+  Camera, LoaderCircle, ShieldCheck, UserCheck, UserX, LineChart
 } from 'lucide-react';
 import { fetchFeedPosts, type FeedPost } from '@/stores/feedClient';
 import EventComments from '@/components/features/EventComments';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
+import { useToastStore } from '@/stores/useToastStore';
+import { useAuthStore } from '@/stores/useAuthStore';
+import TeamEmblem from '@/components/brand/TeamEmblem';
+import {
+  fetchClubSettings,
+  fetchPendingMemberships,
+  patchClubSettings,
+  reviewMembership,
+  uploadClubLogo,
+  type PendingMembershipReview
+} from '@/stores/membershipClient';
 
 export default function DesktopLiveScreen() {
   const { 
@@ -41,7 +53,7 @@ export default function DesktopLiveScreen() {
           </span>
           <span className="text-sm font-black text-white tracking-wide flex items-center gap-2">
             <span className="text-gray-400">|</span>
-            {activeTab === 'records' && `🏆 클럽 명예의 전당 & 시즌 데이터 분석 (${recordsSubTab === 'season' ? '랭킹' : '커뮤니티'})`}
+            {activeTab === 'records' && `🏆 클럽 명예의 전당 & 시즌 데이터 분석 (${recordsSubTab === 'season' ? '랭킹' : recordsSubTab === 'stats' ? '상성 분석' : '커뮤니티'})`}
             {(activeTab === 'locker_room' || activeTab === 'community') && '💬 라커룸 미디어 상세 채널'}
           </span>
         </div>
@@ -59,7 +71,9 @@ export default function DesktopLiveScreen() {
 
       {/* Main Display Area */}
       <div className="flex-1 min-h-0 w-full relative z-10 flex flex-col">
-        {activeTab === 'records' && <DesktopRecordsPanel />}
+        {activeTab === 'records' && (
+          recordsSubTab === 'stats' ? <DesktopDetailStatsPanel /> : <DesktopRecordsPanel />
+        )}
         {activeTab === 'locker_room' && <DesktopLockerRoomPanel />}
         {activeTab === 'community' && (
           focusedPostId ? (
@@ -127,6 +141,9 @@ function DesktopRecordsPanel() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const rows = records?.rankingRows ?? [];
   const summary = records?.seasonSummary ?? null;
+  const topWinRateRow = rows.length > 0
+    ? [...rows].sort((a, b) => b.winRate - a.winRate)[0]
+    : null;
 
   useEffect(() => {
     if (recordsStatus === 'idle') {
@@ -146,9 +163,11 @@ function DesktopRecordsPanel() {
         </h3>
 
         {summary ? (
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-6 gap-4">
             {[
               { label: '총 경기수', value: `${summary.totalMatches || 0} 경기`, icon: Flame, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+              { label: '최다 경기장', value: summary.topVenue?.location || '-', detail: `${summary.topVenue?.count || 0} 매치`, icon: Radio, color: 'text-emerald-400', bg: 'bg-emerald-400/10' },
+              { label: '최고 승률', value: topWinRateRow ? topWinRateRow.nickname : '-', detail: topWinRateRow ? `${topWinRateRow.winRate}%` : '-', icon: Trophy, color: 'text-[#00ffa3]', bg: 'bg-[#00ffa3]/10' },
               { label: '최다 득점왕', value: summary.topGoals?.nickname || '-', detail: `${summary.topGoals?.value || 0} 골`, icon: Trophy, color: 'text-amber-400', bg: 'bg-amber-400/10' },
               { label: '도움왕', value: summary.topAssists?.nickname || '-', detail: `${summary.topAssists?.value || 0} 도움`, icon: Handshake, color: 'text-[#00ffa3]', bg: 'bg-[#00ffa3]/10' },
               { label: '출장왕', value: summary.topAppearance?.nickname || '-', detail: `${summary.topAppearance?.value || 0} 경기`, icon: Users, color: 'text-blue-400', bg: 'bg-blue-400/10' }
@@ -506,16 +525,115 @@ function DesktopOfflinePattern({ message }: { message: string }) {
 /* ==========================================================================
    4. DesktopLockerRoomPanel (라커룸 탭 와이드 대시보드 - 스쿼드 전력 분석 전광판)
    ========================================================================== */
+/* ==========================================================================
+   4. DesktopLockerRoomPanel (라커룸 탭 와이드 대시보드 - 스쿼드 전력 분석 전광판)
+   ========================================================================== */
+function formatFoot(foot: string | null) {
+  if (foot === 'both') return '양발';
+  return foot === 'left' ? '왼발' : '오른발';
+}
+
+function formatBody(member: any) {
+  const h = member.heightCm ? `${member.heightCm}cm` : '';
+  const w = member.weightKg ? `${member.weightKg}kg` : '';
+  if (h && w) return `${h}, ${w}`;
+  return h || w || '-';
+}
+
 function DesktopLockerRoomPanel() {
   const { records, recordsStatus, loadRecords } = useRecordsStore();
-  const { activeClubId, teamName, teamLogoUrl } = useAppStore();
+  const { activeClubId, teamName, teamLogoUrl, userRole } = useAppStore();
+  const { showToast } = useToastStore();
   const rows = records?.rankingRows ?? [];
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
+
+  // 행정 상태들
+  const [pendingMembers, setPendingMembers] = useState<any[]>([]);
+  const [isLoadingPending, setIsLoadingPending] = useState(false);
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [clubDescription, setClubDescription] = useState('');
+  const [isClubPublic, setIsClubPublic] = useState(true);
+  const [isSavingClubSettings, setIsSavingClubSettings] = useState(false);
+  const [isUploadingClubLogo, setIsUploadingClubLogo] = useState(false);
 
   useEffect(() => {
     if (recordsStatus === 'idle') {
       void loadRecords(activeClubId);
     }
   }, [activeClubId, loadRecords, recordsStatus]);
+
+  // 설정 및 신청 대기자 조회
+  const loadAdminData = useCallback(async () => {
+    if (!activeClubId) return;
+    try {
+      setIsLoadingPending(true);
+      const [settings, pendings] = await Promise.all([
+        fetchClubSettings(activeClubId),
+        fetchPendingMemberships(activeClubId)
+      ]);
+      setClubDescription(settings.description || '');
+      setIsClubPublic(settings.isPublic ?? true);
+      setPendingMembers(pendings);
+    } catch (err) {
+      console.error('[FC Moim] Load admin data failed:', err);
+    } finally {
+      setIsLoadingPending(false);
+    }
+  }, [activeClubId]);
+
+  useEffect(() => {
+    void loadAdminData();
+  }, [loadAdminData]);
+
+  // 로고 업로드 핸들러
+  const handleClubLogoChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsUploadingClubLogo(true);
+      const club = await uploadClubLogo({ clubId: activeClubId, file });
+      useAppStore.setState({ teamLogoUrl: club.logoUrl });
+      showToast('팀 로고를 업로드했습니다.');
+      void loadAdminData();
+    } catch (err) {
+      showToast('로고 업로드에 실패했습니다.');
+    } finally {
+      setIsUploadingClubLogo(false);
+    }
+  };
+
+  // 팀 설정 저장 핸들러
+  const handleSaveClubSettings = async () => {
+    try {
+      setIsSavingClubSettings(true);
+      await patchClubSettings({
+        clubId: activeClubId,
+        description: clubDescription,
+        isPublic: isClubPublic
+      });
+      showToast('팀 설정을 저장했습니다.');
+      void loadAdminData();
+    } catch (err) {
+      showToast('설정 저장에 실패했습니다.');
+    } finally {
+      setIsSavingClubSettings(false);
+    }
+  };
+
+  // 입단 심사 핸들러
+  const handleReview = async (membershipId: string, status: 'approved' | 'rejected') => {
+    try {
+      setReviewingId(membershipId);
+      await reviewMembership({ clubId: activeClubId, membershipId, decision: status });
+      showToast(status === 'approved' ? '입단을 승인했습니다.' : '입단을 반려했습니다.');
+      void loadAdminData();
+      void loadRecords(activeClubId); // 스쿼드가 바뀔 수 있으므로 갱신
+    } catch (err) {
+      showToast('심사 처리에 실패했습니다.');
+    } finally {
+      setReviewingId(null);
+    }
+  };
 
   // 스쿼드 통계 계산
   const totalCount = rows.length;
@@ -530,6 +648,8 @@ function DesktopLockerRoomPanel() {
     acc[pos].sumOvr += r.ovr;
     return acc;
   }, { FW: { count: 0, sumOvr: 0 }, MF: { count: 0, sumOvr: 0 }, DF: { count: 0, sumOvr: 0 }, GK: { count: 0, sumOvr: 0 } });
+
+  const canReview = userRole === 'admin' || userRole === 'operator';
 
   return (
     <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6 winning-bg-grid relative">
@@ -631,6 +751,276 @@ function DesktopLockerRoomPanel() {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+      </div>
+
+      {/* 3. 클럽 행정 관리 센터 (Club Administration Hub) */}
+      {canReview && (
+        <div className="border-t border-white/5 pt-6 space-y-4 relative z-10 animate-fadeIn">
+          <div className="flex items-center gap-2 px-1">
+            <ShieldCheck size={18} className="text-[#00ffa3]" />
+            <h3 className="text-sm font-black text-white tracking-tight">클럽 행정 관리 센터 (Club Administration Hub)</h3>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-6">
+            
+            {/* Left Hub: Team Settings Form */}
+            <div className="rounded-3xl border border-[#25283e] bg-[#141624]/60 p-5 shadow-lg backdrop-blur-md space-y-4">
+              <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                <span className="text-[11px] font-black text-gray-400 uppercase">클럽 프로필 설정</span>
+                <span className={`text-[9px] font-black px-2 py-0.5 rounded border ${
+                  isClubPublic
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    : 'bg-white/5 text-gray-400 border-white/10'
+                }`}>
+                  {isClubPublic ? '공개 클럽' : '비공개 클럽'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-4 bg-white/5 border border-white/5 rounded-2xl p-3">
+                <div className="relative w-14 h-14 rounded-full border-2 border-white/10 bg-[#141624] overflow-hidden flex items-center justify-center shrink-0">
+                  <TeamEmblem teamName={teamName} logoUrl={teamLogoUrl} size={56} className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-black text-white">클럽 엠블럼 로고</p>
+                  <p className="text-[10px] text-gray-500 font-bold mt-0.5">JPG, PNG, WEBP · 2MB 이하</p>
+                </div>
+                <button
+                  type="button"
+                  disabled={isUploadingClubLogo}
+                  onClick={() => logoInputRef.current?.click()}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#00ffa3] text-black hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+                  aria-label="로고 업로드"
+                >
+                  {isUploadingClubLogo ? <LoaderCircle size={18} className="animate-spin" /> : <Camera size={18} />}
+                </button>
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="sr-only"
+                  onChange={handleClubLogoChange}
+                  disabled={isUploadingClubLogo}
+                />
+              </div>
+
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-black text-gray-400">클럽 소개글</span>
+                <textarea
+                  value={clubDescription}
+                  onChange={(event) => setClubDescription(event.target.value)}
+                  className="min-h-20 w-full resize-none rounded-xl border border-white/10 bg-black/30 px-3.5 py-3 text-xs font-bold leading-relaxed text-white outline-none focus:border-[#00ffa3] transition-colors"
+                  maxLength={500}
+                />
+              </label>
+
+              <label className="flex items-center justify-between rounded-xl bg-white/5 border border-white/5 px-4 py-3 cursor-pointer select-none">
+                <span className="text-xs font-black text-white">클럽 둘러보기 페이지에 공개</span>
+                <input
+                  type="checkbox"
+                  checked={isClubPublic}
+                  onChange={(event) => setIsClubPublic(event.target.checked)}
+                  className="h-4.5 w-4.5 accent-[#00ffa3] cursor-pointer"
+                />
+              </label>
+
+              <button
+                type="button"
+                disabled={isSavingClubSettings}
+                onClick={() => void handleSaveClubSettings()}
+                className="w-full rounded-xl bg-[#00ffa3] py-3 text-xs font-black text-black hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50"
+              >
+                {isSavingClubSettings ? '팀 설정을 저장 중...' : '클럽 프로필 저장하기'}
+              </button>
+            </div>
+
+            {/* Right Hub: Pending Applicants List */}
+            <div className="rounded-3xl border border-[#25283e] bg-[#141624]/60 p-5 shadow-lg backdrop-blur-md space-y-4">
+              <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                <span className="text-[11px] font-black text-gray-400 uppercase">신규 입단 신청 현황</span>
+                <span className="text-[9px] font-black px-2 py-0.5 rounded bg-[#00ffa3]/10 text-[#00ffa3] border border-[#00ffa3]/20">
+                  {pendingMembers.length}명 대기 중
+                </span>
+              </div>
+
+              {isLoadingPending ? (
+                <div className="py-20 text-center text-xs font-bold text-gray-500">신청 대기열을 가져오는 중...</div>
+              ) : pendingMembers.length > 0 ? (
+                <div className="space-y-3 max-h-[280px] overflow-y-auto no-scrollbar">
+                  {pendingMembers.map((member) => (
+                    <div key={member.id} className="rounded-2xl border border-white/5 bg-black/40 p-3.5 flex justify-between items-center hover:border-white/10 transition-colors">
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-white truncate">{member.nickname}</p>
+                        <p className="text-[10px] text-gray-500 font-bold mt-1">
+                          {formatBody(member)} · {formatFoot(member.preferredFoot)}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 gap-1.5">
+                        <button
+                          type="button"
+                          disabled={reviewingId === member.id}
+                          onClick={() => void handleReview(member.id, 'approved')}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#00ffa3] text-black hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+                          title="승인"
+                        >
+                          <UserCheck size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={reviewingId === member.id}
+                          onClick={() => void handleReview(member.id, 'rejected')}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 text-gray-400 border border-white/5 hover:bg-white/10 hover:text-white active:scale-95 transition-all disabled:opacity-50"
+                          title="반려"
+                        >
+                          <UserX size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-20 text-center text-xs font-bold text-gray-500 rounded-2xl border border-dashed border-white/5 bg-black/20">
+                  현재 입단 대기 중인 신규 신청자가 없습니다.
+                </div>
+              )}
+            </div>
+
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ==========================================================================
+   5. DesktopDetailStatsPanel (상세 기록 분석실 - 경기장 승률 및 스쿼드 케미 상성)
+   ========================================================================== */
+function DesktopDetailStatsPanel() {
+  const { records, recordsStatus, loadRecords } = useRecordsStore();
+  const { activeClubId } = useAppStore();
+
+  useEffect(() => {
+    if (recordsStatus === 'idle') {
+      void loadRecords(activeClubId);
+    }
+  }, [activeClubId, loadRecords, recordsStatus]);
+
+  // 경기장 승률 모의 데이터
+  const stadiums = [
+    { name: 'FC 어반 홈피치 (H)', matches: 5, wins: 4, draws: 1, losses: 0, rate: 80, color: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' },
+    { name: '잠실 FS 돔구장 (A)', matches: 4, wins: 2, draws: 1, losses: 1, rate: 50, color: 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' },
+    { name: '구피 시니어 구장 (H)', matches: 3, wins: 2, draws: 0, losses: 1, rate: 67, color: 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]' },
+    { name: '하남 풋살 스타디움 (A)', matches: 2, wins: 0, draws: 2, losses: 0, rate: 0, color: 'bg-gray-500 shadow-[0_0_8px_rgba(107,114,128,0.5)]' }
+  ];
+
+  // 베스트/워스트 케미 조합 모의 데이터
+  const bestChemistry = [
+    { players: ['최광수', '박영철'], desc: '공수 전환의 마스터클래스', stats: '6경기 5승 1패', rate: 83 },
+    { players: ['이영식', '김영수'], desc: '완벽한 티키타카 빌드업 듀오', stats: '5경기 4승 1무', rate: 80 },
+    { players: ['정상철', '한민수'], desc: '철벽의 통곡의 벽 수비 파트너', stats: '4경기 3승 1무', rate: 75 }
+  ];
+
+  const worstChemistry = [
+    { players: ['김영수', '정상철'], desc: '동선 오버랩으로 역습 자주 허용', stats: '5경기 1승 4패', rate: 20 },
+    { players: ['박영철', '한민수'], desc: '패스 미스 빌드업 불안 요소 노출', stats: '4경기 1승 1무 2패', rate: 25 }
+  ];
+
+  return (
+    <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6 winning-bg-grid relative animate-fadeIn">
+      <div className="absolute inset-0 bg-gradient-to-tr from-[#00ffa3]/5 via-transparent to-[#00b872]/5 pointer-events-none" />
+
+      {/* 1. 분석실 타이틀 배너 */}
+      <div className="rounded-3xl border border-[#25283e] bg-black/60 p-6 shadow-lg backdrop-blur-md relative z-10 flex items-center gap-4">
+        <div className="w-12 h-12 rounded-2xl bg-[#00ffa3]/10 border border-[#00ffa3]/20 flex items-center justify-center text-2xl text-[#00ffa3]">
+          <Activity size={24} className="animate-pulse" />
+        </div>
+        <div>
+          <span className="text-[10px] font-black text-[#00ffa3] tracking-widest uppercase">FC MOIM ANALYTICS CABINET</span>
+          <h2 className="text-xl font-black text-white tracking-tight">클럽 정밀 상성 분석실 (Chemistry & Match stats)</h2>
+        </div>
+      </div>
+
+      {/* 2. 메인 분석 보드 */}
+      <div className="grid grid-cols-2 gap-6 relative z-10">
+        
+        {/* Left Column: 경기장 승률 분석 */}
+        <div className="rounded-3xl border border-[#25283e] bg-[#141624]/60 p-5 shadow-lg backdrop-blur-md flex flex-col justify-between">
+          <div>
+            <h3 className="text-xs font-black tracking-wider text-gray-400 uppercase flex items-center gap-2 mb-3">
+              <Radio size={14} className="text-[#00ffa3]" /> 경기장별 누적 전적 & 승률 (Stadium Win Rate)
+            </h3>
+            <p className="text-[10px] text-gray-500 font-bold mb-4">
+              매치 위치에 따른 승률 변화 및 핏치 친화도 데이터입니다.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {stadiums.map((st, i) => (
+              <div key={i} className="space-y-1.5">
+                <div className="flex justify-between items-baseline text-xs font-bold text-gray-300">
+                  <span>{st.name}</span>
+                  <span className="font-mono text-[11px] text-gray-400">
+                    {st.wins}승 {st.draws}무 {st.losses}패 (승률 <strong className="text-white">{st.rate}%</strong>)
+                  </span>
+                </div>
+                <div className="w-full bg-white/5 rounded-full h-2 overflow-hidden border border-white/5">
+                  <div className={`h-full rounded-full ${st.color}`} style={{ width: `${st.rate || 5}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right Column: 선수단 상성 케미스트리 */}
+        <div className="rounded-3xl border border-[#25283e] bg-[#141624]/60 p-5 shadow-lg backdrop-blur-md space-y-5">
+          {/* Best Chemistry */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-black tracking-wider text-[#00ffa3] uppercase flex items-center gap-1.5">
+              🔥 최강 시너지 듀오 (Best Chemistry)
+            </h3>
+            <div className="grid grid-cols-1 gap-2.5">
+              {bestChemistry.map((bc, i) => (
+                <div key={i} className="bg-white/5 border border-white/5 rounded-2xl p-3 flex justify-between items-center">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-black text-white">{bc.players.join(' & ')}</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">Best</span>
+                    </div>
+                    <p className="text-[10px] text-gray-500 font-bold mt-1">{bc.desc}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-[11px] font-black text-[#00ffa3] font-mono">{bc.rate}% 승률</p>
+                    <p className="text-[9px] font-mono text-gray-500 font-bold mt-0.5">{bc.stats}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Worst Chemistry */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-black tracking-wider text-red-400 uppercase flex items-center gap-1.5">
+              ⚠️ 상성 보완 조합 (Chemistry Warning)
+            </h3>
+            <div className="grid grid-cols-1 gap-2.5">
+              {worstChemistry.map((wc, i) => (
+                <div key={i} className="bg-white/5 border border-white/5 rounded-2xl p-3 flex justify-between items-center">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-black text-white">{wc.players.join(' & ')}</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20 font-bold">Warning</span>
+                    </div>
+                    <p className="text-[10px] text-gray-500 font-bold mt-1">{wc.desc}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-[11px] font-black text-red-400 font-mono">{wc.rate}% 승률</p>
+                    <p className="text-[9px] font-mono text-gray-500 font-bold mt-0.5">{wc.stats}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
