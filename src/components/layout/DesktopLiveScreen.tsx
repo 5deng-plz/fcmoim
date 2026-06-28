@@ -8,11 +8,13 @@ import { useAnnouncementStore } from '@/stores/useAnnouncementStore';
 import { 
   Trophy, Flame, Handshake, X, Users, Award,
   MessageCircle, Radio, Activity, LayoutGrid,
-  Camera, LoaderCircle, ShieldCheck, UserCheck, UserX, LineChart
+  Camera, LoaderCircle, ShieldCheck, UserCheck, UserX, LineChart, UserCog
 } from 'lucide-react';
 import { fetchFeedPosts, type FeedPost } from '@/stores/feedClient';
 import EventComments from '@/components/features/EventComments';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
+import Modal from '@/components/ui/Modal';
+import { fetchUpcomingMatches, type UpcomingMatch } from '@/stores/matchClient';
 import { useToastStore } from '@/stores/useToastStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import TeamEmblem from '@/components/brand/TeamEmblem';
@@ -22,6 +24,8 @@ import {
   patchClubSettings,
   reviewMembership,
   uploadClubLogo,
+  withdrawMembership,
+  updateMembershipRole,
   type PendingMembershipReview
 } from '@/stores/membershipClient';
 
@@ -546,6 +550,7 @@ function DesktopLockerRoomPanel() {
   const { showToast } = useToastStore();
   const rows = records?.rankingRows ?? [];
   const logoInputRef = useRef<HTMLInputElement | null>(null);
+  const memberProfile = useAuthStore((state) => state.memberProfile);
 
   // 행정 상태들
   const [pendingMembers, setPendingMembers] = useState<any[]>([]);
@@ -555,6 +560,12 @@ function DesktopLockerRoomPanel() {
   const [isClubPublic, setIsClubPublic] = useState(true);
   const [isSavingClubSettings, setIsSavingClubSettings] = useState(false);
   const [isUploadingClubLogo, setIsUploadingClubLogo] = useState(false);
+
+  // Roster 관리 상태들
+  const [memberActionModal, setMemberActionModal] = useState<{ mode: 'grant-operator' | 'revoke-operator' | 'withdraw'; member: any } | null>(null);
+  const [withdrawConfirmName, setWithdrawConfirmName] = useState('');
+  const [changingRoleId, setChangingRoleId] = useState<string | null>(null);
+  const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (recordsStatus === 'idle') {
@@ -633,6 +644,49 @@ function DesktopLockerRoomPanel() {
     } finally {
       setReviewingId(null);
     }
+  };
+
+  // 권한 변경 처리 함수
+  const handleChangeRole = async (membershipId: string, role: 'operator' | 'member') => {
+    try {
+      setChangingRoleId(membershipId);
+      await updateMembershipRole({ clubId: activeClubId, membershipId, role });
+      showToast(role === 'operator' ? '운영진 권한을 부여했습니다.' : '운영진 권한을 회수했습니다.');
+      void loadAdminData();
+      void loadRecords(activeClubId);
+    } catch (err) {
+      showToast('역할 변경에 실패했습니다.');
+    } finally {
+      setChangingRoleId(null);
+    }
+  };
+
+  // 탈퇴 제명 처리 함수
+  const handleWithdraw = async (member: any) => {
+    try {
+      setWithdrawingId(member.membershipId);
+      await withdrawMembership({ clubId: activeClubId, membershipId: member.membershipId });
+      showToast(`${member.nickname} 회원을 탈퇴(제명)처리했습니다.`);
+      void loadAdminData();
+      void loadRecords(activeClubId);
+    } catch (err) {
+      showToast('회원 탈퇴(제명)처리에 실패했습니다.');
+    } finally {
+      setWithdrawingId(null);
+    }
+  };
+
+  // 모달 확인 처리
+  const handleConfirmAction = async () => {
+    if (!memberActionModal) return;
+    if (memberActionModal.mode === 'withdraw') {
+      await handleWithdraw(memberActionModal.member);
+    } else {
+      const targetRole = memberActionModal.mode === 'grant-operator' ? 'operator' : 'member';
+      await handleChangeRole(memberActionModal.member.membershipId, targetRole);
+    }
+    setMemberActionModal(null);
+    setWithdrawConfirmName('');
   };
 
   // 스쿼드 통계 계산
@@ -758,7 +812,7 @@ function DesktopLockerRoomPanel() {
 
       {/* 3. 클럽 행정 관리 센터 (Club Administration Hub) */}
       {canReview && (
-        <div className="border-t border-white/5 pt-6 space-y-4 relative z-10 animate-fadeIn">
+        <div className="border-t border-white/5 pt-6 space-y-6 relative z-10 animate-fadeIn">
           <div className="flex items-center gap-2 px-1">
             <ShieldCheck size={18} className="text-[#00ffa3]" />
             <h3 className="text-sm font-black text-white tracking-tight">클럽 행정 관리 센터 (Club Administration Hub)</h3>
@@ -887,9 +941,168 @@ function DesktopLockerRoomPanel() {
               )}
             </div>
 
+            {/* Third Hub: Member Roles & Roster Management */}
+            <div className="rounded-3xl border border-[#25283e] bg-[#141624]/60 p-5 shadow-lg backdrop-blur-md space-y-4 col-span-2">
+              <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                <span className="text-[11px] font-black text-gray-400 uppercase">클럽 멤버십 권한 및 정원 관리 (Member Roles & Roster Management)</span>
+                <span className="text-[9px] font-black px-2 py-0.5 rounded bg-[#00ffa3]/10 text-[#00ffa3] border border-[#00ffa3]/20">
+                  정원 {rows.length}명 활성
+                </span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 max-h-[300px] overflow-y-auto no-scrollbar">
+                {rows.map((member: any) => {
+                  const isSelf = member.membershipId === memberProfile?.id;
+                  const isOwner = member.role === 'admin';
+                  const isOperator = member.role === 'operator';
+                  const canManageThis = !isSelf && !isOwner; // 자신이나 소유주는 관리 대상이 아님
+                  
+                  return (
+                    <div key={member.membershipId} className="rounded-2xl border border-white/5 bg-black/40 p-3.5 flex justify-between items-center hover:border-white/10 transition-colors">
+                      <div className="min-w-0 flex items-center gap-3">
+                        <Image
+                          src={member.photoUrl || getFallbackAvatar(member.nickname)}
+                          alt=""
+                          width={32}
+                          height={32}
+                          className="h-8 w-8 rounded-full bg-surface-bg object-cover ring-1 ring-border"
+                          unoptimized
+                        />
+                        <div className="min-w-0">
+                          <p className="text-xs font-black text-white truncate flex items-center gap-1.5">
+                            {member.nickname}
+                            {isSelf && <span className="text-[8px] bg-blue-500/20 text-blue-400 border border-blue-500/30 px-1 py-0.2 rounded font-bold">ME</span>}
+                          </p>
+                          <p className="text-[9px] text-gray-500 font-bold mt-0.5">
+                            OVR {member.ovr} · {isOwner ? '소유주 👑' : isOperator ? '운영진 🛠️' : '일반 회원 ⚽'}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {canManageThis && (
+                        <div className="flex shrink-0 gap-1.5">
+                          <button
+                            type="button"
+                            disabled={changingRoleId === member.membershipId}
+                            onClick={() => setMemberActionModal({
+                              mode: isOperator ? 'revoke-operator' : 'grant-operator',
+                              member
+                            })}
+                            className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-all active:scale-95 disabled:opacity-50 ${
+                              isOperator
+                                ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20'
+                                : 'bg-[#00ffa3]/10 text-[#00ffa3] border-[#00ffa3]/20 hover:bg-[#00ffa3]/20'
+                            }`}
+                            title={isOperator ? '운영진 권한 회수' : '운영진 권한 부여'}
+                          >
+                            <UserCog size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={withdrawingId === member.membershipId}
+                            onClick={() => setMemberActionModal({
+                              mode: 'withdraw',
+                              member
+                            })}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 active:scale-95 transition-all disabled:opacity-50"
+                            title="회원 탈퇴(제명) 처리"
+                          >
+                            <UserX size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
           </div>
         </div>
       )}
+
+      {/* Roster Action Confirmation Modal */}
+      <Modal
+        title={
+          memberActionModal?.mode === 'withdraw'
+            ? '🚨 회원 탈퇴(제명) 확인'
+            : memberActionModal?.mode === 'grant-operator'
+              ? '🛠️ 운영진 권한 부여'
+              : '🛠️ 운영진 권한 회수'
+        }
+        isOpen={memberActionModal !== null}
+        onClose={() => {
+          setMemberActionModal(null);
+          setWithdrawConfirmName('');
+        }}
+        presentation="dialog"
+      >
+        {memberActionModal && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/5 p-3">
+              <Image
+                src={memberActionModal.member.photoUrl || getFallbackAvatar(memberActionModal.member.nickname)}
+                alt=""
+                width={40}
+                height={40}
+                className="h-10 w-10 rounded-full bg-surface-bg object-cover"
+                unoptimized
+              />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-white">{memberActionModal.member.nickname}</p>
+                <p className="text-xs font-bold text-gray-400">
+                  {memberActionModal.mode === 'withdraw'
+                    ? '이 회원을 클럽에서 탈퇴(제명)처리하고 모든 활동 권한을 회수합니다.'
+                    : memberActionModal.mode === 'grant-operator'
+                      ? '이 회원에게 클럽 행정 관리(가입 심사, 클럽 설정 변경 등) 권한을 부여합니다.'
+                      : '이 회원의 운영진 직위를 회수하고 일반 회원 등급으로 복귀시킵니다.'}
+                </p>
+              </div>
+            </div>
+            {memberActionModal.mode === 'withdraw' && (
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-bold text-red-400">
+                  오작동 방지를 위해 회원 이름({memberActionModal.member.nickname})을 똑같이 입력해주세요.
+                </span>
+                <input
+                  type="text"
+                  value={withdrawConfirmName}
+                  onChange={(event) => setWithdrawConfirmName(event.target.value)}
+                  placeholder={memberActionModal.member.nickname}
+                  className="w-full rounded-xl border border-red-500/20 bg-black/40 px-3 py-2.5 text-sm font-bold text-white outline-none transition-colors focus:border-red-500 focus:bg-[#141624]"
+                />
+              </label>
+            )}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMemberActionModal(null);
+                  setWithdrawConfirmName('');
+                }}
+                className="rounded-xl bg-white/5 border border-white/5 px-4 py-3 text-sm font-bold text-gray-300 transition-all hover:bg-white/10 active:scale-95"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                disabled={
+                  memberActionModal.mode === 'withdraw' &&
+                  withdrawConfirmName !== memberActionModal.member.nickname
+                }
+                onClick={() => void handleConfirmAction()}
+                className={`rounded-xl px-4 py-3 text-sm font-bold text-black transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  memberActionModal.mode === 'withdraw'
+                    ? 'bg-red-500 hover:brightness-110 text-white'
+                    : 'bg-[#00ffa3] hover:brightness-110'
+                }`}
+              >
+                {memberActionModal.mode === 'withdraw' ? '탈퇴(제명) 처리' : '권한 조율 완료'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
@@ -901,11 +1114,39 @@ function DesktopDetailStatsPanel() {
   const { records, recordsStatus, loadRecords } = useRecordsStore();
   const { activeClubId } = useAppStore();
 
+  // 경기 기록 상태
+  const [matches, setMatches] = useState<UpcomingMatch[]>([]);
+  const [isLoadingMatches, setIsLoadingMatches] = useState(false);
+
   useEffect(() => {
     if (recordsStatus === 'idle') {
       void loadRecords(activeClubId);
     }
   }, [activeClubId, loadRecords, recordsStatus]);
+
+  // 경기 목록 로드
+  useEffect(() => {
+    if (!activeClubId) return;
+    let isActive = true;
+    setIsLoadingMatches(true);
+    fetchUpcomingMatches(activeClubId)
+      .then((data) => {
+        if (!isActive) return;
+        // 완료되었거나 스코어가 입력된 경기들을 날짜 내림차순 정렬
+        const finished = data
+          .filter((m) => m.status === 'finished' || (m.ourScore !== null && m.oppScore !== null))
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setMatches(finished);
+      })
+      .catch((err) => {
+        console.error('[FC Moim] Load match history failed:', err);
+      })
+      .finally(() => {
+        if (isActive) setIsLoadingMatches(false);
+      });
+
+    return () => { isActive = false; };
+  }, [activeClubId]);
 
   // 경기장 승률 모의 데이터
   const stadiums = [
@@ -1024,6 +1265,75 @@ function DesktopDetailStatsPanel() {
           </div>
         </div>
 
+      </div>
+
+      {/* 3. 전체 경기 기록실 (All Match History & Records) */}
+      <div className="rounded-3xl border border-[#25283e] bg-[#141624]/60 p-5 shadow-lg backdrop-blur-md relative z-10 animate-fadeIn space-y-4">
+        <div className="flex justify-between items-center pb-2 border-b border-white/5">
+          <h3 className="text-xs font-black tracking-wider text-gray-400 uppercase flex items-center gap-2">
+            <LineChart size={14} className="text-[#00ffa3]" />
+            분석 근거자료: 전체 매치 기록실 (All Match History & Records)
+          </h3>
+          <span className="font-mono text-[10px] font-black text-gray-500">TOTAL: {matches.length} MATCHES</span>
+        </div>
+
+        {isLoadingMatches ? (
+          <div className="py-12 text-center text-xs font-bold text-gray-500">매치 기록 보관소를 불러오는 중...</div>
+        ) : matches.length > 0 ? (
+          <div className="overflow-x-auto no-scrollbar">
+            <table className="w-full border-collapse text-left">
+              <thead>
+                <tr className="border-b border-white/5 text-[10px] font-black text-gray-500 uppercase tracking-wider">
+                  <th className="py-3 px-4">날짜</th>
+                  <th className="py-3 px-4">매치 라운드</th>
+                  <th className="py-3 px-4">매치 타이틀</th>
+                  <th className="py-3 px-4">경기장</th>
+                  <th className="py-3 px-4 text-center">결과 및 스코어</th>
+                  <th className="py-3 px-4">상태</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 text-xs">
+                {matches.map((match) => {
+                  const isWin = (match.ourScore ?? 0) > (match.oppScore ?? 0);
+                  const isDraw = (match.ourScore ?? 0) === (match.oppScore ?? 0);
+                  
+                  return (
+                    <tr key={match.id} className="hover:bg-white/5 transition-colors">
+                      <td className="py-3.5 px-4 font-mono font-bold text-gray-400">
+                        {new Date(match.date).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
+                      </td>
+                      <td className="py-3.5 px-4 font-mono font-extrabold text-[#00ffa3]">
+                        {match.round ? `${match.round}R` : '-'}
+                      </td>
+                      <td className="py-3.5 px-4 font-black text-white">{match.title}</td>
+                      <td className="py-3.5 px-4 font-bold text-gray-300">{match.location}</td>
+                      <td className="py-3.5 px-4 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[11px] ${
+                          isWin
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            : isDraw
+                              ? 'bg-white/5 text-gray-300 border border-white/10'
+                              : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                        }`}>
+                          {isWin ? '승' : isDraw ? '무' : '패'} · {match.ourScore} : {match.oppScore}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="text-[9px] font-black uppercase text-gray-500 bg-white/5 px-2 py-0.5 rounded border border-white/5">
+                          FINISHED
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="py-12 text-center text-xs font-bold text-gray-500 rounded-2xl border border-dashed border-white/5 bg-black/20">
+            아직 완료 보고된 공식 매치 기록이 없습니다.
+          </div>
+        )}
       </div>
     </div>
   );

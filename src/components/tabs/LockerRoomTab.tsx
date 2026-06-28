@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, ChevronDown, LoaderCircle, ShieldCheck, Share2, UserCheck, UserCog, UserX, Users, Medal } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { ChevronDown, Users, Medal, ShieldCheck, UserCog } from 'lucide-react';
 import Image from 'next/image';
-import TeamEmblem from '@/components/brand/TeamEmblem';
 import Modal from '@/components/ui/Modal';
 
 import ConditionIcon from '@/components/ui/ConditionIcon';
@@ -12,15 +11,7 @@ import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import PlayerAbilityPanel, { type PlayerAbilityPanelSeasonRecord } from '@/components/ui/PlayerAbilityPanel';
 import {
   fetchApprovedMemberships,
-  fetchClubSettings,
-  fetchPendingMemberships,
-  patchClubSettings,
-  reviewMembership,
-  updateMembershipRole,
-  uploadClubLogo,
-  withdrawMembership,
   type ApprovedMembership,
-  type PendingMembershipReview,
 } from '@/stores/membershipClient';
 import { useAppStore } from '@/stores/useAppStore';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -29,27 +20,15 @@ import { useToastStore } from '@/stores/useToastStore';
 
 export default function LockerRoomTab() {
   const memberProfile = useAuthStore((state) => state.memberProfile);
-  const { activeClubId, availableClubs, teamLogoUrl, teamName, userRole } = useAppStore();
+  const { activeClubId } = useAppStore();
   const records = useRecordsStore((state) => state.records);
   const recordsStatus = useRecordsStore((state) => state.recordsStatus);
   const loadRecords = useRecordsStore((state) => state.loadRecords);
   const { showToast } = useToastStore();
-  const logoInputRef = useRef<HTMLInputElement | null>(null);
-  const [pendingMembers, setPendingMembers] = useState<PendingMembershipReview[]>([]);
   const [squadMembers, setSquadMembers] = useState<ApprovedMembership[]>([]);
   const [isLoadingSquad, setIsLoadingSquad] = useState(false);
-  const [isLoadingPending, setIsLoadingPending] = useState(false);
-  const [reviewingId, setReviewingId] = useState<string | null>(null);
-  const [changingRoleId, setChangingRoleId] = useState<string | null>(null);
-  const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
-  const [clubDescription, setClubDescription] = useState('');
-  const [clubLogoUrl, setClubLogoUrl] = useState<string | null>(null);
-  const [isClubPublic, setIsClubPublic] = useState(true);
-  const [isSavingClubSettings, setIsSavingClubSettings] = useState(false);
-  const [isUploadingClubLogo, setIsUploadingClubLogo] = useState(false);
   const squadCount = squadMembers.length;
-  const canReview = userRole === 'admin' || userRole === 'operator';
-  const canAssignOperator = userRole === 'admin';
+
   const topMatchPointRanks = useMemo(() => buildTopMatchPointRanks(squadMembers), [squadMembers]);
   const seasonRecordByMembershipId = useMemo(() => {
     if (!Array.isArray(records?.rankingRows)) return new Map();
@@ -61,8 +40,6 @@ export default function LockerRoomTab() {
   );
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
   const [photoMember, setPhotoMember] = useState<ApprovedMembership | null>(null);
-  const [memberActionModal, setMemberActionModal] = useState<MemberActionModalState>(null);
-  const [withdrawConfirmName, setWithdrawConfirmName] = useState('');
 
   useEffect(() => {
     if (!activeClubId || recordsStatus !== 'idle') return;
@@ -97,155 +74,6 @@ export default function LockerRoomTab() {
       isActive = false;
     };
   }, [activeClubId, memberProfile, showToast]);
-
-  useEffect(() => {
-    if (!canReview) return;
-
-    let isActive = true;
-    setIsLoadingPending(true);
-    fetchPendingMemberships(activeClubId)
-      .then((members) => {
-        if (isActive) setPendingMembers(members);
-      })
-      .catch((error) => {
-        console.error('[FC Moim] Pending memberships failed:', error);
-        showToast('입단 대기 목록을 불러오지 못했습니다.');
-      })
-      .finally(() => {
-        if (isActive) setIsLoadingPending(false);
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [activeClubId, canReview, showToast]);
-
-  useEffect(() => {
-    if (!canReview) return;
-
-    let isActive = true;
-    fetchClubSettings(activeClubId)
-      .then((club) => {
-        if (!isActive) return;
-        setClubDescription(club.description ?? '');
-        setClubLogoUrl(club.logoUrl);
-        setIsClubPublic(club.isPublic);
-      })
-      .catch((error) => {
-        console.error('[FC Moim] Club settings load failed:', error);
-        showToast('팀 설정을 불러오지 못했습니다.');
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [activeClubId, canReview, showToast]);
-
-  useEffect(() => {
-    setClubLogoUrl(teamLogoUrl);
-  }, [teamLogoUrl]);
-
-  const handleReview = async (membershipId: string, decision: 'approved' | 'rejected') => {
-    try {
-      setReviewingId(membershipId);
-      await reviewMembership({ clubId: activeClubId, membershipId, decision });
-      setPendingMembers((members) => members.filter((member) => member.id !== membershipId));
-      showToast(decision === 'approved' ? '입단신청을 승인했어요.' : '입단신청을 반려했어요.');
-    } catch (error) {
-      console.error('[FC Moim] Membership review failed:', error);
-      showToast(error instanceof Error ? error.message : '입단신청 심사를 처리하지 못했습니다.');
-    } finally {
-      setReviewingId(null);
-    }
-  };
-
-  const handleChangeRole = async (membershipId: string, role: 'operator' | 'member') => {
-    try {
-      setChangingRoleId(membershipId);
-      const membership = await updateMembershipRole({ clubId: activeClubId, membershipId, role });
-      setSquadMembers((members) =>
-        members.map((member) => (member.id === membership.id ? membership : member)),
-      );
-      showToast(role === 'operator' ? '운영진 권한을 부여했어요.' : '운영진 권한을 회수했어요.');
-    } catch (error) {
-      console.error('[FC Moim] Membership role change failed:', error);
-      showToast(error instanceof Error ? error.message : '멤버십 권한을 변경하지 못했습니다.');
-    } finally {
-      setChangingRoleId(null);
-    }
-  };
-
-  const handleSaveClubSettings = async () => {
-    try {
-      setIsSavingClubSettings(true);
-      const club = await patchClubSettings({
-        clubId: activeClubId,
-        description: clubDescription,
-        isPublic: isClubPublic,
-      });
-      setClubDescription(club.description ?? '');
-      setIsClubPublic(club.isPublic);
-      showToast('팀 공개 설정을 저장했어요.');
-    } catch (error) {
-      console.error('[FC Moim] Club settings save failed:', error);
-      showToast(error instanceof Error ? error.message : '팀 설정을 저장하지 못했습니다.');
-    } finally {
-      setIsSavingClubSettings(false);
-    }
-  };
-
-  const handleClubLogoChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] ?? null;
-    event.target.value = '';
-    if (!file) return;
-
-    try {
-      setIsUploadingClubLogo(true);
-      const club = await uploadClubLogo({ clubId: activeClubId, file });
-      setClubLogoUrl(club.logoUrl);
-      useAppStore.setState({
-        teamLogoUrl: club.logoUrl,
-        availableClubs: availableClubs.map((item) => (
-          item.clubId === activeClubId ? { ...item, logoUrl: club.logoUrl } : item
-        )),
-      });
-      showToast('팀 로고를 업로드했어요.');
-    } catch (error) {
-      console.error('[FC Moim] Club logo upload failed:', error);
-      showToast(error instanceof Error ? error.message : '팀 로고를 업로드하지 못했습니다.');
-    } finally {
-      setIsUploadingClubLogo(false);
-    }
-  };
-
-  const handleWithdrawMembership = async (member: ApprovedMembership) => {
-    try {
-      setWithdrawingId(member.id);
-      await withdrawMembership({ clubId: activeClubId, membershipId: member.id });
-      setSquadMembers((members) => members.filter((item) => item.id !== member.id));
-      showToast(`${member.nickname} 회원을 탈퇴처리했어요.`);
-    } catch (error) {
-      console.error('[FC Moim] Membership withdrawal failed:', error);
-      showToast(error instanceof Error ? error.message : '회원 탈퇴처리를 완료하지 못했습니다.');
-    } finally {
-      setWithdrawingId(null);
-    }
-  };
-
-  const handleConfirmMemberAction = async () => {
-    if (!memberActionModal) return;
-
-    if (memberActionModal.mode === 'withdraw') {
-      await handleWithdrawMembership(memberActionModal.member);
-    } else {
-      await handleChangeRole(
-        memberActionModal.member.id,
-        memberActionModal.mode === 'grant-operator' ? 'operator' : 'member',
-      );
-    }
-    setMemberActionModal(null);
-    setWithdrawConfirmName('');
-  };
 
   return (
     <div className="space-y-4 animate-fadeIn pb-20">
@@ -325,18 +153,6 @@ export default function LockerRoomTab() {
                   <MemberProfileAccordion
                     member={member}
                     seasonRecord={seasonRecordByMembershipId.get(member.id) ?? null}
-                    canManageMembers={canAssignOperator}
-                    isSelf={member.id === memberProfile?.id}
-                    changingRoleId={changingRoleId}
-                    withdrawingId={withdrawingId}
-                    onRoleAction={(target, mode) => {
-                      setWithdrawConfirmName('');
-                      setMemberActionModal({ mode, member: target });
-                    }}
-                    onWithdrawAction={(target) => {
-                      setWithdrawConfirmName('');
-                      setMemberActionModal({ mode: 'withdraw', member: target });
-                    }}
                   />
                 ) : null}
               </div>
@@ -351,66 +167,6 @@ export default function LockerRoomTab() {
           </div>
         )}
       </div>
-
-
-      <Modal
-        title={getMemberActionModalTitle(memberActionModal)}
-        isOpen={memberActionModal !== null}
-        onClose={() => {
-          setMemberActionModal(null);
-          setWithdrawConfirmName('');
-        }}
-        presentation="dialog"
-      >
-        {memberActionModal ? (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 rounded-xl bg-surface-bg p-3">
-              <RoleAvatar member={memberActionModal.member} size={48} />
-              <div className="min-w-0">
-                <p className="truncate text-sm font-bold text-primary">{memberActionModal.member.nickname}</p>
-                <p className="text-xs font-bold text-tertiary">
-                  {getMemberActionModalDescription(memberActionModal)}
-                </p>
-              </div>
-            </div>
-            {memberActionModal.mode === 'withdraw' ? (
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-bold text-feedback-error">
-                  확인을 위해 회원 이름을 입력해주세요
-                </span>
-                <input
-                  type="text"
-                  value={withdrawConfirmName}
-                  onChange={(event) => setWithdrawConfirmName(event.target.value)}
-                  placeholder={memberActionModal.member.nickname}
-                  className="w-full rounded-xl border border-feedback-error-border bg-feedback-error-bg px-3 py-2.5 text-sm font-bold text-primary outline-none transition-colors focus:border-feedback-error focus:bg-surface-card"
-                  aria-label="탈퇴 처리 회원 이름 확인"
-                />
-              </label>
-            ) : null}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setMemberActionModal(null)}
-                className="rounded-xl bg-surface-hover px-4 py-3 text-sm font-semibold text-secondary transition-all hover:bg-border/30 active:scale-95"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                disabled={
-                  isMemberActionBusy(memberActionModal, changingRoleId, withdrawingId) ||
-                  (memberActionModal.mode === 'withdraw' && withdrawConfirmName !== memberActionModal.member.nickname)
-                }
-                onClick={() => void handleConfirmMemberAction()}
-                className={`${getMemberActionConfirmClass(memberActionModal)} rounded-xl px-4 py-3 text-sm font-semibold text-white transition-all active:scale-95 disabled:cursor-not-allowed disabled:bg-action-disabled disabled:text-tertiary`}
-              >
-                {getMemberActionConfirmLabel(memberActionModal)}
-              </button>
-            </div>
-          </div>
-        ) : null}
-      </Modal>
       <Modal
         title={photoMember?.nickname ?? '프로필 사진'}
         isOpen={photoMember !== null}
@@ -448,17 +204,7 @@ function avatarSrcFor(member: ApprovedMembership) {
 }
 
 
-function formatBody(member: PendingMembershipReview) {
-  const height = member.heightCm ? `${member.heightCm}cm` : '-';
-  const weight = member.weightKg ? `${member.weightKg}kg` : '-';
-  return `${height} / ${weight}`;
-}
 
-function formatFoot(foot: PendingMembershipReview['preferredFoot']) {
-  if (foot === 'left') return '왼발';
-  if (foot === 'both') return '양발';
-  return '오른발';
-}
 
 function buildTopMatchPointRanks(members: ApprovedMembership[]) {
   return new Map(
@@ -499,26 +245,10 @@ function getDisplayCondition(): ConditionLevel {
 function MemberProfileAccordion({
   member,
   seasonRecord,
-  canManageMembers,
-  isSelf,
-  changingRoleId,
-  withdrawingId,
-  onRoleAction,
-  onWithdrawAction,
 }: {
   member: ApprovedMembership;
   seasonRecord: PlayerAbilityPanelSeasonRecord | null;
-  canManageMembers: boolean;
-  isSelf: boolean;
-  changingRoleId: string | null;
-  withdrawingId: string | null;
-  onRoleAction: (member: ApprovedMembership, mode: Extract<MemberActionMode, 'grant-operator' | 'revoke-operator'>) => void;
-  onWithdrawAction: (member: ApprovedMembership) => void;
 }) {
-  const canChangeRole = canManageMembers && member.role !== 'admin';
-  const canWithdraw = canManageMembers && member.role !== 'admin' && !isSelf;
-  const roleMode = member.role === 'operator' ? 'revoke-operator' : 'grant-operator';
-
   return (
     <div id={`member-detail-${member.id}`} className="border-t border-border bg-surface-bg/30 px-4 py-4">
       <PlayerAbilityPanel
@@ -531,39 +261,7 @@ function MemberProfileAccordion({
         birthDate={member.birthDate}
         heightCm={member.heightCm}
         weightKg={member.weightKg}
-      >
-
-        {canChangeRole || canWithdraw ? (
-          <div className="grid grid-cols-2 gap-2">
-            {canChangeRole ? (
-              <button
-                type="button"
-                disabled={changingRoleId === member.id}
-                onClick={() => onRoleAction(member, roleMode)}
-                className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold text-white transition-all active:scale-95 disabled:opacity-50 ${
-                  roleMode === 'grant-operator'
-                    ? 'bg-brand-primary hover:bg-brand-primary-hover'
-                    : 'bg-feedback-warning hover:brightness-110'
-                }`}
-              >
-                <UserCog size={15} />
-                {roleMode === 'grant-operator' ? '운영진 권한 부여' : '운영진 권한 회수'}
-              </button>
-            ) : null}
-            {canWithdraw ? (
-              <button
-                type="button"
-                disabled={withdrawingId === member.id}
-                onClick={() => onWithdrawAction(member)}
-                className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-feedback-error px-3 py-2 text-xs font-bold text-white transition-all hover:brightness-110 active:scale-95 disabled:opacity-50"
-              >
-                <UserX size={15} />
-                탈퇴 처리
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-      </PlayerAbilityPanel>
+      />
     </div>
   );
 }
