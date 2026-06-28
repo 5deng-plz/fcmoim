@@ -14,7 +14,7 @@ import { fetchFeedPosts, type FeedPost } from '@/stores/feedClient';
 import EventComments from '@/components/features/EventComments';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import Modal from '@/components/ui/Modal';
-import { fetchCalendarMatches, type UpcomingMatch } from '@/stores/matchClient';
+import { fetchCalendarMatches, fetchMatchAttendees, type UpcomingMatch } from '@/stores/matchClient';
 import { useToastStore } from '@/stores/useToastStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import TeamEmblem from '@/components/brand/TeamEmblem';
@@ -869,172 +869,171 @@ function DesktopLockerRoomPanel() {
               </button>
             </div>
 
-            {/* Right Hub: Pending Applicants List */}
-            <div className="rounded-3xl border border-[#25283e] bg-[#141624]/60 p-5 shadow-lg backdrop-blur-md space-y-4">
-              <div className="flex justify-between items-center pb-2 border-b border-white/5">
-                <span className="text-[11px] font-black text-gray-400 uppercase">신규 입단 신청 현황</span>
-                <span className="text-[9px] font-black px-2 py-0.5 rounded bg-[#00ffa3]/10 text-[#00ffa3] border border-[#00ffa3]/20">
-                  {pendingMembers.length}명 대기 중
-                </span>
-              </div>
-
-              {isLoadingPending ? (
-                <div className="py-20 text-center text-xs font-bold text-gray-500">신청 대기열을 가져오는 중...</div>
-              ) : pendingMembers.length > 0 ? (
-                <div className="space-y-3 max-h-[280px] overflow-y-auto no-scrollbar">
-                  {pendingMembers.map((member) => (
-                    <div key={member.id} className="rounded-2xl border border-white/5 bg-black/40 p-3.5 flex justify-between items-center hover:border-white/10 transition-colors">
-                      <div className="min-w-0">
-                        <p className="text-xs font-black text-white truncate">{member.nickname}</p>
-                        <p className="text-[10px] text-gray-500 font-bold mt-1">
-                          {formatBody(member)} · {formatFoot(member.preferredFoot)}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 gap-1.5">
-                        <button
-                          type="button"
-                          disabled={reviewingId === member.id}
-                          onClick={() => void handleReview(member.id, 'approved')}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#00ffa3] text-black hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
-                          title="승인"
-                        >
-                          <UserCheck size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          disabled={reviewingId === member.id}
-                          onClick={() => void handleReview(member.id, 'rejected')}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 text-gray-400 border border-white/5 hover:bg-white/10 hover:text-white active:scale-95 transition-all disabled:opacity-50"
-                          title="반려"
-                        >
-                          <UserX size={15} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+            {/* Right Hub: Club Membership & Roster Hub (입단 신청 + 운영진 슬롯) */}
+            <div className="rounded-3xl border border-[#25283e] bg-[#141624]/60 p-5 shadow-lg backdrop-blur-md space-y-5 flex flex-col justify-between">
+              
+              {/* Part 1: Pending Applicants */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                  <span className="text-[11px] font-black text-gray-400 uppercase">신규 입단 신청 현황</span>
+                  <span className="text-[9px] font-black px-2 py-0.5 rounded bg-[#00ffa3]/10 text-[#00ffa3] border border-[#00ffa3]/20">
+                    {pendingMembers.length}명 대기 중
+                  </span>
                 </div>
-              ) : (
-                <div className="py-20 text-center text-xs font-bold text-gray-500 rounded-2xl border border-dashed border-white/5 bg-black/20">
-                  현재 입단 대기 중인 신규 신청자가 없습니다.
-                </div>
-              )}
-            </div>
 
-            {/* Third Hub: Operators Slots Hub */}
-            <div className="rounded-3xl border border-[#25283e] bg-[#141624]/60 p-5 shadow-lg backdrop-blur-md space-y-4 col-span-2">
-              <div className="flex justify-between items-center pb-2 border-b border-white/5">
-                <span className="text-[11px] font-black text-gray-400 uppercase">클럽 행정 운영진 지정 및 공석 현황</span>
-                <span className="text-[9px] font-black px-2 py-0.5 rounded bg-[#00ffa3]/10 text-[#00ffa3] border border-[#00ffa3]/20">
-                  최대 2명 임명 가능
-                </span>
-              </div>
-
-              {/* Roster Slot Rows */}
-              <div className="space-y-4">
-                {/* 1. 소유주 (Owner) 고정 슬롯 */}
-                {(() => {
-                  const owner = rows.find((r: any) => r.role === 'admin');
-                  if (!owner) return null;
-                  return (
-                    <div className="rounded-2xl border border-[#00ffa3]/20 bg-black/40 p-3.5 flex justify-between items-center relative overflow-hidden">
-                      <div className="absolute right-0 top-0 text-[32px] opacity-10 pointer-events-none select-none">👑</div>
-                      <div className="flex items-center gap-3 min-w-0">
-                        <Image
-                          src={owner.photoUrl || getFallbackAvatar(owner.nickname)}
-                          alt=""
-                          width={36}
-                          height={36}
-                          className="h-9 w-9 rounded-full bg-surface-bg object-cover ring-2 ring-[#00ffa3]/30"
-                          unoptimized
-                        />
+                {isLoadingPending ? (
+                  <div className="py-12 text-center text-xs font-bold text-gray-500">신청 대기열을 가져오는 중...</div>
+                ) : pendingMembers.length > 0 ? (
+                  <div className="space-y-2.5 max-h-[160px] overflow-y-auto no-scrollbar">
+                    {pendingMembers.map((member) => (
+                      <div key={member.id} className="rounded-2xl border border-white/5 bg-black/40 p-3 flex justify-between items-center hover:border-white/10 transition-colors">
                         <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <p className="text-xs font-black text-white truncate">{owner.nickname}</p>
-                            <span className="text-[8px] bg-[#00ffa3]/10 text-[#00ffa3] border border-[#00ffa3]/20 px-1 py-0.2 rounded font-black uppercase">OWNER</span>
-                          </div>
-                          <p className="text-[9px] text-gray-500 font-bold mt-0.5">OVR {owner.ovr} · 최고 권한 소유주</p>
+                          <p className="text-xs font-black text-white truncate">{member.nickname}</p>
+                          <p className="text-[9px] text-gray-500 font-bold mt-0.5">
+                            {formatBody(member)} · {formatFoot(member.preferredFoot)}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 gap-1.5">
+                          <button
+                            type="button"
+                            disabled={reviewingId === member.id}
+                            onClick={() => void handleReview(member.id, 'approved')}
+                            className="flex h-7.5 w-7.5 items-center justify-center rounded-lg bg-[#00ffa3] text-black hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+                            title="승인"
+                          >
+                            <UserCheck size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={reviewingId === member.id}
+                            onClick={() => void handleReview(member.id, 'rejected')}
+                            className="flex h-7.5 w-7.5 items-center justify-center rounded-lg bg-white/5 text-gray-400 border border-white/5 hover:bg-white/10 hover:text-white active:scale-95 transition-all disabled:opacity-50"
+                            title="반려"
+                          >
+                            <UserX size={14} />
+                          </button>
                         </div>
                       </div>
-                      <div className="shrink-0 text-[10px] font-black text-gray-500 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
-                        해임 불가 👑
-                      </div>
-                    </div>
-                  );
-                })()}
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-12 text-center text-xs font-bold text-gray-500 rounded-2xl border border-dashed border-white/5 bg-black/20">
+                    입단 대기자가 없습니다.
+                  </div>
+                )}
+              </div>
 
-                {/* 2. 운영진 슬롯 2개 (Slots) */}
-                <div className="grid grid-cols-2 gap-4">
+              {/* Part 2: Roster Operator Slots (통합 배치) */}
+              <div className="space-y-3 pt-3 border-t border-white/5">
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-black text-gray-400 uppercase">클럽 운영진 지정 및 공석 현황</span>
+                  <span className="text-[9px] font-black px-2 py-0.5 rounded bg-[#00ffa3]/10 text-[#00ffa3] border border-[#00ffa3]/20">
+                    최대 2명
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {/* 1. 소유주 (Owner) 슬롯 */}
                   {(() => {
-                    const operators = rows.filter((r: any) => r.role === 'operator');
-                    const candidates = rows.filter((r: any) => r.role === 'member');
-                    
-                    return [0, 1].map((index) => {
-                      const operator = operators[index];
-                      
-                      if (operator) {
-                        // 임명된 운영진 슬롯
-                        const isSelf = operator.membershipId === memberProfile?.id;
-                        
-                        return (
-                          <div key={operator.membershipId} className="rounded-2xl border border-white/5 bg-black/40 p-3.5 flex justify-between items-center hover:border-white/10 transition-colors">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <Image
-                                src={operator.photoUrl || getFallbackAvatar(operator.nickname)}
-                                alt=""
-                                width={32}
-                                height={32}
-                                className="h-8 w-8 rounded-full bg-surface-bg object-cover ring-1 ring-border"
-                                unoptimized
-                              />
-                              <div className="min-w-0">
-                                <p className="text-xs font-black text-white truncate flex items-center gap-1.5">
-                                  {operator.nickname}
-                                  {isSelf && <span className="text-[8px] bg-blue-500/20 text-blue-400 border border-blue-500/30 px-1 py-0.2 rounded font-bold">ME</span>}
-                                </p>
-                                <p className="text-[9px] text-gray-500 font-bold mt-0.5">OVR {operator.ovr} · 운영진 🛠️</p>
-                              </div>
+                    const owner = rows.find((r: any) => r.role === 'admin');
+                    if (!owner) return null;
+                    return (
+                      <div className="rounded-2xl border border-[#00ffa3]/10 bg-black/40 px-3 py-2 flex justify-between items-center relative overflow-hidden">
+                        <div className="absolute right-0 top-0 text-[24px] opacity-10 pointer-events-none select-none">👑</div>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Image
+                            src={owner.photoUrl || getFallbackAvatar(owner.nickname)}
+                            alt=""
+                            width={28}
+                            height={28}
+                            className="h-7 w-7 rounded-full bg-surface-bg object-cover ring-1 ring-[#00ffa3]/20"
+                            unoptimized
+                          />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1">
+                              <p className="text-xs font-black text-white truncate">{owner.nickname}</p>
+                              <span className="text-[7px] bg-[#00ffa3]/10 text-[#00ffa3] border border-[#00ffa3]/20 px-1 py-0.2 rounded font-black uppercase">OWNER</span>
                             </div>
-                            
-                            {!isSelf && (
+                            <p className="text-[9px] text-gray-500 font-bold">OVR {owner.ovr} · 소유주</p>
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-[8px] font-black text-gray-500 bg-white/5 px-2 py-1 rounded-lg border border-white/5">
+                          해임 불가
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* 2. 운영진 슬롯 2개 */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {(() => {
+                      const operators = rows.filter((r: any) => r.role === 'operator');
+                      
+                      return [0, 1].map((index) => {
+                        const operator = operators[index];
+                        
+                        if (operator) {
+                          const isSelf = operator.membershipId === memberProfile?.id;
+                          return (
+                            <div key={operator.membershipId} className="rounded-2xl border border-white/5 bg-black/40 p-2.5 flex justify-between items-center hover:border-white/10 transition-colors">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Image
+                                  src={operator.photoUrl || getFallbackAvatar(operator.nickname)}
+                                  alt=""
+                                  width={24}
+                                  height={24}
+                                  className="h-6 w-6 rounded-full bg-surface-bg object-cover"
+                                  unoptimized
+                                />
+                                <div className="min-w-0">
+                                  <p className="text-xs font-black text-white truncate flex items-center gap-1">
+                                    {operator.nickname}
+                                    {isSelf && <span className="text-[7px] bg-blue-500/20 text-blue-400 border border-blue-500/30 px-0.5 rounded font-bold">ME</span>}
+                                  </p>
+                                  <p className="text-[8px] text-gray-500 font-bold">OVR {operator.ovr}</p>
+                                </div>
+                              </div>
+                              
+                              {!isSelf && (
+                                <button
+                                  type="button"
+                                  disabled={changingRoleId === operator.membershipId}
+                                  onClick={() => setOperatorActionModal({
+                                    mode: 'revoke',
+                                    member: operator
+                                  })}
+                                  className="shrink-0 text-[8px] font-black text-red-400 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 px-2 py-1 rounded-lg transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                  해임
+                                </button>
+                              )}
+                            </div>
+                          );
+                        } else {
+                          return (
+                            <div key={`empty-slot-${index}`} className="rounded-2xl border border-dashed border-white/10 bg-black/25 p-2.5 flex items-center justify-between hover:border-white/20 transition-colors">
+                              <div className="flex items-center gap-2 min-w-0 text-gray-500">
+                                <span className="text-sm">🛠️</span>
+                                <div className="min-w-0">
+                                  <p className="text-[10px] font-black leading-tight">운영진 공석</p>
+                                </div>
+                              </div>
                               <button
                                 type="button"
-                                disabled={changingRoleId === operator.membershipId}
-                                onClick={() => setOperatorActionModal({
-                                  mode: 'revoke',
-                                  member: operator
-                                })}
-                                className="shrink-0 text-[10px] font-black text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 px-3 py-1.5 rounded-xl transition-all active:scale-95 disabled:opacity-50"
+                                onClick={() => setShowAssignList(true)}
+                                className="shrink-0 text-[8px] font-black text-black bg-[#00ffa3] hover:brightness-110 px-2.5 py-1.2 rounded-lg transition-all active:scale-95"
                               >
-                                운영진 해임
+                                임명
                               </button>
-                            )}
-                          </div>
-                        );
-                      } else {
-                        // 비어있는 공석 슬롯
-                        return (
-                          <div key={`empty-slot-${index}`} className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-3.5 flex items-center justify-between hover:border-white/20 transition-colors">
-                            <div className="flex items-center gap-3 min-w-0 text-gray-500">
-                              <span className="text-xl">🛠️</span>
-                              <div className="min-w-0">
-                                <p className="text-xs font-black">운영진 미임명</p>
-                                <p className="text-[9px] font-bold mt-0.5">슬롯 공석 (임명 가능)</p>
-                              </div>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => setShowAssignList(true)}
-                              className="shrink-0 text-[10px] font-black text-black bg-[#00ffa3] hover:brightness-110 px-3 py-1.5 rounded-xl transition-all active:scale-95"
-                            >
-                              + 운영진 임명
-                            </button>
-                          </div>
-                        );
-                      }
-                    });
-                  })()}
+                          );
+                        }
+                      });
+                    })()}
+                  </div>
                 </div>
               </div>
+
             </div>
 
           </div>
@@ -1151,9 +1150,6 @@ function DesktopLockerRoomPanel() {
   );
 }
 
-/* ==========================================================================
-   5. DesktopDetailStatsPanel (상세 기록 분석실 - 경기장 승률 및 스쿼드 케미 상성)
-   ========================================================================== */
 function DesktopDetailStatsPanel() {
   const { records, recordsStatus, loadRecords } = useRecordsStore();
   const { activeClubId } = useAppStore();
@@ -1161,6 +1157,8 @@ function DesktopDetailStatsPanel() {
   // 경기 기록 상태
   const [matches, setMatches] = useState<UpcomingMatch[]>([]);
   const [isLoadingMatches, setIsLoadingMatches] = useState(false);
+  const [matchAttendeesMap, setMatchAttendeesMap] = useState<Record<string, string[]>>({});
+  const [isLoadingAttendees, setIsLoadingAttendees] = useState(false);
 
   useEffect(() => {
     if (recordsStatus === 'idle') {
@@ -1181,10 +1179,10 @@ function DesktopDetailStatsPanel() {
     fetchCalendarMatches({ clubId: activeClubId, from: fromStr, to: toStr })
       .then((data) => {
         if (!isActive) return;
-        // 완료되었거나 스코어가 입력된 경기들을 날짜 내림차순 정렬
+        // 완료되었거나 스코어가 입력된 경기들을 날짜 내림차순 정렬 (매트릭스는 왼쪽에서 오른쪽으로 시간 순이 보편적이므로 날짜 오름차순 정렬)
         const finished = data
           .filter((m) => m.status === 'finished' || (m.ourScore !== null && m.oppScore !== null))
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         setMatches(finished);
       })
       .catch((err) => {
@@ -1196,6 +1194,41 @@ function DesktopDetailStatsPanel() {
 
     return () => { isActive = false; };
   }, [activeClubId]);
+
+  // 경기별 참석자 명단 병렬 로드
+  useEffect(() => {
+    if (matches.length === 0) return;
+    let isActive = true;
+    setIsLoadingAttendees(true);
+
+    const loadAttendees = async () => {
+      try {
+        const attendeePromises = matches.map(async (m) => {
+          const attendees = await fetchMatchAttendees({ clubId: activeClubId, matchId: m.id });
+          return {
+            matchId: m.id,
+            membershipIds: attendees.map((a) => a.membershipId)
+          };
+        });
+
+        const results = await Promise.all(attendeePromises);
+        if (!isActive) return;
+
+        const map: Record<string, string[]> = {};
+        for (const res of results) {
+          map[res.matchId] = res.membershipIds;
+        }
+        setMatchAttendeesMap(map);
+      } catch (err) {
+        console.error('[FC Moim] Load match attendees map failed:', err);
+      } finally {
+        if (isActive) setIsLoadingAttendees(false);
+      }
+    };
+
+    void loadAttendees();
+    return () => { isActive = false; };
+  }, [matches, activeClubId]);
 
   // 경기장 승률 모의 데이터
   const stadiums = [
@@ -1216,6 +1249,33 @@ function DesktopDetailStatsPanel() {
     { players: ['김영수', '정상철'], desc: '동선 오버랩으로 역습 자주 허용', stats: '5경기 1승 4패', rate: 20 },
     { players: ['박영철', '한민수'], desc: '패스 미스 빌드업 불안 요소 노출', stats: '4경기 1승 1무 2패', rate: 25 }
   ];
+
+  // 랭킹 리스트 데이터
+  const rows = records?.rankingRows ?? [];
+
+  // 날짜 변환 헬퍼 (ex. 2026-05-02 -> 26.5.2)
+  const formatHeaderDate = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      const yy = d.getFullYear().toString().substring(2);
+      const m = d.getMonth() + 1;
+      const date = d.getDate();
+      return `${yy}.${m}.${date}`;
+    } catch {
+      return '';
+    }
+  };
+
+  // 경기장명 축약 헬퍼
+  const shrinkLocation = (loc: string) => {
+    if (loc.includes('잠실')) return '잠실';
+    if (loc.includes('상암')) return '상암';
+    if (loc.includes('하남')) return '하남';
+    if (loc.includes('어반')) return '어반';
+    return loc.substring(0, 3);
+  };
+
+  const isWorking = isLoadingMatches || isLoadingAttendees;
 
   return (
     <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6 winning-bg-grid relative animate-fadeIn">
@@ -1316,65 +1376,94 @@ function DesktopDetailStatsPanel() {
 
       </div>
 
-      {/* 3. 전체 경기 기록실 (All Match History & Records) */}
+      {/* 3. 선수별 통합 전적 현황판 (Player Match Matrix & Stadium Insights) */}
       <div className="rounded-3xl border border-[#25283e] bg-[#141624]/60 p-5 shadow-lg backdrop-blur-md relative z-10 animate-fadeIn space-y-4">
         <div className="flex justify-between items-center pb-2 border-b border-white/5">
           <h3 className="text-xs font-black tracking-wider text-gray-400 uppercase flex items-center gap-2">
-            <LineChart size={14} className="text-[#00ffa3]" />
-            분석 근거자료: 전체 매치 기록실 (All Match History & Records)
+            <LayoutGrid size={14} className="text-[#00ffa3]" />
+            선수별 통합 전적 현황판 (Player Match Matrix & Stadium Insights)
           </h3>
-          <span className="font-mono text-[10px] font-black text-gray-500">TOTAL: {matches.length} MATCHES</span>
+          <span className="font-mono text-[9px] font-black text-[#00ffa3] bg-[#00ffa3]/10 border border-[#00ffa3]/20 px-2 py-0.5 rounded">
+            경기장 상성 연동 완료
+          </span>
         </div>
 
-        {isLoadingMatches ? (
-          <div className="py-12 text-center text-xs font-bold text-gray-500">매치 기록 보관소를 불러오는 중...</div>
+        {isWorking ? (
+          <div className="py-16 text-center text-xs font-bold text-gray-500 flex flex-col items-center justify-center gap-2">
+            <LoaderCircle size={20} className="animate-spin text-[#00ffa3]" />
+            <span>선수단 전적 매트릭스를 로드 중...</span>
+          </div>
         ) : matches.length > 0 ? (
-          <div className="overflow-x-auto no-scrollbar">
-            <table className="w-full border-collapse text-left">
+          <div className="overflow-x-auto no-scrollbar rounded-2xl border border-white/5 bg-black/25">
+            <table className="w-full border-collapse text-center">
               <thead>
-                <tr className="border-b border-white/5 text-[10px] font-black text-gray-500 uppercase tracking-wider">
-                  <th className="py-3 px-4">날짜</th>
-                  <th className="py-3 px-4">매치 라운드</th>
-                  <th className="py-3 px-4">매치 타이틀</th>
-                  <th className="py-3 px-4">경기장</th>
-                  <th className="py-3 px-4 text-center">결과 및 스코어</th>
-                  <th className="py-3 px-4">상태</th>
+                <tr className="bg-white/5 text-[9px] font-black text-gray-400 uppercase tracking-wider border-b border-white/5">
+                  <th className="py-3 px-3 text-left font-extrabold text-[10px] min-w-[80px]">구분</th>
+                  
+                  {/* 경기별 날짜 및 경기장 명칭 헤더 */}
+                  {matches.map((match) => (
+                    <th key={match.id} className="py-2.5 px-2 border-l border-white/5 min-w-[75px]">
+                      <div className="text-[10px] font-black text-white font-mono">{formatHeaderDate(match.date)}</div>
+                      <div className="text-[8px] font-extrabold text-[#00ffa3] mt-0.5 tracking-tighter truncate max-w-[70px] mx-auto" title={match.location}>
+                        {shrinkLocation(match.location)}
+                      </div>
+                    </th>
+                  ))}
+                  
+                  {/* 누적 승무패 헤더 */}
+                  <th className="py-3 px-3.5 border-l border-white/10 text-emerald-400 font-bold min-w-[45px]">승</th>
+                  <th className="py-3 px-3.5 border-l border-white/5 text-red-400 font-bold min-w-[45px]">패</th>
+                  <th className="py-3 px-3.5 border-l border-white/5 text-[#00ffa3] font-black min-w-[55px]">승률</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5 text-xs">
-                {matches.map((match) => {
-                  const isWin = (match.ourScore ?? 0) > (match.oppScore ?? 0);
-                  const isDraw = (match.ourScore ?? 0) === (match.oppScore ?? 0);
-                  
-                  return (
-                    <tr key={match.id} className="hover:bg-white/5 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-bold text-gray-400">
-                        {new Date(match.date).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
-                      </td>
-                      <td className="py-3.5 px-4 font-mono font-extrabold text-[#00ffa3]">
-                        {match.round ? `${match.round}R` : '-'}
-                      </td>
-                      <td className="py-3.5 px-4 font-black text-white">{match.title}</td>
-                      <td className="py-3.5 px-4 font-bold text-gray-300">{match.location}</td>
-                      <td className="py-3.5 px-4 text-center">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[11px] ${
-                          isWin
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                            : isDraw
-                              ? 'bg-white/5 text-gray-300 border border-white/10'
-                              : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                        }`}>
-                          {isWin ? '승' : isDraw ? '무' : '패'} · {match.ourScore} : {match.oppScore}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="text-[9px] font-black uppercase text-gray-500 bg-white/5 px-2 py-0.5 rounded border border-white/5">
-                          FINISHED
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+              <tbody className="divide-y divide-white/5 text-xs text-white">
+                {rows.map((player) => (
+                  <tr key={player.membershipId} className="hover:bg-white/5 transition-colors">
+                    {/* 구분 (선수 이름) */}
+                    <td className="py-2.5 px-3 text-left font-black text-white flex items-center gap-2">
+                      <Image
+                        src={player.photoUrl || getFallbackAvatar(player.nickname)}
+                        alt=""
+                        width={20}
+                        height={20}
+                        className="h-5 w-5 rounded-full object-cover shrink-0 ring-1 ring-white/10"
+                        unoptimized
+                      />
+                      <span className="truncate max-w-[65px]">{player.nickname}</span>
+                    </td>
+
+                    {/* 각 경기별 승무패 결과 배지 */}
+                    {matches.map((match) => {
+                      const isWin = (match.ourScore ?? 0) > (match.oppScore ?? 0);
+                      const isDraw = (match.ourScore ?? 0) === (match.oppScore ?? 0);
+                      const resultLabel = isWin ? '승' : isDraw ? '무' : '패';
+                      const hasAttended = matchAttendeesMap[match.id]?.includes(player.membershipId);
+
+                      return (
+                        <td key={match.id} className="py-2.5 px-2 border-l border-white/5">
+                          {hasAttended ? (
+                            <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-black ${
+                              isWin
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                : isDraw
+                                  ? 'bg-white/5 text-gray-400 border border-white/10'
+                                  : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                            }`}>
+                              {resultLabel}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-gray-700">-</span>
+                          )}
+                        </td>
+                      );
+                    })}
+
+                    {/* 누적 기록 */}
+                    <td className="py-2.5 px-3.5 border-l border-white/10 text-emerald-400 font-mono font-bold">{player.wins}</td>
+                    <td className="py-2.5 px-3.5 border-l border-white/5 text-red-400 font-mono font-bold">{player.losses}</td>
+                    <td className="py-2.5 px-3.5 border-l border-white/5 text-[#00ffa3] font-mono font-black">{player.winRate}%</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -1384,6 +1473,7 @@ function DesktopDetailStatsPanel() {
           </div>
         )}
       </div>
+
     </div>
   );
 }
