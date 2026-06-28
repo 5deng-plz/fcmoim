@@ -19,6 +19,7 @@ export async function GET(request: Request) {
 
     return Response.json(await service.getClubSettings({ auth, clubId }));
   } catch (error) {
+    console.error('[FC Moim] settings GET error:', error);
     return appErrorResponse(error);
   }
 }

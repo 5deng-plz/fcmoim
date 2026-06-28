@@ -546,7 +546,7 @@ function formatBody(member: any) {
 
 function DesktopLockerRoomPanel() {
   const { records, recordsStatus, loadRecords } = useRecordsStore();
-  const { activeClubId, teamName, teamLogoUrl, userRole } = useAppStore();
+  const { activeClubId, teamName, teamLogoUrl, userRole, isAuthenticated } = useAppStore();
   const { showToast } = useToastStore();
   const rows = records?.rankingRows ?? [];
   const logoInputRef = useRef<HTMLInputElement | null>(null);
@@ -574,7 +574,7 @@ function DesktopLockerRoomPanel() {
 
   // 설정 및 신청 대기자 조회
   const loadAdminData = useCallback(async () => {
-    if (!activeClubId) return;
+    if (!isAuthenticated || !activeClubId || (memberProfile?.role !== 'admin' && userRole !== 'admin')) return;
     try {
       setIsLoadingPending(true);
       const [settings, pendings] = await Promise.all([
@@ -589,7 +589,7 @@ function DesktopLockerRoomPanel() {
     } finally {
       setIsLoadingPending(false);
     }
-  }, [activeClubId]);
+  }, [isAuthenticated, activeClubId, memberProfile?.role, userRole]);
 
   useEffect(() => {
     void loadAdminData();
