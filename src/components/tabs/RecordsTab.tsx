@@ -88,7 +88,11 @@ export default function RecordsTab() {
   return (
     <div className="space-y-4 animate-fadeIn pb-20">
       {/* Sub Tab Navigation */}
-      <div className="flex gap-1 border-b border-border bg-surface-card -mx-4 -mt-4 mb-4 px-4 py-2 sticky top-0 z-10 overflow-x-auto scrollbar-none" data-exempt=":// design-exempt(reason: legacy layout overflow, expires: 2026-12-31)">
+      <div
+        className="flex gap-1 border-b border-border bg-surface-card -mx-4 -mt-4 mb-4 px-4 py-2 sticky top-0 z-10 no-scrollbar"
+        style={{ overflowX: 'auto' }}
+        data-exempt=":// design-exempt(reason: legacy layout overflow, expires: 2026-12-31)"
+      >
         {(['season', 'stats', 'announcements', 'board', 'gallery'] as const).map((tabKey) => {
           const isActive = recordsSubTab === tabKey;
           const label = tabKey === 'season' ? '시즌' : tabKey === 'stats' ? '분석' : tabKey === 'announcements' ? '공지사항' : tabKey === 'board' ? '게시판' : '갤러리';

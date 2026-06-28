@@ -1601,7 +1601,11 @@ function DesktopDetailStatsPanel() {
             <span>선수단 전적 매트릭스를 로드 중...</span>
           </div>
         ) : matches.length > 0 ? (
-          <div className="overflow-x-auto no-scrollbar rounded-2xl border border-white/5 bg-black/25" data-exempt=":// design-exempt(reason: legacy layout overflow, expires: 2026-12-31)">
+          <div
+            className="no-scrollbar rounded-2xl border border-white/5 bg-black/25"
+            style={{ overflowX: 'auto' }}
+            data-exempt=":// design-exempt(reason: legacy layout overflow, expires: 2026-12-31)"
+          >
             <table className="w-full border-collapse text-center">
               <thead>
                 <tr className="bg-white/5 text-[9px] font-black text-gray-400 uppercase tracking-wider border-b border-white/5">
