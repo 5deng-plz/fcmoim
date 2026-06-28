@@ -206,7 +206,7 @@ function PlayerOvrStyleCard({
   const trait = resolvedTrait.positionGroup === 'GK'
     ? (findTraitById('build-up-df') ?? resolvedTrait)
     : resolvedTrait;
-  const traitPillClasses = 'border-border bg-surface-card text-primary';
+  const traitPillClasses = 'border-[#00ffa3]/25 bg-black/50 text-[#00ffa3] shadow-[0_0_8px_rgba(0,255,163,0.15)]';
   const tier = getOvrTierClasses(ovr);
 
   if (size === 'full') {

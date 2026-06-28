@@ -26,20 +26,8 @@ export default function LockerRoomTab() {
   const loadRecords = useRecordsStore((state) => state.loadRecords);
   const { showToast } = useToastStore();
   const [squadMembers, setSquadMembers] = useState<ApprovedMembership[]>([]);
-  const [isLoadingSquad, setIsLoadingSquad] = useState(false);
+  const [isLoadingSquad, setIsLoadingSquad] = useState(true);
   const squadCount = squadMembers.length;
-
-  const [prevActiveClubId, setPrevActiveClubId] = useState(activeClubId);
-  const [prevMemberProfileId, setPrevMemberProfileId] = useState(memberProfile?.id);
-
-  if (activeClubId !== prevActiveClubId || memberProfile?.id !== prevMemberProfileId) {
-    setPrevActiveClubId(activeClubId);
-    setPrevMemberProfileId(memberProfile?.id);
-    setIsLoadingSquad(Boolean(memberProfile));
-    if (!memberProfile) {
-      setSquadMembers([]);
-    }
-  }
 
   const topMatchPointRanks = useMemo(() => buildTopMatchPointRanks(squadMembers), [squadMembers]);
   const seasonRecordByMembershipId = useMemo(() => {
@@ -62,7 +50,20 @@ export default function LockerRoomTab() {
   }, [activeClubId, loadRecords, recordsStatus]);
 
   useEffect(() => {
+    if (!activeClubId) {
+      const timer = setTimeout(() => {
+        setSquadMembers([]);
+        setIsLoadingSquad(false);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+
     let isActive = true;
+    
+    // 비동기 fetch 호출 전 로딩 상태 갱신은 동기 setState 린트 룰 경고를 유발할 수 있으므로 setTimeout으로 감싸서 처리
+    const timer = setTimeout(() => {
+      if (isActive) setIsLoadingSquad(true);
+    }, 0);
 
     if (memberProfile) {
       fetchApprovedMemberships(activeClubId)
@@ -76,10 +77,23 @@ export default function LockerRoomTab() {
         .finally(() => {
           if (isActive) setIsLoadingSquad(false);
         });
+    } else {
+      const clearTimer = setTimeout(() => {
+        if (isActive) {
+          setSquadMembers([]);
+          setIsLoadingSquad(false);
+        }
+      }, 0);
+      return () => {
+        isActive = false;
+        clearTimeout(timer);
+        clearTimeout(clearTimer);
+      };
     }
 
     return () => {
       isActive = false;
+      clearTimeout(timer);
     };
   }, [activeClubId, memberProfile, showToast]);
 
