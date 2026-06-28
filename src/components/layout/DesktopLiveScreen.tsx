@@ -14,7 +14,7 @@ import { fetchFeedPosts, type FeedPost } from '@/stores/feedClient';
 import EventComments from '@/components/features/EventComments';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import Modal from '@/components/ui/Modal';
-import { fetchUpcomingMatches, type UpcomingMatch } from '@/stores/matchClient';
+import { fetchCalendarMatches, type UpcomingMatch } from '@/stores/matchClient';
 import { useToastStore } from '@/stores/useToastStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import TeamEmblem from '@/components/brand/TeamEmblem';
@@ -167,7 +167,7 @@ function DesktopRecordsPanel() {
         </h3>
 
         {summary ? (
-          <div className="grid grid-cols-6 gap-4">
+          <div className="grid grid-cols-6 gap-2">
             {[
               { label: '총 경기수', value: `${summary.totalMatches || 0} 경기`, icon: Flame, color: 'text-orange-500', bg: 'bg-orange-500/10' },
               { label: '최다 경기장', value: summary.topVenue?.location || '-', detail: `${summary.topVenue?.count || 0} 매치`, icon: Radio, color: 'text-emerald-400', bg: 'bg-emerald-400/10' },
@@ -176,15 +176,15 @@ function DesktopRecordsPanel() {
               { label: '도움왕', value: summary.topAssists?.nickname || '-', detail: `${summary.topAssists?.value || 0} 도움`, icon: Handshake, color: 'text-[#00ffa3]', bg: 'bg-[#00ffa3]/10' },
               { label: '출장왕', value: summary.topAppearance?.nickname || '-', detail: `${summary.topAppearance?.value || 0} 경기`, icon: Users, color: 'text-blue-400', bg: 'bg-blue-400/10' }
             ].map((item, i) => (
-              <div key={i} className="flex items-center gap-3.5 bg-white/5 border border-white/5 rounded-2xl p-3.5">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${item.bg}`}>
-                  <item.icon size={18} className={item.color} />
+              <div key={i} className="flex items-center gap-2 bg-white/5 border border-white/5 rounded-2xl p-2 min-w-0">
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${item.bg}`}>
+                  <item.icon size={13} className={item.color} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10px] text-gray-500 font-bold uppercase">{item.label}</p>
-                  <div className="flex justify-between items-baseline mt-0.5">
-                    <p className="text-sm font-black text-white truncate">{item.value}</p>
-                    {item.detail && <span className="text-xs font-mono font-black text-[#00ffa3]">{item.detail}</span>}
+                  <p className="text-[9px] text-gray-500 font-bold uppercase truncate">{item.label}</p>
+                  <div className="flex justify-between items-baseline gap-1 mt-0.5">
+                    <p className="text-xs font-black text-white truncate">{item.value}</p>
+                    {item.detail && <span className="text-[9px] font-mono font-black text-[#00ffa3] shrink-0">{item.detail}</span>}
                   </div>
                 </div>
               </div>
@@ -561,11 +561,10 @@ function DesktopLockerRoomPanel() {
   const [isSavingClubSettings, setIsSavingClubSettings] = useState(false);
   const [isUploadingClubLogo, setIsUploadingClubLogo] = useState(false);
 
-  // Roster 관리 상태들
-  const [memberActionModal, setMemberActionModal] = useState<{ mode: 'grant-operator' | 'revoke-operator' | 'withdraw'; member: any } | null>(null);
-  const [withdrawConfirmName, setWithdrawConfirmName] = useState('');
+  // Roster 관리 상태들 (운영진 임명/회수 슬롯 중심)
+  const [operatorActionModal, setOperatorActionModal] = useState<{ mode: 'grant' | 'revoke'; member: any } | null>(null);
   const [changingRoleId, setChangingRoleId] = useState<string | null>(null);
-  const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
+  const [showAssignList, setShowAssignList] = useState(false);
 
   useEffect(() => {
     if (recordsStatus === 'idle') {
@@ -651,7 +650,7 @@ function DesktopLockerRoomPanel() {
     try {
       setChangingRoleId(membershipId);
       await updateMembershipRole({ clubId: activeClubId, membershipId, role });
-      showToast(role === 'operator' ? '운영진 권한을 부여했습니다.' : '운영진 권한을 회수했습니다.');
+      showToast(role === 'operator' ? '운영진을 임명했습니다.' : '운영진 권한을 회수했습니다.');
       void loadAdminData();
       void loadRecords(activeClubId);
     } catch (err) {
@@ -661,32 +660,12 @@ function DesktopLockerRoomPanel() {
     }
   };
 
-  // 탈퇴 제명 처리 함수
-  const handleWithdraw = async (member: any) => {
-    try {
-      setWithdrawingId(member.membershipId);
-      await withdrawMembership({ clubId: activeClubId, membershipId: member.membershipId });
-      showToast(`${member.nickname} 회원을 탈퇴(제명)처리했습니다.`);
-      void loadAdminData();
-      void loadRecords(activeClubId);
-    } catch (err) {
-      showToast('회원 탈퇴(제명)처리에 실패했습니다.');
-    } finally {
-      setWithdrawingId(null);
-    }
-  };
-
   // 모달 확인 처리
   const handleConfirmAction = async () => {
-    if (!memberActionModal) return;
-    if (memberActionModal.mode === 'withdraw') {
-      await handleWithdraw(memberActionModal.member);
-    } else {
-      const targetRole = memberActionModal.mode === 'grant-operator' ? 'operator' : 'member';
-      await handleChangeRole(memberActionModal.member.membershipId, targetRole);
-    }
-    setMemberActionModal(null);
-    setWithdrawConfirmName('');
+    if (!operatorActionModal) return;
+    const targetRole = operatorActionModal.mode === 'grant' ? 'operator' : 'member';
+    await handleChangeRole(operatorActionModal.member.membershipId, targetRole);
+    setOperatorActionModal(null);
   };
 
   // 스쿼드 통계 계산
@@ -941,79 +920,120 @@ function DesktopLockerRoomPanel() {
               )}
             </div>
 
-            {/* Third Hub: Member Roles & Roster Management */}
+            {/* Third Hub: Operators Slots Hub */}
             <div className="rounded-3xl border border-[#25283e] bg-[#141624]/60 p-5 shadow-lg backdrop-blur-md space-y-4 col-span-2">
               <div className="flex justify-between items-center pb-2 border-b border-white/5">
-                <span className="text-[11px] font-black text-gray-400 uppercase">클럽 멤버십 권한 및 정원 관리 (Member Roles & Roster Management)</span>
+                <span className="text-[11px] font-black text-gray-400 uppercase">클럽 행정 운영진 지정 및 공석 현황</span>
                 <span className="text-[9px] font-black px-2 py-0.5 rounded bg-[#00ffa3]/10 text-[#00ffa3] border border-[#00ffa3]/20">
-                  정원 {rows.length}명 활성
+                  최대 2명 임명 가능
                 </span>
               </div>
 
-              <div className="grid grid-cols-3 gap-4 max-h-[300px] overflow-y-auto no-scrollbar">
-                {rows.map((member: any) => {
-                  const isSelf = member.membershipId === memberProfile?.id;
-                  const isOwner = member.role === 'admin';
-                  const isOperator = member.role === 'operator';
-                  const canManageThis = !isSelf && !isOwner; // 자신이나 소유주는 관리 대상이 아님
-                  
+              {/* Roster Slot Rows */}
+              <div className="space-y-4">
+                {/* 1. 소유주 (Owner) 고정 슬롯 */}
+                {(() => {
+                  const owner = rows.find((r: any) => r.role === 'admin');
+                  if (!owner) return null;
                   return (
-                    <div key={member.membershipId} className="rounded-2xl border border-white/5 bg-black/40 p-3.5 flex justify-between items-center hover:border-white/10 transition-colors">
-                      <div className="min-w-0 flex items-center gap-3">
+                    <div className="rounded-2xl border border-[#00ffa3]/20 bg-black/40 p-3.5 flex justify-between items-center relative overflow-hidden">
+                      <div className="absolute right-0 top-0 text-[32px] opacity-10 pointer-events-none select-none">👑</div>
+                      <div className="flex items-center gap-3 min-w-0">
                         <Image
-                          src={member.photoUrl || getFallbackAvatar(member.nickname)}
+                          src={owner.photoUrl || getFallbackAvatar(owner.nickname)}
                           alt=""
-                          width={32}
-                          height={32}
-                          className="h-8 w-8 rounded-full bg-surface-bg object-cover ring-1 ring-border"
+                          width={36}
+                          height={36}
+                          className="h-9 w-9 rounded-full bg-surface-bg object-cover ring-2 ring-[#00ffa3]/30"
                           unoptimized
                         />
                         <div className="min-w-0">
-                          <p className="text-xs font-black text-white truncate flex items-center gap-1.5">
-                            {member.nickname}
-                            {isSelf && <span className="text-[8px] bg-blue-500/20 text-blue-400 border border-blue-500/30 px-1 py-0.2 rounded font-bold">ME</span>}
-                          </p>
-                          <p className="text-[9px] text-gray-500 font-bold mt-0.5">
-                            OVR {member.ovr} · {isOwner ? '소유주 👑' : isOperator ? '운영진 🛠️' : '일반 회원 ⚽'}
-                          </p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-xs font-black text-white truncate">{owner.nickname}</p>
+                            <span className="text-[8px] bg-[#00ffa3]/10 text-[#00ffa3] border border-[#00ffa3]/20 px-1 py-0.2 rounded font-black uppercase">OWNER</span>
+                          </div>
+                          <p className="text-[9px] text-gray-500 font-bold mt-0.5">OVR {owner.ovr} · 최고 권한 소유주</p>
                         </div>
                       </div>
-                      
-                      {canManageThis && (
-                        <div className="flex shrink-0 gap-1.5">
-                          <button
-                            type="button"
-                            disabled={changingRoleId === member.membershipId}
-                            onClick={() => setMemberActionModal({
-                              mode: isOperator ? 'revoke-operator' : 'grant-operator',
-                              member
-                            })}
-                            className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-all active:scale-95 disabled:opacity-50 ${
-                              isOperator
-                                ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20'
-                                : 'bg-[#00ffa3]/10 text-[#00ffa3] border-[#00ffa3]/20 hover:bg-[#00ffa3]/20'
-                            }`}
-                            title={isOperator ? '운영진 권한 회수' : '운영진 권한 부여'}
-                          >
-                            <UserCog size={14} />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={withdrawingId === member.membershipId}
-                            onClick={() => setMemberActionModal({
-                              mode: 'withdraw',
-                              member
-                            })}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 active:scale-95 transition-all disabled:opacity-50"
-                            title="회원 탈퇴(제명) 처리"
-                          >
-                            <UserX size={14} />
-                          </button>
-                        </div>
-                      )}
+                      <div className="shrink-0 text-[10px] font-black text-gray-500 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
+                        해임 불가 👑
+                      </div>
                     </div>
                   );
-                })}
+                })()}
+
+                {/* 2. 운영진 슬롯 2개 (Slots) */}
+                <div className="grid grid-cols-2 gap-4">
+                  {(() => {
+                    const operators = rows.filter((r: any) => r.role === 'operator');
+                    const candidates = rows.filter((r: any) => r.role === 'member');
+                    
+                    return [0, 1].map((index) => {
+                      const operator = operators[index];
+                      
+                      if (operator) {
+                        // 임명된 운영진 슬롯
+                        const isSelf = operator.membershipId === memberProfile?.id;
+                        
+                        return (
+                          <div key={operator.membershipId} className="rounded-2xl border border-white/5 bg-black/40 p-3.5 flex justify-between items-center hover:border-white/10 transition-colors">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <Image
+                                src={operator.photoUrl || getFallbackAvatar(operator.nickname)}
+                                alt=""
+                                width={32}
+                                height={32}
+                                className="h-8 w-8 rounded-full bg-surface-bg object-cover ring-1 ring-border"
+                                unoptimized
+                              />
+                              <div className="min-w-0">
+                                <p className="text-xs font-black text-white truncate flex items-center gap-1.5">
+                                  {operator.nickname}
+                                  {isSelf && <span className="text-[8px] bg-blue-500/20 text-blue-400 border border-blue-500/30 px-1 py-0.2 rounded font-bold">ME</span>}
+                                </p>
+                                <p className="text-[9px] text-gray-500 font-bold mt-0.5">OVR {operator.ovr} · 운영진 🛠️</p>
+                              </div>
+                            </div>
+                            
+                            {!isSelf && (
+                              <button
+                                type="button"
+                                disabled={changingRoleId === operator.membershipId}
+                                onClick={() => setOperatorActionModal({
+                                  mode: 'revoke',
+                                  member: operator
+                                })}
+                                className="shrink-0 text-[10px] font-black text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 px-3 py-1.5 rounded-xl transition-all active:scale-95 disabled:opacity-50"
+                              >
+                                운영진 해임
+                              </button>
+                            )}
+                          </div>
+                        );
+                      } else {
+                        // 비어있는 공석 슬롯
+                        return (
+                          <div key={`empty-slot-${index}`} className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-3.5 flex items-center justify-between hover:border-white/20 transition-colors">
+                            <div className="flex items-center gap-3 min-w-0 text-gray-500">
+                              <span className="text-xl">🛠️</span>
+                              <div className="min-w-0">
+                                <p className="text-xs font-black">운영진 미임명</p>
+                                <p className="text-[9px] font-bold mt-0.5">슬롯 공석 (임명 가능)</p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setShowAssignList(true)}
+                              className="shrink-0 text-[10px] font-black text-black bg-[#00ffa3] hover:brightness-110 px-3 py-1.5 rounded-xl transition-all active:scale-95"
+                            >
+                              + 운영진 임명
+                            </button>
+                          </div>
+                        );
+                      }
+                    });
+                  })()}
+                </div>
               </div>
             </div>
 
@@ -1021,27 +1041,78 @@ function DesktopLockerRoomPanel() {
         </div>
       )}
 
-      {/* Roster Action Confirmation Modal */}
+      {/* Operator Assignment Candidate Picker Modal */}
       <Modal
-        title={
-          memberActionModal?.mode === 'withdraw'
-            ? '🚨 회원 탈퇴(제명) 확인'
-            : memberActionModal?.mode === 'grant-operator'
-              ? '🛠️ 운영진 권한 부여'
-              : '🛠️ 운영진 권한 회수'
-        }
-        isOpen={memberActionModal !== null}
-        onClose={() => {
-          setMemberActionModal(null);
-          setWithdrawConfirmName('');
-        }}
+        title="🛠️ 신규 운영진 임명"
+        isOpen={showAssignList}
+        onClose={() => setShowAssignList(false)}
         presentation="dialog"
       >
-        {memberActionModal && (
+        <div className="space-y-4">
+          <p className="text-xs font-bold text-gray-400">
+            클럽 행정(가입 승인, 클럽 정보 관리)을 지원할 새 운영진 회원을 일반 스쿼드 목록 중에서 선택해 주세요.
+          </p>
+          <div className="max-h-[250px] overflow-y-auto no-scrollbar space-y-2.5">
+            {(() => {
+              const candidates = rows.filter((r: any) => r.role === 'member');
+              return candidates.length > 0 ? (
+                candidates.map((member) => (
+                  <div key={member.membershipId} className="rounded-xl border border-white/5 bg-black/40 p-3 flex justify-between items-center hover:border-white/10 transition-colors">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Image
+                        src={member.photoUrl || getFallbackAvatar(member.nickname)}
+                        alt=""
+                        width={28}
+                        height={28}
+                        className="h-7 w-7 rounded-full bg-surface-bg object-cover"
+                        unoptimized
+                      />
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-white truncate">{member.nickname}</p>
+                        <p className="text-[9px] text-gray-500 font-bold">OVR {member.ovr}</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAssignList(false);
+                        setOperatorActionModal({ mode: 'grant', member });
+                      }}
+                      className="text-[10px] font-black text-black bg-[#00ffa3] hover:brightness-110 px-3 py-1.5 rounded-lg active:scale-95 transition-all"
+                    >
+                      임명 선택
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div className="py-8 text-center text-xs font-bold text-gray-500 rounded-xl border border-dashed border-white/5">
+                  임명할 수 있는 일반 멤버 후보가 없습니다.
+                </div>
+              );
+            })()}
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowAssignList(false)}
+            className="w-full rounded-xl bg-white/5 border border-white/5 py-2.5 text-xs font-black text-gray-300 transition-all hover:bg-white/10 active:scale-95"
+          >
+            닫기
+          </button>
+        </div>
+      </Modal>
+
+      {/* Operator Action Confirmation Modal */}
+      <Modal
+        title={operatorActionModal?.mode === 'grant' ? '🛠️ 운영진 임명' : '🛠️ 운영진 권한 회수'}
+        isOpen={operatorActionModal !== null}
+        onClose={() => setOperatorActionModal(null)}
+        presentation="dialog"
+      >
+        {operatorActionModal && (
           <div className="space-y-4">
             <div className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/5 p-3">
               <Image
-                src={memberActionModal.member.photoUrl || getFallbackAvatar(memberActionModal.member.nickname)}
+                src={operatorActionModal.member.photoUrl || getFallbackAvatar(operatorActionModal.member.nickname)}
                 alt=""
                 width={40}
                 height={40}
@@ -1049,55 +1120,28 @@ function DesktopLockerRoomPanel() {
                 unoptimized
               />
               <div className="min-w-0">
-                <p className="truncate text-sm font-bold text-white">{memberActionModal.member.nickname}</p>
+                <p className="truncate text-sm font-bold text-white">{operatorActionModal.member.nickname}</p>
                 <p className="text-xs font-bold text-gray-400">
-                  {memberActionModal.mode === 'withdraw'
-                    ? '이 회원을 클럽에서 탈퇴(제명)처리하고 모든 활동 권한을 회수합니다.'
-                    : memberActionModal.mode === 'grant-operator'
-                      ? '이 회원에게 클럽 행정 관리(가입 심사, 클럽 설정 변경 등) 권한을 부여합니다.'
-                      : '이 회원의 운영진 직위를 회수하고 일반 회원 등급으로 복귀시킵니다.'}
+                  {operatorActionModal.mode === 'grant'
+                    ? '이 회원을 클럽 운영진으로 승격시켜 행정(입단 심사 등) 권한을 부여합니다.'
+                    : '이 회원의 운영진 지위를 해임하고 일반 회원 등급으로 복귀시킵니다.'}
                 </p>
               </div>
             </div>
-            {memberActionModal.mode === 'withdraw' && (
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-bold text-red-400">
-                  오작동 방지를 위해 회원 이름({memberActionModal.member.nickname})을 똑같이 입력해주세요.
-                </span>
-                <input
-                  type="text"
-                  value={withdrawConfirmName}
-                  onChange={(event) => setWithdrawConfirmName(event.target.value)}
-                  placeholder={memberActionModal.member.nickname}
-                  className="w-full rounded-xl border border-red-500/20 bg-black/40 px-3 py-2.5 text-sm font-bold text-white outline-none transition-colors focus:border-red-500 focus:bg-[#141624]"
-                />
-              </label>
-            )}
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  setMemberActionModal(null);
-                  setWithdrawConfirmName('');
-                }}
+                onClick={() => setOperatorActionModal(null)}
                 className="rounded-xl bg-white/5 border border-white/5 px-4 py-3 text-sm font-bold text-gray-300 transition-all hover:bg-white/10 active:scale-95"
               >
                 취소
               </button>
               <button
                 type="button"
-                disabled={
-                  memberActionModal.mode === 'withdraw' &&
-                  withdrawConfirmName !== memberActionModal.member.nickname
-                }
                 onClick={() => void handleConfirmAction()}
-                className={`rounded-xl px-4 py-3 text-sm font-bold text-black transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
-                  memberActionModal.mode === 'withdraw'
-                    ? 'bg-red-500 hover:brightness-110 text-white'
-                    : 'bg-[#00ffa3] hover:brightness-110'
-                }`}
+                className="rounded-xl bg-[#00ffa3] text-black hover:brightness-110 px-4 py-3 text-sm font-bold transition-all active:scale-95"
               >
-                {memberActionModal.mode === 'withdraw' ? '탈퇴(제명) 처리' : '권한 조율 완료'}
+                {operatorActionModal.mode === 'grant' ? '임명 승인' : '해임 승인'}
               </button>
             </div>
           </div>
@@ -1129,7 +1173,12 @@ function DesktopDetailStatsPanel() {
     if (!activeClubId) return;
     let isActive = true;
     setIsLoadingMatches(true);
-    fetchUpcomingMatches(activeClubId)
+    
+    const currentYear = new Date().getFullYear();
+    const fromStr = `${currentYear}-01-01`;
+    const toStr = `${currentYear + 1}-01-01`;
+
+    fetchCalendarMatches({ clubId: activeClubId, from: fromStr, to: toStr })
       .then((data) => {
         if (!isActive) return;
         // 완료되었거나 스코어가 입력된 경기들을 날짜 내림차순 정렬
