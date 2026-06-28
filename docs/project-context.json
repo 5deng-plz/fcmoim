@@ -1,13 +1,13 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 116,
-  "updatedAt": "2026-06-29T02:36:00+09:00",
+  "updateVersion": 117,
+  "updatedAt": "2026-06-29T02:39:00+09:00",
   "updatedBy": "codex-backend",
   "currentPhase": "backend-single-team-domain-repository-cleanup",
   "activeWork": {
     "taskId": "backend-single-team-phase2",
-    "status": "in-progress",
+    "status": "ready",
     "designMode": "maintenance",
     "baselineCommit": "6ea8411",
     "changedFiles": [
@@ -90,25 +90,23 @@
         "summary": "implementation.ts 제거. team, membership, schedule, records, community가 각 factory와 필요한 로컬 DB row type/helper를 직접 소유하고 index가 조합."
       },
       "browserRuntime": {
-        "status": "partial",
+        "status": "passed",
         "provider": "npm run dev, in-app browser, server log",
         "command": "npm run dev; open http://localhost:3000/",
-        "summary": "dev server ready, GET / 200, /api/dev-test 200. stale auth로 /api/membership/current 401 확인. 브라우저 DOM/console 수집은 두 차례 시간 초과."
+        "summary": "dev server ready. 새 브라우저 탭에서 FC Guppy 로그인 first screen 렌더, browser console error/warn 0건, server log의 GET / 및 /api/dev-test 200 확인. package.json 변경은 legacy DB seed script 제거에 따른 runtime command 정리이며 앱 dependency/startup 변경은 없음."
       }
     },
     "retrospective": {
       "issuesObserved": [
         "Repository 내부 teamId가 schedule poll 응답에 노출됐으며 Local API 테스트로 발견 후 제거.",
-        "기존 브라우저의 stale Supabase refresh token으로 인증 bootstrap이 401을 반환."
+        "기존 탭의 stale Supabase refresh token을 새 탭 분리로 격리하고 정상 첫 화면을 검증."
       ],
-      "missedEvidence": [
-        "인앱 브라우저 DOM과 console 최종 증적"
-      ],
+      "missedEvidence": [],
       "harnessImprovementProposal": [],
       "promotionRecommendation": "none",
       "reason": "프로젝트 로컬 구현 및 stale 인증 상태로 재사용 가능한 Harness 정책 변경 대상이 아님."
     },
-    "reviewStatus": "blocked",
+    "reviewStatus": "ready",
     "loopCounters": {
       "reviewRounds": 1,
       "guardRetries": 0
@@ -123,7 +121,9 @@
     },
     {
       "id": "backend-single-team-domain-repository-cleanup",
-      "status": "in-progress"
+      "status": "complete",
+      "completedAt": "2026-06-29T02:39:00+09:00",
+      "commit": "fe41738"
     },
     {
       "id": "desktop-tactics-studio-dnd-polish",
@@ -162,12 +162,8 @@
       "commit": "a1ede07bc849a82749853401aeacc70dc0054fc3"
     }
   ],
-  "blockers": [
-    "Runtime smoke의 dev server와 server log는 통과했으나 인앱 브라우저 DOM/console 수집이 두 차례 시간 초과되어 browserRuntime evidence가 partial입니다.",
-    "사용자 지시에 따라 Harness full과 최종 환경 검증은 Phase 3 완료 후 일괄 정리합니다."
-  ],
+  "blockers": [],
   "nextActions": [
-    "Phase 3 완료 후 stale browser auth를 제거하고 browser runtime smoke를 재수집합니다.",
-    "Phase 3 완료 후 npm run harness:guard:full을 실행하고 evidence/status를 최종 동기화합니다."
+    "03_database_singleton_and_migration_squash.md에 따라 Phase 3 DB singleton 및 migration squash를 진행합니다."
   ]
 }
