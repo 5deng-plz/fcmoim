@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Users, Medal, ShieldCheck, UserCog } from 'lucide-react';
+import { ChevronDown, Users, ShieldCheck, UserCog } from 'lucide-react';
 import Image from 'next/image';
 import Modal from '@/components/ui/Modal';
 
@@ -358,17 +358,37 @@ function RoleMark({ role }: { role: ApprovedMembership['role'] }) {
 }
 
 function MatchPointAward({ rank }: { rank?: number }) {
-  if (!rank) return <span className="h-[14px] w-[14px]" aria-hidden="true" />;
+  if (!rank) return <span className="h-[18px] w-[18px]" aria-hidden="true" />;
 
-  if (rank === 1) {
-    return <Medal size={16} className="text-tier-gold" />;
-  }
-  if (rank === 2) {
-    return <Medal size={16} className="text-tier-silver" />;
-  }
-  if (rank === 3) {
-    return <Medal size={16} className="text-tier-bronze" />;
-  }
+  const config = {
+    1: {
+      emoji: '👑',
+      bg: 'bg-tier-gold/15',
+      border: 'border-tier-gold/40',
+      shadow: 'shadow-[0_0_6px_rgba(234,179,8,0.3)]',
+    },
+    2: {
+      emoji: '🥈',
+      bg: 'bg-tier-silver/15',
+      border: 'border-tier-silver/40',
+      shadow: 'shadow-[0_0_6px_rgba(148,163,184,0.3)]',
+    },
+    3: {
+      emoji: '🥉',
+      bg: 'bg-tier-bronze/15',
+      border: 'border-tier-bronze/40',
+      shadow: 'shadow-[0_0_6px_rgba(180,83,9,0.3)]',
+    },
+  }[rank];
 
-  return <span className="h-[14px] w-[14px]" aria-hidden="true" />;
+  if (!config) return <span className="h-[18px] w-[18px]" aria-hidden="true" />;
+
+  return (
+    <span
+      className={`flex h-[18px] w-[18px] items-center justify-center rounded-full border text-[10px] leading-none ${config.bg} ${config.border} ${config.shadow}`}
+      aria-label={`${rank}위`}
+    >
+      {config.emoji}
+    </span>
+  );
 }

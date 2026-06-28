@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import Image from 'next/image';
-import { Flame, Handshake, Medal, MinusCircle, Target, Trophy, Users, XCircle, Megaphone, MessageSquare, Image as ImageIcon, Activity } from 'lucide-react';
+import { Flame, Handshake, MinusCircle, Target, Trophy, Users, XCircle, Megaphone, MessageSquare, Image as ImageIcon, Activity } from 'lucide-react';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import { useAppStore } from '@/stores/useAppStore';
 import { useRecordsStore } from '@/stores/useRecordsStore';
@@ -242,11 +242,37 @@ export default function RecordsTab() {
 }
 
 function RankMark({ rank }: { rank: number }) {
-  if (rank === 1) return <span className="flex h-7 w-7 items-center justify-center rounded-full border border-tier-gold/30 bg-tier-gold/10 shadow-inner"><Medal size={16} className="text-tier-gold" /></span>;
-  if (rank === 2) return <span className="flex h-7 w-7 items-center justify-center rounded-full border border-tier-silver/30 bg-tier-silver/10 shadow-inner"><Medal size={16} className="text-tier-silver" /></span>;
-  if (rank === 3) return <span className="flex h-7 w-7 items-center justify-center rounded-full border border-tier-bronze/30 bg-tier-bronze/10 shadow-inner"><Medal size={16} className="text-tier-bronze" /></span>;
+  const config = {
+    1: {
+      emoji: '👑',
+      bg: 'bg-tier-gold/15',
+      border: 'border-tier-gold/40',
+      shadow: 'shadow-[0_0_8px_rgba(234,179,8,0.35)]',
+    },
+    2: {
+      emoji: '🥈',
+      bg: 'bg-tier-silver/15',
+      border: 'border-tier-silver/40',
+      shadow: 'shadow-[0_0_8px_rgba(148,163,184,0.35)]',
+    },
+    3: {
+      emoji: '🥉',
+      bg: 'bg-tier-bronze/15',
+      border: 'border-tier-bronze/40',
+      shadow: 'shadow-[0_0_8px_rgba(180,83,9,0.35)]',
+    },
+  }[rank];
 
-  return <div className="text-center text-xs font-bold text-secondary">{rank}</div>;
+  if (!config) return <div className="text-center text-xs font-bold text-secondary">{rank}</div>;
+
+  return (
+    <span
+      className={`flex h-7 w-7 items-center justify-center rounded-full border text-sm leading-none ${config.bg} ${config.border} ${config.shadow}`}
+      aria-label={`${rank}위`}
+    >
+      {config.emoji}
+    </span>
+  );
 }
 
 function RecordCell({ icon: Icon, value, className }: { icon: typeof Trophy; value: number; className: string }) {
