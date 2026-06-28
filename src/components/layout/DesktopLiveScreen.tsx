@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import Image from 'next/image';
 import { useAppStore } from '@/stores/useAppStore';
 import { useRecordsStore } from '@/stores/useRecordsStore';
@@ -14,7 +14,7 @@ import { fetchFeedPosts, type FeedPost } from '@/stores/feedClient';
 import EventComments from '@/components/features/EventComments';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import Modal from '@/components/ui/Modal';
-import { fetchCalendarMatches, fetchMatchAttendees, type UpcomingMatch } from '@/stores/matchClient';
+import { fetchCalendarMatches, fetchMatchAttendees, fetchMatchLineup, type UpcomingMatch, type MatchLineupEntry } from '@/stores/matchClient';
 import { useToastStore } from '@/stores/useToastStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import TeamEmblem from '@/components/brand/TeamEmblem';
@@ -1157,8 +1157,8 @@ function DesktopDetailStatsPanel() {
   // 경기 기록 상태
   const [matches, setMatches] = useState<UpcomingMatch[]>([]);
   const [isLoadingMatches, setIsLoadingMatches] = useState(false);
-  const [matchAttendeesMap, setMatchAttendeesMap] = useState<Record<string, string[]>>({});
-  const [isLoadingAttendees, setIsLoadingAttendees] = useState(false);
+  const [matchLineupsMap, setMatchLineupsMap] = useState<Record<string, MatchLineupEntry[]>>({});
+  const [isLoadingLineups, setIsLoadingLineups] = useState(false);
 
   useEffect(() => {
     if (recordsStatus === 'idle') {
@@ -1195,38 +1195,38 @@ function DesktopDetailStatsPanel() {
     return () => { isActive = false; };
   }, [activeClubId]);
 
-  // 경기별 참석자 명단 병렬 로드
+  // 경기별 라인업 명단 병렬 로드 (참석 여부 및 소속 팀 번호 확보)
   useEffect(() => {
     if (matches.length === 0) return;
     let isActive = true;
-    setIsLoadingAttendees(true);
+    setIsLoadingLineups(true);
 
-    const loadAttendees = async () => {
+    const loadLineups = async () => {
       try {
-        const attendeePromises = matches.map(async (m) => {
-          const attendees = await fetchMatchAttendees({ clubId: activeClubId, matchId: m.id });
+        const lineupPromises = matches.map(async (m) => {
+          const lineup = await fetchMatchLineup({ clubId: activeClubId, matchId: m.id });
           return {
             matchId: m.id,
-            membershipIds: attendees.map((a) => a.membershipId)
+            lineup
           };
         });
 
-        const results = await Promise.all(attendeePromises);
+        const results = await Promise.all(lineupPromises);
         if (!isActive) return;
 
-        const map: Record<string, string[]> = {};
+        const map: Record<string, MatchLineupEntry[]> = {};
         for (const res of results) {
-          map[res.matchId] = res.membershipIds;
+          map[res.matchId] = res.lineup;
         }
-        setMatchAttendeesMap(map);
+        setMatchLineupsMap(map);
       } catch (err) {
-        console.error('[FC Moim] Load match attendees map failed:', err);
+        console.error('[FC Moim] Load match lineups map failed:', err);
       } finally {
-        if (isActive) setIsLoadingAttendees(false);
+        if (isActive) setIsLoadingLineups(false);
       }
     };
 
-    void loadAttendees();
+    void loadLineups();
     return () => { isActive = false; };
   }, [matches, activeClubId]);
 
@@ -1253,6 +1253,48 @@ function DesktopDetailStatsPanel() {
   // 랭킹 리스트 데이터
   const rows = records?.rankingRows ?? [];
 
+  // 각 선수별 매트릭스 실시간 승무패 집계 (청백전에서 RED vs BLUE로 나누어 승리/패배 지정)
+  const playerMatrixStats = useMemo(() => {
+    const stats: Record<string, { wins: number; losses: number; draws: number; winRate: number }> = {};
+    
+    for (const player of rows) {
+      let wins = 0;
+      let losses = 0;
+      let draws = 0;
+      
+      for (const match of matches) {
+        if (match.ourScore === null || match.oppScore === null) continue;
+        const lineup = matchLineupsMap[match.id] ?? [];
+        const entry = lineup.find((e) => e.membershipId === player.membershipId);
+        if (!entry) continue; // 불참
+        
+        const isWin = match.ourScore > match.oppScore;
+        const isDraw = match.ourScore === match.oppScore;
+        
+        if (isDraw) {
+          draws += 1;
+        } else {
+          // entry.teamNumber === 1 이면 Team 1 (RED)
+          // entry.teamNumber === 2 이면 Team 2 (BLUE)
+          const isTeam1 = entry.teamNumber === 1;
+          if (isWin) {
+            if (isTeam1) wins += 1;
+            else losses += 1;
+          } else {
+            if (isTeam1) losses += 1;
+            else wins += 1;
+          }
+        }
+      }
+      
+      const total = wins + losses + draws;
+      const winRate = total ? Math.round((wins / total) * 100) : 0;
+      stats[player.membershipId] = { wins, losses, draws, winRate };
+    }
+    
+    return stats;
+  }, [rows, matches, matchLineupsMap]);
+
   // 날짜 변환 헬퍼 (ex. 2026-05-02 -> 26.5.2)
   const formatHeaderDate = (dateStr: string) => {
     try {
@@ -1275,7 +1317,7 @@ function DesktopDetailStatsPanel() {
     return loc.substring(0, 3);
   };
 
-  const isWorking = isLoadingMatches || isLoadingAttendees;
+  const isWorking = isLoadingMatches || isLoadingLineups;
 
   return (
     <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6 winning-bg-grid relative animate-fadeIn">
@@ -1417,53 +1459,69 @@ function DesktopDetailStatsPanel() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 text-xs text-white">
-                {rows.map((player) => (
-                  <tr key={player.membershipId} className="hover:bg-white/5 transition-colors">
-                    {/* 구분 (선수 이름) */}
-                    <td className="py-2.5 px-3 text-left font-black text-white flex items-center gap-2">
-                      <Image
-                        src={player.photoUrl || getFallbackAvatar(player.nickname)}
-                        alt=""
-                        width={20}
-                        height={20}
-                        className="h-5 w-5 rounded-full object-cover shrink-0 ring-1 ring-white/10"
-                        unoptimized
-                      />
-                      <span className="truncate max-w-[65px]">{player.nickname}</span>
-                    </td>
+                {rows.map((player) => {
+                  const mStats = playerMatrixStats[player.membershipId] || { wins: 0, losses: 0, draws: 0, winRate: 0 };
+                  
+                  return (
+                    <tr key={player.membershipId} className="hover:bg-white/5 transition-colors">
+                      {/* 구분 (선수 이름) */}
+                      <td className="py-2.5 px-3 text-left font-black text-white flex items-center gap-2">
+                        <Image
+                          src={player.photoUrl || getFallbackAvatar(player.nickname)}
+                          alt=""
+                          width={20}
+                          height={20}
+                          className="h-5 w-5 rounded-full object-cover shrink-0 ring-1 ring-white/10"
+                          unoptimized
+                        />
+                        <span className="truncate max-w-[65px]">{player.nickname}</span>
+                      </td>
 
-                    {/* 각 경기별 승무패 결과 배지 */}
-                    {matches.map((match) => {
-                      const isWin = (match.ourScore ?? 0) > (match.oppScore ?? 0);
-                      const isDraw = (match.ourScore ?? 0) === (match.oppScore ?? 0);
-                      const resultLabel = isWin ? '승' : isDraw ? '무' : '패';
-                      const hasAttended = matchAttendeesMap[match.id]?.includes(player.membershipId);
+                      {/* 각 경기별 승무패 결과 배지 */}
+                      {matches.map((match) => {
+                        const isWin = (match.ourScore ?? 0) > (match.oppScore ?? 0);
+                        const isDraw = (match.ourScore ?? 0) === (match.oppScore ?? 0);
+                        const lineup = matchLineupsMap[match.id] ?? [];
+                        const entry = lineup.find((e) => e.membershipId === player.membershipId);
 
-                      return (
-                        <td key={match.id} className="py-2.5 px-2 border-l border-white/5">
-                          {hasAttended ? (
-                            <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-black ${
-                              isWin
-                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                : isDraw
-                                  ? 'bg-white/5 text-gray-400 border border-white/10'
-                                  : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                            }`}>
-                              {resultLabel}
-                            </span>
-                          ) : (
-                            <span className="text-[10px] font-bold text-gray-700">-</span>
-                          )}
-                        </td>
-                      );
-                    })}
+                        let resultLabel = '-';
+                        let hasAttended = !!entry;
+                        let cellClass = 'bg-white/5 text-gray-400 border border-white/10';
 
-                    {/* 누적 기록 */}
-                    <td className="py-2.5 px-3.5 border-l border-white/10 text-emerald-400 font-mono font-bold">{player.wins}</td>
-                    <td className="py-2.5 px-3.5 border-l border-white/5 text-red-400 font-mono font-bold">{player.losses}</td>
-                    <td className="py-2.5 px-3.5 border-l border-white/5 text-[#00ffa3] font-mono font-black">{player.winRate}%</td>
-                  </tr>
-                ))}
+                        if (entry) {
+                          if (isDraw) {
+                            resultLabel = '무';
+                            cellClass = 'bg-white/5 text-gray-400 border border-white/10';
+                          } else {
+                            const isTeam1 = entry.teamNumber === 1;
+                            const isPlayerWin = isWin ? isTeam1 : !isTeam1;
+                            resultLabel = isPlayerWin ? '승' : '패';
+                            cellClass = isPlayerWin
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              : 'bg-red-500/10 text-red-400 border border-red-500/20';
+                          }
+                        }
+
+                        return (
+                          <td key={match.id} className="py-2.5 px-2 border-l border-white/5">
+                            {hasAttended ? (
+                              <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-black ${cellClass}`}>
+                                {resultLabel}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-bold text-gray-700">-</span>
+                            )}
+                          </td>
+                        );
+                      })}
+
+                      {/* 누적 기록 */}
+                      <td className="py-2.5 px-3.5 border-l border-white/10 text-emerald-400 font-mono font-bold">{mStats.wins}</td>
+                      <td className="py-2.5 px-3.5 border-l border-white/5 text-red-400 font-mono font-bold">{mStats.losses}</td>
+                      <td className="py-2.5 px-3.5 border-l border-white/5 text-[#00ffa3] font-mono font-black">{mStats.winRate}%</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
