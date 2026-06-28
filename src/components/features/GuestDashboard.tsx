@@ -8,6 +8,7 @@ import AttendeeList from '@/components/features/AttendeeList';
 import { getScheduleEventTheme, type ScheduleEventThemeType } from '@/components/features/scheduleEventTheme';
 import Modal from '@/components/ui/Modal';
 import { useAppStore } from '@/stores/useAppStore';
+import { appConfig } from '@/config/app.config';
 import {
   checkClubSlug,
   createClub,
@@ -15,7 +16,6 @@ import {
   fetchClubMemberships,
   fetchMembershipSnapshot,
   fetchPublicClubDetail,
-  fetchPublicClubs,
   type PublicClubDetail,
   type PublicClubSummary,
 } from '@/stores/membershipClient';
@@ -49,32 +49,25 @@ export default function GuestDashboard({
   } = useAppStore();
   const { switchClub } = useAuthStore();
   const { showToast } = useToastStore();
-  const [clubs, setClubs] = useState<PublicClubSummary[]>([]);
   const [clubDetail, setClubDetail] = useState<PublicClubDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
     let isActive = true;
+    setIsLoading(true);
 
-    fetchPublicClubs()
-      .then((publicClubs) => {
-        if (!isActive) return;
-        setClubs(publicClubs);
-        const selectedClub = publicClubs.find((club) => club.id === selectedJoinClubId) || publicClubs[0];
-        if (selectedClub) {
-          setSelectedJoinClubId(selectedClub.id);
-          return fetchPublicClubDetail(selectedClub.id);
-        }
-        return null;
-      })
+    const clubId = selectedJoinClubId || appConfig.defaultClubId;
+    setSelectedJoinClubId(clubId);
+
+    fetchPublicClubDetail(clubId)
       .then((detail) => {
         if (!isActive) return;
         setClubDetail(detail ?? null);
       })
       .catch((error) => {
         console.error('[FC Moim] Public club load failed:', error);
-        showToast('팀 정보를 불러오지 못했습니다.');
+        showToast('클럽 정보를 불러오지 못했습니다.');
       })
       .finally(() => {
         if (isActive) setIsLoading(false);
@@ -86,8 +79,11 @@ export default function GuestDashboard({
   }, [selectedJoinClubId, setSelectedJoinClubId, showToast]);
 
   const selectedClub = useMemo(
-    () => clubs.find((club) => club.id === selectedJoinClubId) || clubs[0] || null,
-    [clubs, selectedJoinClubId],
+    () => {
+      const clubId = selectedJoinClubId || appConfig.defaultClubId;
+      return { id: clubId, name: clubDetail?.name || 'FC Guppy' };
+    },
+    [selectedJoinClubId, clubDetail],
   );
   const selectedMembership = useMemo(
     () => availableClubs.find((club) => club.clubId === selectedClub?.id) ?? null,
