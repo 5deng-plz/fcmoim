@@ -37,9 +37,16 @@ describe('Backend single-team domain contract', () => {
 
   it('exposes the five repository domains through a composition index', () => {
     const repositoryRoot = path.join(root, 'src/services/repositories');
-    for (const file of ['team.ts', 'membership.ts', 'schedule.ts', 'records.ts', 'community.ts', 'index.ts']) {
+    const domainFiles = ['team.ts', 'membership.ts', 'schedule.ts', 'records.ts', 'community.ts'];
+    for (const file of [...domainFiles, 'index.ts']) {
       expect(fs.existsSync(path.join(repositoryRoot, file)), file).toBe(true);
     }
+    for (const file of domainFiles) {
+      const source = fs.readFileSync(path.join(repositoryRoot, file), 'utf8');
+      expect(source, file).toMatch(/export function createSupabase\w+Repositories/);
+      expect(source, file).not.toMatch(/from ['"].*implementation['"]/);
+    }
+    expect(fs.existsSync(path.join(repositoryRoot, 'implementation.ts'))).toBe(false);
     expect(fs.existsSync(path.join(root, 'src/services/supabase-repositories.ts'))).toBe(false);
   });
 

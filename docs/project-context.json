@@ -1,8 +1,8 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 115,
-  "updatedAt": "2026-06-29T02:27:00+09:00",
+  "updateVersion": 116,
+  "updatedAt": "2026-06-29T02:36:00+09:00",
   "updatedBy": "codex-backend",
   "currentPhase": "backend-single-team-domain-repository-cleanup",
   "activeWork": {
@@ -81,7 +81,13 @@
         "status": "passed",
         "provider": "Vitest",
         "command": "npx vitest run tests/backend-single-team-domain-contract.test.ts",
-        "summary": "TeamContext 주입, service 공개 clubId 제거, repository composition, legacy seed 제거 계약 4개 통과."
+        "summary": "TeamContext 주입, service 공개 clubId 제거, repository 실제 구현 분리, legacy seed 제거 계약 4개 통과."
+      },
+      "repositorySplit": {
+        "status": "passed",
+        "provider": "TypeScript AST dependency closure and Vitest",
+        "command": "npm run typecheck && npx vitest run tests/backend-single-team-domain-contract.test.ts",
+        "summary": "implementation.ts 제거. team, membership, schedule, records, community가 각 factory와 필요한 로컬 DB row type/helper를 직접 소유하고 index가 조합."
       },
       "browserRuntime": {
         "status": "partial",
