@@ -1,11 +1,12 @@
 import { AppError } from '../types/api';
+import type { TeamContext } from '../config/server-team';
 import type {
   AuthContext,
   SchedulePollRow,
   TeamMembershipRow,
 } from '../types/domain';
 
-type SchedulePollMembership = Pick<TeamMembershipRow, 'id' | 'clubId' | 'role' | 'status'>;
+type SchedulePollMembership = Pick<TeamMembershipRow, 'id' | 'role' | 'status'>;
 
 type CreatePollRepositoryInput = {
   clubId: string;
@@ -26,15 +27,15 @@ type SchedulePollDateConflict = {
 
 export type SchedulePollRepositories = {
   memberships: {
-    findByAccountAndClub(accountId: string, clubId: string): Promise<SchedulePollMembership | null>;
+    findCurrentMembership(accountId: string, clubId: string): Promise<SchedulePollMembership | null>;
   };
   seasons: {
-    findActiveByClub(clubId: string): Promise<{ id: string } | null>;
+    findActiveForTeam(clubId: string): Promise<{ id: string } | null>;
   };
   polls: {
     create(input: CreatePollRepositoryInput): Promise<SchedulePollRow>;
     listActive(clubId: string): Promise<SchedulePollRow[]>;
-    findById(pollId: string): Promise<SchedulePollRow | null>;
+    findById(pollId: string, teamId: string): Promise<SchedulePollRow | null>;
     findActiveDateConflicts(input: {
       clubId: string;
       optionDates: string[];
@@ -52,18 +53,23 @@ export type SchedulePollRepositories = {
     promoteToMatch(input: {
       pollId: string;
       optionId: string;
+      teamId: string;
       seasonId: string;
       promotedByMembershipId: string;
     }): Promise<{ pollId: string; matchId: string }>;
   };
 };
 
-export function createSchedulePollService(repositories: SchedulePollRepositories) {
+export function createSchedulePollService(
+  repositories: SchedulePollRepositories,
+  teamContext: TeamContext,
+) {
+  const teamId = teamContext.teamId;
+
   return {
     async createPoll(input: {
       auth: AuthContext;
       authUid?: string;
-      clubId: string;
       seasonId?: string | null;
       title: string;
       commonTime: string;
@@ -73,14 +79,14 @@ export function createSchedulePollService(repositories: SchedulePollRepositories
       closesAt?: string | null;
     }) {
       void input.authUid;
-      const membership = await findMembership(repositories, input.auth, input.clubId);
+      const membership = await findMembership(repositories, input.auth, teamId);
       assertCanManageSchedulePolls(membership);
 
       const optionDates = normalizeOptionDates(input.optionDates);
-      await assertNoDateConflicts(repositories, input.clubId, optionDates);
+      await assertNoDateConflicts(repositories, teamId, optionDates);
 
       return repositories.polls.create({
-        clubId: input.clubId,
+        clubId: teamId,
         seasonId: input.seasonId ?? null,
         title: normalizeRequiredText(input.title, 'Poll title is required.'),
         commonTime: normalizeTime(input.commonTime),
@@ -94,25 +100,22 @@ export function createSchedulePollService(repositories: SchedulePollRepositories
 
     async listActivePolls(input: {
       auth: AuthContext;
-      clubId: string;
     }) {
-      const membership = await findMembership(repositories, input.auth, input.clubId);
+      const membership = await findMembership(repositories, input.auth, teamId);
       assertApprovedMember(membership);
 
-      return repositories.polls.listActive(input.clubId);
+      return repositories.polls.listActive(teamId);
     },
 
     async votePoll(input: {
       auth: AuthContext;
-      clubId: string;
       pollId: string;
       selectedOptionIds: string[];
     }) {
-      const membership = await findMembership(repositories, input.auth, input.clubId);
+      const membership = await findMembership(repositories, input.auth, teamId);
       assertApprovedMember(membership);
 
-      const poll = await findPoll(repositories, input.pollId);
-      assertPollBelongsToClub(poll, input.clubId);
+      const poll = await findPoll(repositories, input.pollId, teamId);
       assertPollIsOpen(poll);
 
       return repositories.polls.replaceVote({
@@ -124,18 +127,16 @@ export function createSchedulePollService(repositories: SchedulePollRepositories
 
     async promotePoll(input: {
       auth: AuthContext;
-      clubId: string;
       pollId: string;
       optionId: string;
     }) {
-      const membership = await findMembership(repositories, input.auth, input.clubId);
+      const membership = await findMembership(repositories, input.auth, teamId);
       assertCanManageSchedulePolls(membership);
 
-      const poll = await findPoll(repositories, input.pollId);
-      assertPollBelongsToClub(poll, input.clubId);
+      const poll = await findPoll(repositories, input.pollId, teamId);
       assertPollOptionBelongsToPoll(input.optionId, poll);
 
-      const seasonId = poll.seasonId ?? (await repositories.seasons.findActiveByClub(input.clubId))?.id;
+      const seasonId = poll.seasonId ?? (await repositories.seasons.findActiveForTeam(teamId))?.id;
       if (!seasonId) {
         throw new AppError('bad_request', '활성 시즌이 없어 확정 일정을 만들 수 없어요.');
       }
@@ -143,6 +144,7 @@ export function createSchedulePollService(repositories: SchedulePollRepositories
       return repositories.polls.promoteToMatch({
         pollId: input.pollId,
         optionId: input.optionId,
+        teamId,
         seasonId,
         promotedByMembershipId: membership.id,
       });
@@ -150,15 +152,13 @@ export function createSchedulePollService(repositories: SchedulePollRepositories
 
     async cancelPoll(input: {
       auth: AuthContext;
-      clubId: string;
       pollId: string;
       cancellationReason: string;
     }) {
-      const membership = await findMembership(repositories, input.auth, input.clubId);
+      const membership = await findMembership(repositories, input.auth, teamId);
       assertCanManageSchedulePolls(membership);
 
-      const poll = await findPoll(repositories, input.pollId);
-      assertPollBelongsToClub(poll, input.clubId);
+      const poll = await findPoll(repositories, input.pollId, teamId);
       assertPollCanBeCancelled(poll);
 
       return repositories.polls.cancel({
@@ -190,11 +190,11 @@ async function findMembership(
   auth: AuthContext,
   clubId: string,
 ) {
-  return repositories.memberships.findByAccountAndClub(auth.user.id, clubId);
+  return repositories.memberships.findCurrentMembership(auth.user.id, clubId);
 }
 
-async function findPoll(repositories: SchedulePollRepositories, pollId: string) {
-  const poll = await repositories.polls.findById(pollId);
+async function findPoll(repositories: SchedulePollRepositories, pollId: string, teamId: string) {
+  const poll = await repositories.polls.findById(pollId, teamId);
   if (!poll) {
     throw new AppError('not_found', 'Schedule poll was not found.');
   }
@@ -219,12 +219,6 @@ function assertApprovedMember(membership: SchedulePollMembership | null): assert
       'This action requires an approved team membership.',
       { status: 403 },
     );
-  }
-}
-
-function assertPollBelongsToClub(poll: SchedulePollRow, clubId: string) {
-  if (poll.clubId !== clubId) {
-    throw new AppError('not_found', 'Schedule poll was not found for this club.');
   }
 }
 

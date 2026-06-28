@@ -18,10 +18,14 @@ const tablesToTruncate = [
   'schedule_polls',
   'matches',
   'team_memberships',
+  'seasons',
+  'clubs',
 ];
 
 const expectedCounts = {
-  team_memberships: 14,
+  clubs: 1,
+  seasons: 1,
+  team_memberships: 6,
   matches: 8,
   schedule_polls: 2,
   schedule_poll_options: 4,
@@ -39,7 +43,7 @@ truncateLocalDemoTables();
 // Base club/account/member data is prepared directly because it is foundational
 // fixture setup. Calendar, poll, lineup, and result rows remain deterministic
 // and are wiped before each rebuild to avoid dirty local data.
-await import('./seed-local-demo-data.mjs');
+await import('./local-demo-fixtures.mjs');
 
 await verifyCounts();
 console.log('Rebuilt clean local demo data.');

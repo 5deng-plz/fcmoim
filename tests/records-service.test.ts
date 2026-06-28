@@ -13,14 +13,14 @@ const DEFAULT_STATS = {
 async function loadService(repositories: RecordsRepositories) {
   const { createRecordsService } = await import('../src/services/records');
 
-  return createRecordsService(repositories);
+  return createRecordsService(repositories, { teamId: 'club-1' });
 }
 
 describe('records season summary service', () => {
   it('sorts rankings by points, win rate, and wins while building the six summary stats', async () => {
     const repositories: RecordsRepositories = {
       memberships: {
-        findByAccountAndClub: vi.fn(async () => ({
+        findCurrentMembership: vi.fn(async () => ({
           id: 'member-admin',
           clubId: 'club-1',
           role: 'admin' as const,
@@ -33,7 +33,7 @@ describe('records season summary service', () => {
         ]),
       },
       seasons: {
-        findActiveByClub: vi.fn(async () => ({ id: 'season-1' })),
+        findActiveForTeam: vi.fn(async () => ({ id: 'season-1' })),
       },
       matches: {
         listFinishedBySeason: vi.fn(async () => [
@@ -63,7 +63,6 @@ describe('records season summary service', () => {
 
     const summary = await service.getSeasonSummary({
       auth: { user: { id: 'auth-admin' } },
-      clubId: 'club-1',
     });
 
     expect(summary.rankingRows.map((row) => row.membershipId)).toEqual(['member-1', 'member-3', 'member-2']);

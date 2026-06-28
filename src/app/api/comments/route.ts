@@ -1,14 +1,13 @@
 import { appErrorResponse } from '../../../types/api';
-import { getServerTeamId } from '@/config/server-team';
+import { getServerTeamContext } from '@/config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../lib/supabase-server';
 import { createCommentService } from '../../../services/comments';
-import { createSupabaseCommentRepositories } from '../../../services/supabase-repositories';
+import { createSupabaseCommentRepositories } from '../../../services/repositories';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     searchParams.get('clubId');
-    const clubId = getServerTeamId();
     const targetType = searchParams.get('targetType');
     const targetId = searchParams.get('targetId');
     if (!targetType || !targetId) {
@@ -17,9 +16,9 @@ export async function GET(request: Request) {
 
     const supabase = await createSupabaseServerClient();
     const auth = await getRequiredServerAuthContext(supabase);
-    const service = createCommentService(createSupabaseCommentRepositories(supabase));
+    const service = createCommentService(createSupabaseCommentRepositories(supabase), getServerTeamContext());
 
-    return Response.json(await service.listComments({ auth, clubId, targetType, targetId }));
+    return Response.json(await service.listComments({ auth, targetType, targetId }));
   } catch (error) {
     return appErrorResponse(error);
   }
@@ -39,11 +38,10 @@ export async function POST(request: Request) {
 
     const supabase = await createSupabaseServerClient();
     const auth = await getRequiredServerAuthContext(supabase);
-    const service = createCommentService(createSupabaseCommentRepositories(supabase));
+    const service = createCommentService(createSupabaseCommentRepositories(supabase), getServerTeamContext());
 
     return Response.json(await service.createComment({
       auth,
-      clubId: getServerTeamId(),
       targetType: body.targetType,
       targetId: body.targetId,
       content: body.content,

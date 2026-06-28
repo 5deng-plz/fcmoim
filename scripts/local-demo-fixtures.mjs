@@ -1,17 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 const clubId = process.env.NEXT_PUBLIC_DEFAULT_CLUB_ID || '00000000-0000-0000-0000-000000000001';
-const clubIds = {
-  guppy: clubId,
-  orca: '00000000-0000-0000-0000-000000000002',
-  lynx: '00000000-0000-0000-0000-000000000003',
-};
 const seasonId = '00000000-0000-0000-0000-000000000101';
-const seasonIds = {
-  guppy: seasonId,
-  orca: '00000000-0000-0000-0000-000000000102',
-  lynx: '00000000-0000-0000-0000-000000000103',
-};
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const secretKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || '';
 
@@ -37,15 +27,7 @@ const qaUsers = [
 const qaMembershipFixtures = [
   ...qaUsers
     .filter((qaUser) => qaUser.email !== 'qa-new@fcmoim.test')
-    .map((qaUser) => ({ ...qaUser, clubId: clubIds.guppy, status: 'approved' })),
-  { ...findQaUser('qa-admin@fcmoim.test'), clubId: clubIds.orca, status: 'approved' },
-  { ...findQaUser('qa-operator@fcmoim.test'), clubId: clubIds.orca, status: 'approved' },
-  { ...findQaUser('qa-member2@fcmoim.test'), clubId: clubIds.orca, status: 'approved' },
-  { ...findQaUser('qa-admin@fcmoim.test'), clubId: clubIds.lynx, status: 'approved' },
-  { ...findQaUser('qa-operator@fcmoim.test'), clubId: clubIds.lynx, status: 'approved' },
-  { ...findQaUser('qa-member1@fcmoim.test'), clubId: clubIds.lynx, status: 'suspended' },
-  { ...findQaUser('qa-member4@fcmoim.test'), clubId: clubIds.lynx, status: 'pending' },
-  { ...findQaUser('qa-member3@fcmoim.test'), clubId: clubIds.lynx, status: 'rejected' },
+    .map((qaUser) => ({ ...qaUser, clubId, status: 'approved' })),
 ];
 
 await upsertClubsAndSeasons();
@@ -53,7 +35,7 @@ const usersByEmail = await fetchUsersByEmail();
 const memberships = await upsertMemberships(usersByEmail);
 const byEmail = Object.fromEntries(
   memberships
-    .filter((membership) => membership.clubId === clubIds.guppy)
+    .filter((membership) => membership.clubId === clubId)
     .map((membership) => [membership.email, membership]),
 );
 
@@ -64,7 +46,6 @@ await upsertRewards(byEmail);
 
 console.log('Seeded rich local demo data.');
 console.log(`Club: ${clubId}`);
-console.log(`Public clubs: ${Object.values(clubIds).join(', ')}`);
 console.log(`Season: ${seasonId}`);
 console.log(`Members: ${memberships.length}`);
 
@@ -81,60 +62,24 @@ function assertLocalOnly() {
 }
 
 async function upsertClubsAndSeasons() {
-  const { error: clubError } = await supabase.from('clubs').upsert([
-    {
-      id: clubIds.guppy,
+  const { error: clubError } = await supabase.from('clubs').upsert({
+      id: clubId,
       name: 'FC Guppy',
       slug: 'fc-guppy',
       description: 'FC Guppy는 함께 뛰고 성장하는 풋살 팀입니다.',
       is_public: true,
       logo_url: null,
-    },
-    {
-      id: clubIds.orca,
-      name: 'FC Orca',
-      slug: 'fc-orca',
-      description: 'FC Orca는 주중 야간 풋살과 전술 훈련을 병행하는 팀입니다.',
-      is_public: true,
-      logo_url: null,
-    },
-    {
-      id: clubIds.lynx,
-      name: 'FC Lynx',
-      slug: 'fc-lynx',
-      description: 'FC Lynx는 신규 입단과 운영진 승인 흐름을 검증하는 공개 팀입니다.',
-      is_public: true,
-      logo_url: null,
-    },
-  ]);
+    });
   if (clubError) throw new Error(`Failed to seed clubs: ${clubError.message}`);
 
-  const { error: seasonError } = await supabase.from('seasons').upsert([
-    {
-      id: seasonIds.guppy,
-      club_id: clubIds.guppy,
+  const { error: seasonError } = await supabase.from('seasons').upsert({
+      id: seasonId,
+      club_id: clubId,
       name: '2026 Guppy 시즌',
       start_date: '2026-01-01',
       end_date: '2026-12-31',
       is_active: true,
-    },
-    {
-      id: seasonIds.orca,
-      club_id: clubIds.orca,
-      name: '2026 Orca 시즌',
-      start_date: '2026-01-01',
-      end_date: '2026-12-31',
-      is_active: true,
-    },
-    {
-      id: seasonIds.lynx,
-      club_id: clubIds.lynx,
-      name: '2026 Lynx 시즌',
-      start_date: '2026-01-01',
-      end_date: '2026-12-31',
-      is_active: true,
-    },
-  ]);
+    });
   if (seasonError) throw new Error(`Failed to seed seasons: ${seasonError.message}`);
 }
 
@@ -201,12 +146,6 @@ async function upsertMemberships(usersByEmail) {
       nickname: qaUser.nickname,
     };
   });
-}
-
-function findQaUser(email) {
-  const qaUser = qaUsers.find((candidate) => candidate.email === email);
-  if (!qaUser) throw new Error(`Unknown QA user fixture: ${email}`);
-  return qaUser;
 }
 
 async function upsertAnnouncements(authorMembershipId) {

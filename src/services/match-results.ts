@@ -1,4 +1,5 @@
 import { AppError } from '../types/api';
+import type { TeamContext } from '../config/server-team';
 import type { AuthContext, MatchLineupEntryRow, MatchRow, TeamMembershipRow } from '../types/domain';
 import { applyPerformanceBoost, calculateOVR } from '../utils/ovr';
 
@@ -36,11 +37,11 @@ type MatchResultTransaction = {
 
 export type MatchResultRepositories = {
   memberships: {
-    findByAccountAndClub(accountId: string, clubId: string): Promise<Pick<TeamMembershipRow, 'role' | 'status'> | null>;
+    findCurrentMembership(accountId: string, clubId: string): Promise<Pick<TeamMembershipRow, 'role' | 'status'> | null>;
     findStatsByIds(membershipIds: string[]): Promise<Array<Pick<TeamMembershipRow, 'id' | 'stats'>>>;
   };
   matches: {
-    findById(matchId: string): Promise<MatchRow | null>;
+    findById(matchId: string, teamId: string): Promise<MatchRow | null>;
   };
   lineups: {
     listForMatch(matchId: string): Promise<MatchLineupEntryRow[]>;
@@ -48,24 +49,28 @@ export type MatchResultRepositories = {
   transaction<T>(callback: (tx: MatchResultTransaction) => Promise<T>): Promise<T>;
 };
 
-export function createMatchResultService(repositories: MatchResultRepositories) {
+export function createMatchResultService(
+  repositories: MatchResultRepositories,
+  teamContext: TeamContext,
+) {
+  const teamId = teamContext.teamId;
+
   return {
     async saveMatchResult(input: {
       auth: AuthContext;
-      clubId: string;
       matchId: string;
       score: ScoreInput;
       playerStats: PlayerResultInput[];
     }) {
-      const membership = await repositories.memberships.findByAccountAndClub(
+      const membership = await repositories.memberships.findCurrentMembership(
         input.auth.user.id,
-        input.clubId,
+        teamId,
       );
       assertCanSaveMatchResult(membership);
       const score = normalizeScore(input.score);
       const submittedStats = normalizePlayerResultInputs(input.playerStats);
-      const match = await repositories.matches.findById(input.matchId);
-      assertMatchCanReceiveResult(match, input.clubId);
+      const match = await repositories.matches.findById(input.matchId, teamId);
+      assertMatchCanReceiveResult(match);
       const lineup = await repositories.lineups.listForMatch(input.matchId);
       assertPlayerStatsMatchScore({
         score,
@@ -145,8 +150,8 @@ function normalizeCount(value: unknown, label: string): number {
   return value;
 }
 
-function assertMatchCanReceiveResult(match: MatchRow | null, clubId: string): asserts match is MatchRow {
-  if (!match || match.clubId !== clubId) {
+function assertMatchCanReceiveResult(match: MatchRow | null): asserts match is MatchRow {
+  if (!match) {
     throw new AppError('not_found', 'Match was not found for this club.');
   }
   if (match.status === 'cancelled') {

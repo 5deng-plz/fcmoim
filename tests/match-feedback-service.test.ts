@@ -5,7 +5,7 @@ const closedDeadline = '2026-06-21T00:00:00.000Z';
 
 async function loadService(repositories = createRepositories()) {
   const { createMatchFeedbackService } = await import('../src/services/match-feedback');
-  return createMatchFeedbackService(repositories);
+  return createMatchFeedbackService(repositories, { teamId: 'club-1' });
 }
 
 function createRepositories(options?: {
@@ -36,7 +36,7 @@ function createRepositories(options?: {
 
   return {
     memberships: {
-      findByAccountAndClub: vi.fn(async () => ({
+      findCurrentMembership: vi.fn(async () => ({
         id: 'member-1',
         clubId: 'club-1',
         role: 'member' as const,
@@ -81,7 +81,6 @@ describe('match feedback service', () => {
 
       await expect(service.voteMvp({
         auth,
-        clubId: 'club-1',
         matchId: 'match-1',
         candidateMembershipId: 'member-2',
       })).resolves.toEqual({
@@ -110,7 +109,6 @@ describe('match feedback service', () => {
 
       await expect(service.voteMvp({
         auth,
-        clubId: 'club-1',
         matchId: 'match-1',
         candidateMembershipId: 'member-2',
       })).rejects.toMatchObject({
@@ -132,7 +130,6 @@ describe('match feedback service', () => {
 
       await expect(service.submitPeerRatings({
         auth,
-        clubId: 'club-1',
         matchId: 'match-1',
         ratings: [{ rateeMembershipId: 'member-1', rating: 8, badges: [] }],
       })).rejects.toMatchObject({
@@ -162,7 +159,6 @@ describe('match feedback service', () => {
 
       await expect(service.getFeedback({
         auth,
-        clubId: 'club-1',
         matchId: 'match-1',
       })).resolves.toMatchObject({
         status: 'closed',

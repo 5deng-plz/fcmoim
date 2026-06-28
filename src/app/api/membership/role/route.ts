@@ -2,7 +2,7 @@ import { appErrorResponse } from '../../../../types/api';
 import { getServerTeamContext } from '../../../../config/server-team';
 import { createPrivilegedSupabaseClient, createSupabaseServerClient, getRequiredServerAuthContext } from '../../../../lib/supabase-server';
 import { createAccountMembershipService } from '../../../../services/account-membership';
-import { createSupabaseAccountMembershipRepositories } from '../../../../services/supabase-repositories';
+import { createSupabaseAccountMembershipRepositories } from '../../../../services/repositories';
 
 export async function PATCH(request: Request) {
   try {

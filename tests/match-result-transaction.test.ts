@@ -33,7 +33,7 @@ type MatchResultService = {
 
 type MockRepositories = {
   memberships: {
-    findByAccountAndClub: ReturnType<typeof vi.fn>;
+    findCurrentMembership: ReturnType<typeof vi.fn>;
     findStatsByIds: ReturnType<typeof vi.fn>;
   };
   matches: {
@@ -49,13 +49,13 @@ async function loadService(repositories: MockRepositories): Promise<MatchResultS
   const serviceModulePath = '../src/services/match-results';
   const { createMatchResultService } = await import(serviceModulePath);
 
-  return createMatchResultService(repositories);
+  return createMatchResultService(repositories, { teamId: 'club-1' });
 }
 
 function createRepositories(overrides: Partial<MockRepositories> = {}): MockRepositories {
   const repositories = {
     memberships: {
-      findByAccountAndClub: vi.fn(async () => ({
+      findCurrentMembership: vi.fn(async () => ({
         role: 'operator',
         status: 'approved',
       })),
@@ -255,7 +255,7 @@ describe('v1.0 match result save transaction', () => {
 
       await expect(loadService(createRepositories({
         matches: {
-          findById: vi.fn(async () => createMatch({ clubId: 'other-club' })),
+          findById: vi.fn(async () => null),
         },
       })).then((service) => service.saveMatchResult(input))).rejects.toMatchObject({ code: 'not_found' });
 

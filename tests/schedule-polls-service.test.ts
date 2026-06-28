@@ -57,10 +57,10 @@ type SchedulePollService = {
 
 async function loadService(repositories: {
   memberships: {
-    findByAccountAndClub: ReturnType<typeof vi.fn>;
+    findCurrentMembership: ReturnType<typeof vi.fn>;
   };
   seasons: {
-    findActiveByClub: ReturnType<typeof vi.fn>;
+    findActiveForTeam: ReturnType<typeof vi.fn>;
   };
   polls: {
     create: ReturnType<typeof vi.fn>;
@@ -76,6 +76,7 @@ async function loadService(repositories: {
 
   return createSchedulePollService(
     repositories as unknown as Parameters<typeof createSchedulePollService>[0],
+    { teamId: 'club-1' },
   );
 }
 
@@ -121,7 +122,7 @@ function createRepositories(options?: {
 
   return {
     memberships: {
-      findByAccountAndClub: vi.fn(async (accountId: string, clubId: string) => {
+      findCurrentMembership: vi.fn(async (accountId: string, clubId: string) => {
         if (!membership || membership.accountId !== accountId || membership.clubId !== clubId) {
           return null;
         }
@@ -130,7 +131,7 @@ function createRepositories(options?: {
       }),
     },
     seasons: {
-      findActiveByClub: vi.fn(async () => (
+      findActiveForTeam: vi.fn(async () => (
         options?.activeSeasonId === null ? null : { id: options?.activeSeasonId ?? 'season-1' }
       )),
     },
@@ -194,7 +195,7 @@ describe('v1.0 schedule poll service', () => {
       id: 'created-poll',
     });
 
-    expect(repositories.memberships.findByAccountAndClub).toHaveBeenCalledWith(
+    expect(repositories.memberships.findCurrentMembership).toHaveBeenCalledWith(
       'current-auth-user',
       'club-1',
     );
@@ -518,6 +519,7 @@ describe('v1.0 schedule poll service', () => {
     expect(repositories.polls.promoteToMatch).toHaveBeenCalledWith({
       pollId: 'poll-1',
       optionId: 'option-1',
+      teamId: 'club-1',
       seasonId: 'season-1',
       promotedByMembershipId: 'operator-membership',
     });
@@ -544,10 +546,11 @@ describe('v1.0 schedule poll service', () => {
       matchId: 'match-created-from-poll',
     });
 
-    expect(repositories.seasons.findActiveByClub).toHaveBeenCalledWith('club-1');
+    expect(repositories.seasons.findActiveForTeam).toHaveBeenCalledWith('club-1');
     expect(repositories.polls.promoteToMatch).toHaveBeenCalledWith({
       pollId: 'poll-1',
       optionId: 'option-1',
+      teamId: 'club-1',
       seasonId: 'active-season',
       promotedByMembershipId: 'operator-membership',
     });

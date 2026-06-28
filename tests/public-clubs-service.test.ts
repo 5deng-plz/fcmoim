@@ -1,14 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createPublicClubService, type PublicClubRepositories } from '../src/services/public-clubs';
-import type { PublicClubDetailRow, PublicClubSummaryRow } from '../src/types/domain';
+import type { TeamProfile, TeamProfileDetail } from '../src/types/domain';
 
 const teamContext = { teamId: '00000000-0000-0000-0000-000000000001' } as const;
 
 function createRepositories(overrides: Partial<PublicClubRepositories['clubs']> = {}): PublicClubRepositories {
-  const clubSummary: PublicClubSummaryRow = {
-    id: teamContext.teamId,
+  const clubSummary: TeamProfile = {
     name: 'FC Guppy',
-    slug: 'fc-guppy',
     description: 'Default club',
     logoUrl: null,
     isPublic: true,
@@ -22,7 +20,7 @@ function createRepositories(overrides: Partial<PublicClubRepositories['clubs']> 
     recentMatchCount: 2,
     upcomingMatchCount: 1,
   };
-  const clubDetail: PublicClubDetailRow = {
+  const clubDetail: TeamProfileDetail = {
     ...clubSummary,
     activeSeason: null,
     recentMatchCount: 0,
@@ -45,43 +43,26 @@ function createRepositories(overrides: Partial<PublicClubRepositories['clubs']> 
 
   return {
     clubs: {
-      findPublicDetail: vi.fn(async (clubId: string) => clubId === teamContext.teamId ? clubDetail : null),
+      findTeamProfile: vi.fn(async (clubId: string) => clubId === teamContext.teamId ? clubDetail : null),
       ...overrides,
     },
   };
 }
 
 describe('public club service', () => {
-  it('returns public club summaries without membership identities', async () => {
-    const repositories = createRepositories();
-    const service = createPublicClubService(repositories, teamContext);
-
-    const clubs = await service.listCompatibleClubs();
-
-    expect(clubs).toHaveLength(1);
-    expect(clubs[0]).toMatchObject({
-      name: 'FC Guppy',
-      memberCount: 12,
-      upcomingMatchCount: 1,
-    });
-    expect(clubs[0]).not.toHaveProperty('members');
-    expect(clubs[0]).not.toHaveProperty('pendingMembers');
-  });
-
   it('loads only the server-owned FC Guppy detail', async () => {
     const repositories = createRepositories();
     const service = createPublicClubService(repositories, teamContext);
 
     await expect(service.getTeam()).resolves.toMatchObject({
-      id: teamContext.teamId,
       upcomingMatches: [{ title: 'Round 1', attendeeCount: 0, attendeeTotal: 12 }],
     });
-    expect(repositories.clubs.findPublicDetail).toHaveBeenCalledWith(teamContext.teamId);
+    expect(repositories.clubs.findTeamProfile).toHaveBeenCalledWith(teamContext.teamId);
   });
 
   it('rejects a missing canonical team', async () => {
     const service = createPublicClubService(
-      createRepositories({ findPublicDetail: vi.fn(async () => null) }),
+      createRepositories({ findTeamProfile: vi.fn(async () => null) }),
       teamContext,
     );
 

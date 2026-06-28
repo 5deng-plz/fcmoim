@@ -1,12 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { AppError } from '../types/api';
-import type { UserStats } from '../types';
-import { normalizeUserStats } from '../utils/stats';
-import { createPrivilegedSupabaseClient } from '../lib/supabase-server';
+import { AppError } from '../../types/api';
+import type { UserStats } from '../../types';
+import { normalizeUserStats } from '../../utils/stats';
+import { createPrivilegedSupabaseClient } from '../../lib/supabase-server';
 import type {
   AccountRow,
   AnnouncementRow,
-  ClubMembershipSummaryRow,
   EventCommentRow,
   EventCommentTargetType,
   MatchEventType,
@@ -17,8 +16,8 @@ import type {
   MembershipProfilePatch,
   NormalizedJoinProfile,
   PendingMembershipReviewRow,
-  PublicClubDetailRow,
-  PublicClubSummaryRow,
+  TeamProfile,
+  TeamProfileDetail,
   PublicMatchSummaryRow,
   PublicSeasonSummaryRow,
   SchedulePollOptionRow,
@@ -26,18 +25,18 @@ import type {
   SchedulePollStatus,
   SchedulePollVoteRow,
   TeamMembershipRow,
-} from '../types/domain';
-import type { AnnouncementRepositories } from './announcements';
-import type { AccountMembershipRepositories } from './account-membership';
-import type { ClubAdminRepositories } from './club-admin';
-import type { CommentRepositories } from './comments';
-import type { FeedContentType, FeedPostRepositories, FeedReactionType } from './feed-posts';
-import type { MatchFeedbackRepositories } from './match-feedback';
-import type { MatchResultRepositories } from './match-results';
-import type { MatchRepositories } from './matches';
-import type { PublicClubRepositories } from './public-clubs';
-import type { RecordsRepositories } from './records';
-import type { SchedulePollRepositories } from './schedule-polls';
+} from '../../types/domain';
+import type { AnnouncementRepositories } from '../announcements';
+import type { AccountMembershipRepositories } from '../account-membership';
+import type { ClubAdminRepositories } from '../club-admin';
+import type { CommentRepositories } from '../comments';
+import type { FeedContentType, FeedPostRepositories, FeedReactionType } from '../feed-posts';
+import type { MatchFeedbackRepositories } from '../match-feedback';
+import type { MatchResultRepositories } from '../match-results';
+import type { MatchRepositories } from '../matches';
+import type { PublicClubRepositories } from '../public-clubs';
+import type { RecordsRepositories } from '../records';
+import type { SchedulePollRepositories } from '../schedule-polls';
 
 type MembershipDbRow = {
   id: string;
@@ -71,17 +70,6 @@ type PendingMembershipDbRow = {
   created_at: string;
 };
 
-type ClubMembershipDbRow = {
-  id: string;
-  club_id: string;
-  role: TeamMembershipRow['role'];
-  status: TeamMembershipRow['status'];
-  clubs: {
-    name: string;
-    logo_url: string | null;
-  } | null;
-};
-
 type AccountDbRow = {
   id: string;
   display_name: string | null;
@@ -95,6 +83,11 @@ type PublicClubDbRow = {
   description: string | null;
   logo_url: string | null;
   is_public?: boolean;
+};
+
+type TeamProfileDbProjection = TeamProfile & {
+  id: string;
+  slug: string;
 };
 
 type PublicSeasonDbRow = {
@@ -341,7 +334,7 @@ export function createSupabaseAccountMembershipRepositories(
       },
     },
     memberships: {
-      async findByAccountAndClub(accountId, clubId) {
+      async findCurrentMembership(accountId, clubId) {
         const { data, error } = await supabase
           .from('team_memberships')
           .select(MEMBERSHIP_SELECT)
@@ -355,11 +348,12 @@ export function createSupabaseAccountMembershipRepositories(
 
         return data ? mapMembership(data) : null;
       },
-      async findById(membershipId) {
+      async findById(membershipId, teamId) {
         const { data, error } = await supabase
           .from('team_memberships')
           .select(MEMBERSHIP_SELECT)
           .eq('id', membershipId)
+          .eq('club_id', teamId)
           .maybeSingle<MembershipDbRow>();
 
         if (error) {
@@ -368,28 +362,7 @@ export function createSupabaseAccountMembershipRepositories(
 
         return data ? mapMembership(data) : null;
       },
-      async listClubMemberships(accountId) {
-        const { data, error } = await supabase
-          .from('team_memberships')
-          .select('id, club_id, role, status, clubs(name, logo_url)')
-          .eq('account_id', accountId)
-          .in('status', ['approved', 'pending'])
-          .returns<ClubMembershipDbRow[]>();
-
-        if (error) {
-          throw new AppError('internal_error', 'Failed to fetch club memberships.', { cause: error });
-        }
-
-        return (data ?? []).map((row) => ({
-          membershipId: row.id,
-          clubId: row.club_id,
-          clubName: row.clubs?.name || '이름 없는 팀',
-          logoUrl: row.clubs?.logo_url ?? null,
-          role: row.role,
-          status: row.status,
-        }) satisfies ClubMembershipSummaryRow);
-      },
-      async listPendingByClub(clubId) {
+      async listPendingForTeam(clubId) {
         const { data, error } = await supabase
           .from('team_memberships')
           .select('id, account_id, club_id, profile_name, main_position, height, weight, preferred_foot, created_at')
@@ -404,7 +377,7 @@ export function createSupabaseAccountMembershipRepositories(
 
         return (data ?? []).map(mapPendingMembership);
       },
-      async listApprovedByClub(clubId) {
+      async listApprovedForTeam(clubId) {
         const { data, error } = await supabase
           .from('team_memberships')
           .select(MEMBERSHIP_SELECT)
@@ -508,7 +481,7 @@ export function createSupabasePublicClubRepositories(
 ): PublicClubRepositories {
   return {
     clubs: {
-      async findPublicDetail(clubId) {
+      async findTeamProfile(clubId) {
         const { data, error } = await selectPublicClubById(supabase, clubId);
 
         if (error) {
@@ -526,11 +499,23 @@ export function createSupabasePublicClubRepositories(
           fetchPublicMatches(privilegedSupabase, clubId, 'upcoming', memberCount),
         ]);
 
-        return {
+        const detail = {
           ...mapPublicClubSummary(data, aggregates),
           recentMatches,
           upcomingMatches,
-        } satisfies PublicClubDetailRow;
+        };
+        return {
+          name: detail.name,
+          description: detail.description,
+          logoUrl: detail.logoUrl,
+          isPublic: detail.isPublic,
+          memberCount: detail.memberCount,
+          activeSeason: detail.activeSeason,
+          recentMatchCount: detail.recentMatchCount,
+          upcomingMatchCount: detail.upcomingMatchCount,
+          recentMatches: detail.recentMatches,
+          upcomingMatches: detail.upcomingMatches,
+        } satisfies TeamProfileDetail;
       },
     },
   };
@@ -541,7 +526,7 @@ export function createSupabaseClubAdminRepositories(
 ): ClubAdminRepositories {
   return {
     memberships: {
-      async findByAccountAndClub(accountId, clubId) {
+      async findCurrentMembership(accountId, clubId) {
         const { data, error } = await supabase
           .from('team_memberships')
           .select('role, status')
@@ -629,7 +614,7 @@ export function createSupabaseMatchResultRepositories(
 ): MatchResultRepositories {
   return {
     memberships: {
-      async findByAccountAndClub(accountId, clubId) {
+      async findCurrentMembership(accountId, clubId) {
         const { data, error } = await supabase
           .from('team_memberships')
           .select('role, status')
@@ -663,11 +648,12 @@ export function createSupabaseMatchResultRepositories(
       },
     },
     matches: {
-      async findById(matchId) {
+      async findById(matchId, teamId) {
         const { data, error } = await supabase
           .from('matches')
           .select(MATCH_SELECT)
           .eq('id', matchId)
+          .eq('club_id', teamId)
           .maybeSingle<MatchDbRow>();
 
         if (error) {
@@ -711,7 +697,7 @@ export function createSupabaseSchedulePollRepositories(
 ): SchedulePollRepositories {
   return {
     memberships: {
-      async findByAccountAndClub(accountId, clubId) {
+      async findCurrentMembership(accountId, clubId) {
         const { data, error } = await supabase
           .from('team_memberships')
           .select('id, club_id, role, status')
@@ -734,7 +720,7 @@ export function createSupabaseSchedulePollRepositories(
       },
     },
     seasons: {
-      async findActiveByClub(clubId) {
+      async findActiveForTeam(clubId) {
         const { data, error } = await supabase
           .from('seasons')
           .select('id')
@@ -809,11 +795,12 @@ export function createSupabaseSchedulePollRepositories(
         return (data ?? []).map((poll) => mapSchedulePoll(poll, eligibleVoterCount));
       },
 
-      async findById(pollId) {
+      async findById(pollId, teamId) {
         const { data, error } = await supabase
           .from('schedule_polls')
           .select(SCHEDULE_POLL_SELECT)
           .eq('id', pollId)
+          .eq('club_id', teamId)
           .maybeSingle<SchedulePollDbRow>();
 
         if (error) {
@@ -934,7 +921,7 @@ export function createSupabaseSchedulePollRepositories(
           throw new AppError('bad_request', 'Selected option does not belong to this poll.');
         }
         const matchDate = toKoreaIsoDateTime(selectedOption.optionDate, poll.commonTime);
-        const existingMatch = await findNonCancelledMatchOnKoreaDate(supabase, poll.clubId, matchDate);
+        const existingMatch = await findNonCancelledMatchOnKoreaDate(supabase, input.teamId, matchDate);
         if (existingMatch) {
           throw new AppError('conflict', '이미 같은 날짜에 등록된 경기가 있어요.');
         }
@@ -942,7 +929,7 @@ export function createSupabaseSchedulePollRepositories(
         const { data: match, error: matchError } = await supabase
           .from('matches')
           .insert({
-            club_id: poll.clubId,
+            club_id: input.teamId,
             season_id: input.seasonId,
             title: poll.title,
             date: matchDate,
@@ -1016,7 +1003,7 @@ export function createSupabaseAnnouncementRepositories(
 ): AnnouncementRepositories {
   return {
     memberships: {
-      async findByAccountAndClub(accountId, clubId) {
+      async findCurrentMembership(accountId, clubId) {
         const { data, error } = await supabase
           .from('team_memberships')
           .select('id, club_id, role, status')
@@ -1039,7 +1026,7 @@ export function createSupabaseAnnouncementRepositories(
       },
     },
     announcements: {
-      async listByClub(clubId) {
+      async listForTeam(clubId) {
         const { data, error } = await supabase
           .from('announcements')
           .select(ANNOUNCEMENT_SELECT)
@@ -1055,11 +1042,12 @@ export function createSupabaseAnnouncementRepositories(
         return (data ?? []).map(mapAnnouncement);
       },
 
-      async findById(announcementId) {
+      async findById(announcementId, teamId) {
         const { data, error } = await supabase
           .from('announcements')
           .select(ANNOUNCEMENT_SELECT)
           .eq('id', announcementId)
+          .eq('club_id', teamId)
           .maybeSingle<AnnouncementDbRow>();
 
         if (error) {
@@ -1128,7 +1116,7 @@ export function createSupabaseRecordsRepositories(
 ): RecordsRepositories {
   return {
     memberships: {
-      async findByAccountAndClub(accountId, clubId) {
+      async findCurrentMembership(accountId, clubId) {
         const { data, error } = await supabase
           .from('team_memberships')
           .select('id, club_id, role, status')
@@ -1184,7 +1172,7 @@ export function createSupabaseRecordsRepositories(
       },
     },
     seasons: {
-      async findActiveByClub(clubId) {
+      async findActiveForTeam(clubId) {
         const { data, error } = await supabase
           .from('seasons')
           .select('id')
@@ -1270,7 +1258,7 @@ export function createSupabaseMatchRepositories(
 ): MatchRepositories {
   return {
     memberships: {
-      async findByAccountAndClub(accountId, clubId) {
+      async findCurrentMembership(accountId, clubId) {
         const { data, error } = await supabase
           .from('team_memberships')
           .select('id, club_id, role, status')
@@ -1293,7 +1281,7 @@ export function createSupabaseMatchRepositories(
       },
     },
     seasons: {
-      async findActiveByClub(clubId) {
+      async findActiveForTeam(clubId) {
         const { data, error } = await supabase
           .from('seasons')
           .select('id')
@@ -1395,11 +1383,12 @@ export function createSupabaseMatchRepositories(
         return mapMatch(data);
       },
 
-      async findById(matchId) {
+      async findById(matchId, teamId) {
         const { data, error } = await supabase
           .from('matches')
           .select(MATCH_SELECT)
           .eq('id', matchId)
+          .eq('club_id', teamId)
           .maybeSingle<MatchDbRow>();
 
         if (error) {
@@ -1607,7 +1596,7 @@ export function createSupabaseMatchFeedbackRepositories(
 ): MatchFeedbackRepositories {
   return {
     memberships: {
-      async findByAccountAndClub(accountId, clubId) {
+      async findCurrentMembership(accountId, clubId) {
         const { data, error } = await supabase
           .from('team_memberships')
           .select('id, club_id, role, status')
@@ -1630,11 +1619,12 @@ export function createSupabaseMatchFeedbackRepositories(
       },
     },
     matches: {
-      async findById(matchId) {
+      async findById(matchId, teamId) {
         const { data, error } = await supabase
           .from('matches')
           .select(MATCH_SELECT)
           .eq('id', matchId)
+          .eq('club_id', teamId)
           .maybeSingle<MatchDbRow>();
 
         if (error) {
@@ -1873,7 +1863,7 @@ export function createSupabaseFeedPostRepositories(
 ): FeedPostRepositories {
   return {
     memberships: {
-      async findByAccountAndClub(accountId, clubId) {
+      async findCurrentMembership(accountId, clubId) {
         const { data, error } = await supabase
           .from('team_memberships')
           .select('id, club_id, role, status')
@@ -1952,11 +1942,12 @@ export function createSupabaseFeedPostRepositories(
         return (await hydrateFeedPosts(supabase, [data], input.membershipId))[0];
       },
 
-      async findById(postId) {
+      async findById(postId, teamId) {
         const { data, error } = await supabase
           .from('feed_posts')
           .select('id, club_id, membership_id')
           .eq('id', postId)
+          .eq('club_id', teamId)
           .maybeSingle<{ id: string; club_id: string; membership_id: string }>();
 
         if (error) {
@@ -2024,7 +2015,7 @@ export function createSupabaseCommentRepositories(
 ): CommentRepositories {
   return {
     memberships: {
-      async findByAccountAndClub(accountId, clubId) {
+      async findCurrentMembership(accountId, clubId) {
         const { data, error } = await supabase
           .from('team_memberships')
           .select('id, club_id, role, status')
@@ -2294,7 +2285,7 @@ async function fetchPublicMatchAttendeeCounts(
 function mapPublicClubSummary(
   club: PublicClubDbRow,
   aggregates: PublicClubAggregates,
-): PublicClubSummaryRow {
+): TeamProfileDbProjection {
   return {
     id: club.id,
     name: club.name,
@@ -2351,7 +2342,6 @@ function mapMembership(row: MembershipDbRow): TeamMembershipRow {
   return {
     id: row.id,
     accountId: row.account_id,
-    clubId: row.club_id,
     role: row.role,
     status: row.status,
     nickname: row.profile_name,
@@ -2377,7 +2367,6 @@ function mapPendingMembership(row: PendingMembershipDbRow): PendingMembershipRev
   return {
     id: row.id,
     accountId: row.account_id,
-    clubId: row.club_id,
     nickname: row.profile_name,
     position: row.main_position,
     heightCm: row.height,
@@ -2469,7 +2458,6 @@ async function countApprovedMembershipsByClub(supabase: SupabaseClient, clubId: 
 function mapSchedulePoll(row: SchedulePollDbRow, eligibleVoterCount: number): SchedulePollRow {
   return {
     id: row.id,
-    clubId: row.club_id,
     seasonId: row.season_id,
     title: row.title,
     status: row.status,
@@ -2490,7 +2478,6 @@ function mapSchedulePoll(row: SchedulePollDbRow, eligibleVoterCount: number): Sc
 function mapAnnouncement(row: AnnouncementDbRow): AnnouncementRow {
   return {
     id: row.id,
-    clubId: row.club_id,
     seasonId: row.season_id,
     title: row.title,
     content: row.content,
@@ -2504,7 +2491,6 @@ function mapAnnouncement(row: AnnouncementDbRow): AnnouncementRow {
 function mapMatch(row: MatchDbRow): MatchRow {
   return {
     id: row.id,
-    clubId: row.club_id,
     seasonId: row.season_id,
     round: row.round,
     title: row.title,

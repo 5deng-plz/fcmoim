@@ -1,21 +1,20 @@
 import { appErrorResponse } from '../../../types/api';
-import { getServerTeamId } from '@/config/server-team';
+import { getServerTeamContext } from '@/config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../lib/supabase-server';
 import { fireAndForgetPush, sendPushToClubMembers } from '../../../lib/push-sender';
 import { createSchedulePollService } from '../../../services/schedule-polls';
-import { createSupabaseSchedulePollRepositories } from '../../../services/supabase-repositories';
+import { createSupabaseSchedulePollRepositories } from '../../../services/repositories';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     searchParams.get('clubId');
-    const clubId = getServerTeamId();
 
     const supabase = await createSupabaseServerClient();
     const auth = await getRequiredServerAuthContext(supabase);
-    const service = createSchedulePollService(createSupabaseSchedulePollRepositories(supabase));
+    const service = createSchedulePollService(createSupabaseSchedulePollRepositories(supabase), getServerTeamContext());
 
-    return Response.json(await service.listActivePolls({ auth, clubId }));
+    return Response.json(await service.listActivePolls({ auth }));
   } catch (error) {
     return appErrorResponse(error);
   }
@@ -26,12 +25,11 @@ export async function POST(request: Request) {
     const body = await request.json();
     const supabase = await createSupabaseServerClient();
     const auth = await getRequiredServerAuthContext(supabase);
-    const service = createSchedulePollService(createSupabaseSchedulePollRepositories(supabase));
+    const service = createSchedulePollService(createSupabaseSchedulePollRepositories(supabase), getServerTeamContext());
 
     const poll = await service.createPoll({
       auth,
       authUid: body.authUid,
-      clubId: getServerTeamId(),
       seasonId: body.seasonId,
       title: body.title,
       commonTime: body.commonTime,
@@ -41,11 +39,12 @@ export async function POST(request: Request) {
       optionDates: body.optionDates,
     });
 
-    fireAndForgetPush('schedule poll creation', () => sendPushToClubMembers(poll.clubId, {
+    const teamId = getServerTeamContext().teamId;
+    fireAndForgetPush('schedule poll creation', () => sendPushToClubMembers(teamId, {
       type: 'SCHEDULE_POLL_CREATED',
       title: '새 일정 투표가 시작됐어요',
       targetUrl: '/?tab=schedule',
-      metadata: { clubId: poll.clubId, pollId: poll.id },
+      metadata: { clubId: teamId, pollId: poll.id },
     }, { excludeAccountId: auth.user.id }));
 
     return Response.json(poll, { status: 201 });

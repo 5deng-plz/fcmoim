@@ -1,9 +1,9 @@
 import { appErrorResponse } from '../../../types/api';
 import { AppError } from '../../../types/api';
-import { getServerTeamId } from '@/config/server-team';
+import { getServerTeamContext } from '@/config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../lib/supabase-server';
 import { createMatchResultService } from '../../../services/match-results';
-import { createSupabaseMatchResultRepositories } from '../../../services/supabase-repositories';
+import { createSupabaseMatchResultRepositories } from '../../../services/repositories';
 
 export async function POST(request: Request) {
   try {
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     const input = parseSaveMatchResultBody(body);
     const supabase = await createSupabaseServerClient();
     const auth = await getRequiredServerAuthContext(supabase);
-    const service = createMatchResultService(createSupabaseMatchResultRepositories(supabase));
+    const service = createMatchResultService(createSupabaseMatchResultRepositories(supabase), getServerTeamContext());
 
     const result = await service.saveMatchResult({
       auth,
@@ -41,7 +41,6 @@ function parseSaveMatchResultBody(body: unknown) {
   }
 
   return {
-    clubId: getServerTeamId(),
     matchId,
     score: {
       home: parseCount(body.score.home, 'score.home'),

@@ -1,11 +1,12 @@
 import { AppError } from '../types/api';
+import type { TeamContext } from '../config/server-team';
 import type {
   RecordsRankingRow,
   RecordsSeasonSummaryResponse,
   TeamMembershipRow,
 } from '../types/domain';
 
-type RecordsMembership = Pick<TeamMembershipRow, 'id' | 'clubId' | 'role' | 'status'>;
+type RecordsMembership = Pick<TeamMembershipRow, 'id' | 'role' | 'status'>;
 
 type RecordsApprovedMember = {
   id: string;
@@ -43,11 +44,11 @@ type RecordsPlayerStat = {
 
 export type RecordsRepositories = {
   memberships: {
-    findByAccountAndClub(accountId: string, clubId: string): Promise<RecordsMembership | null>;
+    findCurrentMembership(accountId: string, clubId: string): Promise<RecordsMembership | null>;
     listApproved(clubId: string): Promise<RecordsApprovedMember[]>;
   };
   seasons: {
-    findActiveByClub(clubId: string): Promise<RecordsSeason | null>;
+    findActiveForTeam(clubId: string): Promise<RecordsSeason | null>;
   };
   matches: {
     listFinishedBySeason(clubId: string, seasonId: string): Promise<RecordsMatch[]>;
@@ -60,19 +61,24 @@ export type RecordsRepositories = {
   };
 };
 
-export function createRecordsService(repositories: RecordsRepositories) {
+export function createRecordsService(
+  repositories: RecordsRepositories,
+  teamContext: TeamContext,
+) {
+  const teamId = teamContext.teamId;
+
   return {
-    async getSeasonSummary(input: { auth: { user: { id: string } }; clubId: string }): Promise<RecordsSeasonSummaryResponse> {
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, input.clubId);
+    async getSeasonSummary(input: { auth: { user: { id: string } } }): Promise<RecordsSeasonSummaryResponse> {
+      const membership = await repositories.memberships.findCurrentMembership(input.auth.user.id, teamId);
       assertApprovedMember(membership);
 
-      const season = await repositories.seasons.findActiveByClub(input.clubId);
-      const members = await repositories.memberships.listApproved(input.clubId);
+      const season = await repositories.seasons.findActiveForTeam(teamId);
+      const members = await repositories.memberships.listApproved(teamId);
       if (!season) {
         return buildEmptyResponse(null, members);
       }
 
-      const matches = await repositories.matches.listFinishedBySeason(input.clubId, season.id);
+      const matches = await repositories.matches.listFinishedBySeason(teamId, season.id);
       const matchIds = matches.map((match) => match.id);
       const [attendances, playerStats] = matchIds.length > 0
         ? await Promise.all([

@@ -4,7 +4,6 @@ import type {
   AccountRow,
   ApprovedMemberAction,
   AuthContext,
-  ClubMembershipSummaryRow,
   JoinProfileInput,
   MembershipStats,
   MembershipProfilePatch,
@@ -30,11 +29,10 @@ type AccountRepository = {
 };
 
 type MembershipRepository = {
-  findByAccountAndClub(accountId: string, clubId: string): Promise<TeamMembershipRow | null>;
-  findById(membershipId: string): Promise<TeamMembershipRow | null>;
-  listClubMemberships(accountId: string): Promise<ClubMembershipSummaryRow[]>;
-  listApprovedByClub(clubId: string): Promise<TeamMembershipRow[]>;
-  listPendingByClub(clubId: string): Promise<PendingMembershipReviewRow[]>;
+  findCurrentMembership(accountId: string, clubId: string): Promise<TeamMembershipRow | null>;
+  findById(membershipId: string, teamId: string): Promise<TeamMembershipRow | null>;
+  listApprovedForTeam(clubId: string): Promise<TeamMembershipRow[]>;
+  listPendingForTeam(clubId: string): Promise<PendingMembershipReviewRow[]>;
   createPending(input: {
     accountId: string;
     clubId: string;
@@ -86,14 +84,14 @@ export function createAccountMembershipService(
     membershipId: string;
     role: 'operator' | 'member';
   }) {
-    const adminMembership = await repositories.memberships.findByAccountAndClub(
+    const adminMembership = await repositories.memberships.findCurrentMembership(
       input.auth.user.id,
       teamId,
     );
     assertCanAssignOperatorRole(adminMembership);
 
-    const target = await repositories.memberships.findById(input.membershipId);
-    if (!target || target.clubId !== teamId) {
+    const target = await repositories.memberships.findById(input.membershipId, teamId);
+    if (!target) {
       throw new AppError('not_found', 'Membership was not found for this club.');
     }
     if (target.status !== 'approved') {
@@ -118,7 +116,7 @@ export function createAccountMembershipService(
         id: input.auth.user.id,
         email: input.auth.user.email,
       });
-      const membership = await repositories.memberships.findByAccountAndClub(
+      const membership = await repositories.memberships.findCurrentMembership(
         input.auth.user.id,
         teamId,
       );
@@ -136,29 +134,24 @@ export function createAccountMembershipService(
       };
     },
 
-    async listCompatibleMemberships(input: { auth: AuthContext }) {
-      const memberships = await repositories.memberships.listClubMemberships(input.auth.user.id);
-      return memberships.filter((membership) => membership.clubId === teamId);
-    },
-
     async listPendingMemberships(input: { auth: AuthContext }) {
-      const reviewerMembership = await repositories.memberships.findByAccountAndClub(
+      const reviewerMembership = await repositories.memberships.findCurrentMembership(
         input.auth.user.id,
         teamId,
       );
       assertCanReviewMembership(reviewerMembership);
 
-      return repositories.memberships.listPendingByClub(teamId);
+      return repositories.memberships.listPendingForTeam(teamId);
     },
 
     async listApprovedMemberships(input: { auth: AuthContext }) {
-      const membership = await repositories.memberships.findByAccountAndClub(
+      const membership = await repositories.memberships.findCurrentMembership(
         input.auth.user.id,
         teamId,
       );
       assertApprovedMembership(membership);
 
-      return repositories.memberships.listApprovedByClub(teamId);
+      return repositories.memberships.listApprovedForTeam(teamId);
     },
 
     async joinClub(input: {
@@ -167,7 +160,7 @@ export function createAccountMembershipService(
       profile: JoinProfileInput;
     }) {
       void input.authUid;
-      const existingMembership = await repositories.memberships.findByAccountAndClub(
+      const existingMembership = await repositories.memberships.findCurrentMembership(
         input.auth.user.id,
         teamId,
       );
@@ -195,14 +188,14 @@ export function createAccountMembershipService(
         throw new AppError('bad_request', 'Unsupported membership review decision.');
       }
 
-      const reviewerMembership = await repositories.memberships.findByAccountAndClub(
+      const reviewerMembership = await repositories.memberships.findCurrentMembership(
         input.auth.user.id,
         teamId,
       );
       assertCanReviewMembership(reviewerMembership);
 
-      const target = await repositories.memberships.findById(input.membershipId);
-      if (!target || target.clubId !== teamId) {
+      const target = await repositories.memberships.findById(input.membershipId, teamId);
+      if (!target) {
         throw new AppError('not_found', 'Membership was not found for this club.');
       }
       if (target.status !== 'pending') {
@@ -239,7 +232,7 @@ export function createAccountMembershipService(
       auth: AuthContext;
       profile: MembershipProfilePatch;
     }) {
-      const membership = await repositories.memberships.findByAccountAndClub(
+      const membership = await repositories.memberships.findCurrentMembership(
         input.auth.user.id,
         teamId,
       );
@@ -259,8 +252,8 @@ export function createAccountMembershipService(
       auth: AuthContext;
       membershipId: string;
     }) {
-      const target = await repositories.memberships.findById(input.membershipId);
-      if (!target || target.clubId !== teamId) {
+      const target = await repositories.memberships.findById(input.membershipId, teamId);
+      if (!target) {
         throw new AppError('not_found', 'Membership was not found for this club.');
       }
 
@@ -280,7 +273,7 @@ export function createAccountMembershipService(
       }
 
       // If the caller is withdrawing someone else's membership:
-      const managerMembership = await repositories.memberships.findByAccountAndClub(
+      const managerMembership = await repositories.memberships.findCurrentMembership(
         input.auth.user.id,
         teamId,
       );
@@ -308,7 +301,7 @@ export function createAccountMembershipService(
       action: ApprovedMemberAction;
     }) {
       void input.action;
-      const membership = await repositories.memberships.findByAccountAndClub(
+      const membership = await repositories.memberships.findCurrentMembership(
         input.auth.user.id,
         teamId,
       );

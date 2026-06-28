@@ -2,7 +2,7 @@ import { AppError, appErrorResponse } from '../../../../types/api';
 import { getServerTeamContext } from '../../../../config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../../lib/supabase-server';
 import { createAccountMembershipService } from '../../../../services/account-membership';
-import { createSupabaseAccountMembershipRepositories } from '../../../../services/supabase-repositories';
+import { createSupabaseAccountMembershipRepositories } from '../../../../services/repositories';
 
 type PointLedgerDbRow = {
   id: string;

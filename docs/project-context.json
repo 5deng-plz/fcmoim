@@ -1,116 +1,111 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 114,
-  "updatedAt": "2026-06-29T01:00:00+09:00",
-  "updatedBy": "antigravity",
-  "currentPhase": "harness-lightweight-profiles",
+  "updateVersion": 115,
+  "updatedAt": "2026-06-29T02:27:00+09:00",
+  "updatedBy": "codex-backend",
+  "currentPhase": "backend-single-team-domain-repository-cleanup",
   "activeWork": {
-    "taskId": "frontend-single-team-sync",
+    "taskId": "backend-single-team-phase2",
     "status": "in-progress",
     "designMode": "maintenance",
-    "baselineCommit": "dd787d4c460d822b143b616ac23bc48874137991",
+    "baselineCommit": "6ea8411",
     "changedFiles": [
-      "docs/project-context.json",
-      "src/app/layout.tsx",
-      "src/components/brand/TeamEmblem.tsx",
-      "src/components/brand/FcmoimLogo.tsx",
-      "src/components/ui/PlayerAbilityPanel.tsx",
-      "public/brand/fcmoimLogo.svg",
-      "public/brand/fcmoimLogo_shield_legacy.svg",
-      "public/icons/svgrepo-soccer-player.svg",
-      "public/icons/asset-sources.json",
-      "src/components/features/CardMarket.tsx",
-      "src/components/features/GuestDashboard.tsx",
-      "src/components/features/LoginScreen.tsx",
-      "src/components/layout/DesktopLiveScreen.tsx",
-      "src/components/tabs/CommunityPage.tsx",
-      "src/components/tabs/HomeTab.tsx",
-      "src/components/tabs/LockerRoomTab.tsx",
-      "src/components/tabs/MyPage.tsx",
-      "src/components/tabs/RecordsTab.tsx",
-      "src/components/tabs/ScheduleTab.tsx",
-      "src/stores/membershipClient.ts",
-      "src/stores/useAppStore.ts",
-      "src/stores/useAuthStore.ts",
-      "src/components/features/JoinRequestForm.tsx",
-      "src/app/page.tsx",
-      "tests/frontend-auth-and-schedule-ui.test.tsx",
-      "tests/frontend-membership-client.test.ts"
+      "package.json",
+      "scripts/local-demo-fixtures.mjs",
+      "scripts/rebuild-local-demo-data.mjs",
+      "scripts/seed-local-demo-data.mjs",
+      "scripts/seed-qa-auth-users.mjs",
+      "src/app/api/**",
+      "src/services/**",
+      "src/types/domain.ts",
+      "tests/backend-single-team-domain-contract.test.ts",
+      "tests/local-supabase-api.test.ts",
+      "tests/*-service.test.ts",
+      "tests/account-membership-flows.test.ts",
+      "tests/match-result-transaction.test.ts",
+      "docs/handoff/backend-single-team-phase2-frontend.md",
+      "docs/project-context.json"
     ],
     "changedSurfaces": [
-      "src",
-      "tests"
+      "api",
+      "services",
+      "tests",
+      "scripts",
+      "docs"
     ],
     "allowedPaths": [
-      "docs/project-context.json",
-      "src/app/layout.tsx",
-      "src/components/brand/TeamEmblem.tsx",
-      "src/components/brand/FcmoimLogo.tsx",
-      "src/components/ui/PlayerAbilityPanel.tsx",
-      "public/brand/fcmoimLogo.svg",
-      "public/brand/fcmoimLogo_shield_legacy.svg",
-      "public/icons/svgrepo-soccer-player.svg",
-      "public/icons/asset-sources.json",
-      "src/components/features/CardMarket.tsx",
-      "src/components/features/GuestDashboard.tsx",
-      "src/components/features/LoginScreen.tsx",
-      "src/components/layout/DesktopLiveScreen.tsx",
-      "src/components/tabs/CommunityPage.tsx",
-      "src/components/tabs/HomeTab.tsx",
-      "src/components/tabs/LockerRoomTab.tsx",
-      "src/components/tabs/MyPage.tsx",
-      "src/components/tabs/RecordsTab.tsx",
-      "src/components/tabs/ScheduleTab.tsx",
-      "src/stores/membershipClient.ts",
-      "src/stores/useAppStore.ts",
-      "src/stores/useAuthStore.ts",
-      "tests/frontend-auth-and-schedule-ui.test.tsx",
-      "tests/frontend-membership-client.test.ts",
-      "src/components/features/JoinRequestForm.tsx",
-      "src/app/page.tsx",
-      "src/stores/.membershipClient.ts.swp"
+      "package.json",
+      "scripts/local-demo-fixtures.mjs",
+      "scripts/rebuild-local-demo-data.mjs",
+      "scripts/seed-local-demo-data.mjs",
+      "scripts/seed-qa-auth-users.mjs",
+      "src/app/api/**",
+      "src/services/**",
+      "src/types/domain.ts",
+      "tests/backend-single-team-domain-contract.test.ts",
+      "tests/local-supabase-api.test.ts",
+      "tests/account-membership-flows.test.ts",
+      "tests/club-admin-service.test.ts",
+      "tests/comments-service.test.ts",
+      "tests/feed-posts-service.test.ts",
+      "tests/match-feedback-service.test.ts",
+      "tests/match-result-transaction.test.ts",
+      "tests/matches-service.test.ts",
+      "tests/public-clubs-service.test.ts",
+      "tests/records-service.test.ts",
+      "tests/schedule-polls-service.test.ts",
+      "docs/handoff/backend-single-team-phase2-frontend.md",
+      "docs/project-context.json"
     ],
     "evidence": {
-      "scopeReview": {
-        "status": "completed",
-        "provider": "Manual review",
-        "command": "Read API contract and update frontend codebase to match single team configuration.",
-        "summary": "Completed Frontend sync with single team API contract and resolved all lint errors."
-      },
-      "harnessValidate": {
+      "phase1Prerequisite": {
         "status": "passed",
-        "provider": "Harness",
-        "command": "npm run harness:validate",
-        "summary": "Harness checks passed."
+        "provider": "Git, Vitest, Harness",
+        "command": "git merge-base --is-ancestor dd787d4 HEAD && npx vitest run ... && npm run harness:guard:standard",
+        "summary": "1단계 커밋 존재, Backend 계약 41개 및 Harness standard 통과."
       },
-      "verifyAlias": {
-        "status": "completed",
-        "provider": "Harness guard",
-        "command": "npm run harness:guard:verify",
-        "summary": "Verified all tests and checks with standard guard."
+      "baseline": {
+        "status": "passed",
+        "provider": "Harness, ESLint, TypeScript, Vitest",
+        "command": "npm run verify:baseline",
+        "summary": "25 test files passed, 239 tests passed, 47 Local API tests skipped."
       },
-      "lintReproduction": {
-        "status": "completed",
-        "provider": "ESLint",
-        "command": "npm run lint",
-        "summary": "Fixed 15 errors in DesktopLiveScreen, CommunityPage, LockerRoomTab, and RecordsTab."
+      "localDatabase": {
+        "status": "passed",
+        "provider": "Local Supabase CLI and PostgreSQL",
+        "command": "npm run verify:db:local; docker exec ... psql ...",
+        "summary": "Reset 및 단일 seed 성공. clubs=1 FC Guppy, seasons=1, memberships=6, Local API 17 tests passed after poll DTO fix."
+      },
+      "domainContract": {
+        "status": "passed",
+        "provider": "Vitest",
+        "command": "npx vitest run tests/backend-single-team-domain-contract.test.ts",
+        "summary": "TeamContext 주입, service 공개 clubId 제거, repository composition, legacy seed 제거 계약 4개 통과."
+      },
+      "browserRuntime": {
+        "status": "partial",
+        "provider": "npm run dev, in-app browser, server log",
+        "command": "npm run dev; open http://localhost:3000/",
+        "summary": "dev server ready, GET / 200, /api/dev-test 200. stale auth로 /api/membership/current 401 확인. 브라우저 DOM/console 수집은 두 차례 시간 초과."
       }
     },
     "retrospective": {
       "issuesObserved": [
-        "Swapped to single team Guppy API contract successfully.",
-        "Fixed frontend lint warnings and errors."
+        "Repository 내부 teamId가 schedule poll 응답에 노출됐으며 Local API 테스트로 발견 후 제거.",
+        "기존 브라우저의 stale Supabase refresh token으로 인증 bootstrap이 401을 반환."
       ],
-      "missedEvidence": [],
+      "missedEvidence": [
+        "인앱 브라우저 DOM과 console 최종 증적"
+      ],
       "harnessImprovementProposal": [],
       "promotionRecommendation": "none",
-      "reason": "Successfully applied single team API contract changes."
+      "reason": "프로젝트 로컬 구현 및 stale 인증 상태로 재사용 가능한 Harness 정책 변경 대상이 아님."
     },
-    "reviewStatus": "ready",
+    "reviewStatus": "blocked",
     "loopCounters": {
-      "reviewRounds": 0,
-      "guardRetries": 1
+      "reviewRounds": 1,
+      "guardRetries": 0
     }
   },
   "workstreams": [
@@ -119,6 +114,10 @@
       "status": "complete",
       "completedAt": "2026-06-28T16:36:55+09:00",
       "commit": "dd787d4c460d822b143b616ac23bc48874137991"
+    },
+    {
+      "id": "backend-single-team-domain-repository-cleanup",
+      "status": "in-progress"
     },
     {
       "id": "desktop-tactics-studio-dnd-polish",
@@ -158,11 +157,11 @@
     }
   ],
   "blockers": [
-    "npm run harness:guard:verify cannot complete while the unrelated untracked src/stores/.membershipClient.ts.swp file is present outside activeWork.allowedPaths.",
-    "npm run lint is blocked by 15 existing errors in DesktopLiveScreen, CommunityPage, LockerRoomTab, and RecordsTab; the full guard cannot reach later tests until these are resolved."
+    "Runtime smoke의 dev server와 server log는 통과했으나 인앱 브라우저 DOM/console 수집이 두 차례 시간 초과되어 browserRuntime evidence가 partial입니다.",
+    "사용자 지시에 따라 Harness full과 최종 환경 검증은 Phase 3 완료 후 일괄 정리합니다."
   ],
   "nextActions": [
-    "Remove or intentionally preserve the Vim swap file outside this automation, then rerun the full guard.",
-    "Resolve the existing Frontend lint and UI test failures in a separately scoped product task."
+    "Phase 3 완료 후 stale browser auth를 제거하고 browser runtime smoke를 재수집합니다.",
+    "Phase 3 완료 후 npm run harness:guard:full을 실행하고 evidence/status를 최종 동기화합니다."
   ]
 }

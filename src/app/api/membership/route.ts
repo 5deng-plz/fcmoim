@@ -3,7 +3,7 @@ import { getServerTeamContext } from '../../../config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../lib/supabase-server';
 import { fireAndForgetPush, sendPushToClubOperators } from '../../../lib/push-sender';
 import { createAccountMembershipService } from '../../../services/account-membership';
-import { createSupabaseAccountMembershipRepositories } from '../../../services/supabase-repositories';
+import { createSupabaseAccountMembershipRepositories } from '../../../services/repositories';
 
 export async function GET(request: Request) {
   try {
@@ -38,11 +38,12 @@ export async function POST(request: Request) {
       profile: body.profile,
     });
 
-    fireAndForgetPush('membership request', () => sendPushToClubOperators(membership.clubId, {
+    const teamId = getServerTeamContext().teamId;
+    fireAndForgetPush('membership request', () => sendPushToClubOperators(teamId, {
       type: 'JOIN_REQUESTED',
       title: '새 입단 신청이 도착했어요',
       targetUrl: '/?tab=locker_room',
-      metadata: { clubId: membership.clubId, membershipId: membership.id },
+      metadata: { clubId: teamId, membershipId: membership.id },
     }, { excludeAccountId: auth.user.id }));
 
     return Response.json(membership, { status: 201 });

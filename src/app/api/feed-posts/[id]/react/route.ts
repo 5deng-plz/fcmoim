@@ -1,9 +1,9 @@
 import { appErrorResponse } from '../../../../../types/api';
 import { AppError } from '../../../../../types/api';
-import { getServerTeamId } from '@/config/server-team';
+import { getServerTeamContext } from '@/config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../../../lib/supabase-server';
 import { createFeedPostService } from '../../../../../services/feed-posts';
-import { createSupabaseFeedPostRepositories } from '../../../../../services/supabase-repositories';
+import { createSupabaseFeedPostRepositories } from '../../../../../services/repositories';
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -15,11 +15,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     const supabase = await createSupabaseServerClient();
     const auth = await getRequiredServerAuthContext(supabase);
-    const service = createFeedPostService(createSupabaseFeedPostRepositories(supabase));
+    const service = createFeedPostService(createSupabaseFeedPostRepositories(supabase), getServerTeamContext());
 
     return Response.json(await service.toggleReaction({
       auth,
-      clubId: getServerTeamId(),
       postId,
       reactionType: readRequiredText(body.reactionType, 'reactionType is required.'),
     }));

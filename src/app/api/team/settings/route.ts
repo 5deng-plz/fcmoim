@@ -5,7 +5,7 @@ import {
   getRequiredServerAuthContext,
 } from '../../../../lib/supabase-server';
 import { createClubAdminService } from '../../../../services/club-admin';
-import { createSupabaseClubAdminRepositories } from '../../../../services/supabase-repositories';
+import { createSupabaseClubAdminRepositories } from '../../../../services/repositories';
 import { appErrorResponse } from '../../../../types/api';
 
 export async function GET() {

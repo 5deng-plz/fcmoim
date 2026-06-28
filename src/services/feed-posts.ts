@@ -1,4 +1,5 @@
 import { AppError } from '../types/api';
+import type { TeamContext } from '../config/server-team';
 import type { AuthContext, TeamMembershipRow } from '../types/domain';
 
 export type FeedContentType = 'text' | 'image' | 'video';
@@ -6,7 +7,6 @@ export type FeedReactionType = 'up' | 'down' | 'check' | 'smile' | 'sad';
 
 export type FeedPostRow = {
   id: string;
-  clubId: string;
   membershipId: string;
   authorName: string;
   matchId: string | null;
@@ -20,11 +20,11 @@ export type FeedPostRow = {
   commentCount: number;
 };
 
-type FeedMembership = Pick<TeamMembershipRow, 'id' | 'clubId' | 'role' | 'status'>;
+type FeedMembership = Pick<TeamMembershipRow, 'id' | 'role' | 'status'>;
 
 export type FeedPostRepositories = {
   memberships: {
-    findByAccountAndClub(accountId: string, clubId: string): Promise<FeedMembership | null>;
+    findCurrentMembership(accountId: string, clubId: string): Promise<FeedMembership | null>;
   };
   matches: {
     findClubId(matchId: string): Promise<string | null>;
@@ -45,7 +45,7 @@ export type FeedPostRepositories = {
       mediaUrl: string | null;
       matchId: string | null;
     }): Promise<FeedPostRow>;
-    findById(postId: string): Promise<Pick<FeedPostRow, 'id' | 'clubId' | 'membershipId'> | null>;
+    findById(postId: string, teamId: string): Promise<Pick<FeedPostRow, 'id' | 'membershipId'> | null>;
     delete(postId: string): Promise<void>;
   };
   reactions: {
@@ -57,18 +57,22 @@ export type FeedPostRepositories = {
   };
 };
 
-export function createFeedPostService(repositories: FeedPostRepositories) {
+export function createFeedPostService(
+  repositories: FeedPostRepositories,
+  teamContext: TeamContext,
+) {
+  const teamId = teamContext.teamId;
+
   return {
     async listPosts(input: {
       auth: AuthContext;
-      clubId: string;
       contentType?: string | null;
       page?: number | null;
       limit?: number | null;
     }) {
-      const membership = await requireApprovedMembership(input.auth, input.clubId);
+      const membership = await requireApprovedMembership(input.auth);
       return repositories.posts.list({
-        clubId: input.clubId,
+        clubId: teamId,
         membershipId: membership.id,
         contentType: normalizeContentTypeFilter(input.contentType),
         limit: normalizeLimit(input.limit),
@@ -78,13 +82,12 @@ export function createFeedPostService(repositories: FeedPostRepositories) {
 
     async createPost(input: {
       auth: AuthContext;
-      clubId: string;
       contentType: string;
       textContent?: string | null;
       mediaUrl?: string | null;
       matchId?: string | null;
     }) {
-      const membership = await requireApprovedMembership(input.auth, input.clubId);
+      const membership = await requireApprovedMembership(input.auth);
       const contentType = normalizeContentType(input.contentType);
       const textContent = normalizeTextContent(input.textContent);
       const mediaUrl = normalizeMediaUrl(input.mediaUrl);
@@ -92,13 +95,13 @@ export function createFeedPostService(repositories: FeedPostRepositories) {
       validatePostPayload({ contentType, textContent, mediaUrl });
       if (matchId) {
         const matchClubId = await repositories.matches.findClubId(matchId);
-        if (matchClubId !== input.clubId) {
+        if (matchClubId !== teamId) {
           throw new AppError('not_found', '연결할 경기를 찾을 수 없어요.');
         }
       }
 
       return repositories.posts.create({
-        clubId: input.clubId,
+        clubId: teamId,
         membershipId: membership.id,
         contentType,
         textContent,
@@ -109,12 +112,11 @@ export function createFeedPostService(repositories: FeedPostRepositories) {
 
     async deletePost(input: {
       auth: AuthContext;
-      clubId: string;
       postId: string;
     }) {
-      const membership = await requireApprovedMembership(input.auth, input.clubId);
-      const post = await repositories.posts.findById(input.postId);
-      if (!post || post.clubId !== input.clubId) {
+      const membership = await requireApprovedMembership(input.auth);
+      const post = await repositories.posts.findById(input.postId, teamId);
+      if (!post) {
         throw new AppError('not_found', '게시글을 찾을 수 없어요.');
       }
       if (post.membershipId !== membership.id && membership.role !== 'admin' && membership.role !== 'operator') {
@@ -126,13 +128,12 @@ export function createFeedPostService(repositories: FeedPostRepositories) {
 
     async toggleReaction(input: {
       auth: AuthContext;
-      clubId: string;
       postId: string;
       reactionType: string;
     }) {
-      const membership = await requireApprovedMembership(input.auth, input.clubId);
-      const post = await repositories.posts.findById(input.postId);
-      if (!post || post.clubId !== input.clubId) {
+      const membership = await requireApprovedMembership(input.auth);
+      const post = await repositories.posts.findById(input.postId, teamId);
+      if (!post) {
         throw new AppError('not_found', '게시글을 찾을 수 없어요.');
       }
       await repositories.reactions.toggle({
@@ -144,8 +145,8 @@ export function createFeedPostService(repositories: FeedPostRepositories) {
     },
   };
 
-  async function requireApprovedMembership(auth: AuthContext, clubId: string) {
-    const membership = await repositories.memberships.findByAccountAndClub(auth.user.id, clubId);
+  async function requireApprovedMembership(auth: AuthContext) {
+    const membership = await repositories.memberships.findCurrentMembership(auth.user.id, teamId);
     if (!membership || membership.status !== 'approved') {
       throw new AppError('membership_not_approved', '승인된 회원만 피드를 사용할 수 있어요.');
     }

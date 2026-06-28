@@ -1,22 +1,22 @@
 import { AppError } from '../types/api';
 import type { TeamContext } from '../config/server-team';
-import type { AuthContext, PublicClubSummaryRow, TeamMembershipRow } from '../types/domain';
+import type { AuthContext, TeamProfile, TeamMembershipRow } from '../types/domain';
 
 export type ClubAdminRepositories = {
   memberships: {
-    findByAccountAndClub(accountId: string, clubId: string): Promise<Pick<TeamMembershipRow, 'role' | 'status'> | null>;
+    findCurrentMembership(accountId: string, clubId: string): Promise<Pick<TeamMembershipRow, 'role' | 'status'> | null>;
   };
   clubs: {
-    findSettings(clubId: string): Promise<PublicClubSummaryRow | null>;
+    findSettings(clubId: string): Promise<TeamProfile | null>;
     updateSettings(input: {
       clubId: string;
       description: string | null;
       isPublic: boolean;
-    }): Promise<PublicClubSummaryRow>;
+    }): Promise<TeamProfile>;
     updateLogo(input: {
       clubId: string;
       logoUrl: string | null;
-    }): Promise<PublicClubSummaryRow>;
+    }): Promise<TeamProfile>;
   };
 };
 
@@ -32,7 +32,7 @@ export function createClubAdminService(
       description: string | null;
       isPublic: boolean;
     }) {
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, teamId);
+      const membership = await repositories.memberships.findCurrentMembership(input.auth.user.id, teamId);
       assertCanManageClub(membership);
 
       return repositories.clubs.updateSettings({
@@ -43,7 +43,7 @@ export function createClubAdminService(
     },
 
     async getClubSettings(input: { auth: AuthContext }) {
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, teamId);
+      const membership = await repositories.memberships.findCurrentMembership(input.auth.user.id, teamId);
       assertCanManageClub(membership);
 
       const club = await repositories.clubs.findSettings(teamId);
@@ -58,7 +58,7 @@ export function createClubAdminService(
       auth: AuthContext;
       logoUrl: string | null;
     }) {
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, teamId);
+      const membership = await repositories.memberships.findCurrentMembership(input.auth.user.id, teamId);
       assertCanManageClub(membership);
 
       return repositories.clubs.updateLogo({

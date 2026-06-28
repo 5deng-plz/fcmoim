@@ -1,15 +1,16 @@
 import { AppError } from '../types/api';
+import type { TeamContext } from '../config/server-team';
 import type { AnnouncementRow, AuthContext, TeamMembershipRow } from '../types/domain';
 
-type AnnouncementMembership = Pick<TeamMembershipRow, 'id' | 'clubId' | 'role' | 'status'>;
+type AnnouncementMembership = Pick<TeamMembershipRow, 'id' | 'role' | 'status'>;
 
 export type AnnouncementRepositories = {
   memberships: {
-    findByAccountAndClub(accountId: string, clubId: string): Promise<AnnouncementMembership | null>;
+    findCurrentMembership(accountId: string, clubId: string): Promise<AnnouncementMembership | null>;
   };
   announcements: {
-    listByClub(clubId: string): Promise<AnnouncementRow[]>;
-    findById(announcementId: string): Promise<AnnouncementRow | null>;
+    listForTeam(clubId: string): Promise<AnnouncementRow[]>;
+    findById(announcementId: string, teamId: string): Promise<AnnouncementRow | null>;
     create(input: {
       clubId: string;
       seasonId: string | null;
@@ -28,28 +29,32 @@ export type AnnouncementRepositories = {
   };
 };
 
-export function createAnnouncementService(repositories: AnnouncementRepositories) {
+export function createAnnouncementService(
+  repositories: AnnouncementRepositories,
+  teamContext: TeamContext,
+) {
+  const teamId = teamContext.teamId;
+
   return {
-    async listAnnouncements(input: { auth: AuthContext; clubId: string }) {
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, input.clubId);
+    async listAnnouncements(input: { auth: AuthContext }) {
+      const membership = await repositories.memberships.findCurrentMembership(input.auth.user.id, teamId);
       assertApprovedMember(membership);
 
-      return repositories.announcements.listByClub(input.clubId);
+      return repositories.announcements.listForTeam(teamId);
     },
 
     async createAnnouncement(input: {
       auth: AuthContext;
-      clubId: string;
       seasonId?: string | null;
       title: string;
       content: string;
       isPinned?: boolean;
     }) {
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, input.clubId);
+      const membership = await repositories.memberships.findCurrentMembership(input.auth.user.id, teamId);
       assertCanWriteAnnouncements(membership);
 
       return repositories.announcements.create({
-        clubId: input.clubId,
+        clubId: teamId,
         seasonId: input.seasonId ?? null,
         title: normalizeRequiredText(input.title, '공지 제목을 입력해주세요.'),
         content: normalizeRequiredText(input.content, '공지 내용을 입력해주세요.'),
@@ -65,8 +70,8 @@ export function createAnnouncementService(repositories: AnnouncementRepositories
       content: string;
       isPinned?: boolean;
     }) {
-      const announcement = await getExistingAnnouncement(repositories, input.announcementId);
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, announcement.clubId);
+      const announcement = await getExistingAnnouncement(repositories, input.announcementId, teamId);
+      const membership = await repositories.memberships.findCurrentMembership(input.auth.user.id, teamId);
       assertCanWriteAnnouncements(membership);
 
       return repositories.announcements.update({
@@ -81,8 +86,8 @@ export function createAnnouncementService(repositories: AnnouncementRepositories
       auth: AuthContext;
       announcementId: string;
     }) {
-      const announcement = await getExistingAnnouncement(repositories, input.announcementId);
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, announcement.clubId);
+      const announcement = await getExistingAnnouncement(repositories, input.announcementId, teamId);
+      const membership = await repositories.memberships.findCurrentMembership(input.auth.user.id, teamId);
       assertCanWriteAnnouncements(membership);
 
       await repositories.announcements.delete(announcement.id);
@@ -118,9 +123,10 @@ function normalizeRequiredText(value: string | null | undefined, message: string
 async function getExistingAnnouncement(
   repositories: AnnouncementRepositories,
   announcementId: string | null | undefined,
+  teamId: string,
 ) {
   const normalizedId = normalizeRequiredText(announcementId, 'announcementId is required.');
-  const announcement = await repositories.announcements.findById(normalizedId);
+  const announcement = await repositories.announcements.findById(normalizedId, teamId);
   if (!announcement) {
     throw new AppError('not_found', '공지사항을 찾을 수 없어요.');
   }

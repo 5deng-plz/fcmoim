@@ -1,4 +1,5 @@
 import { AppError } from '../types/api';
+import type { TeamContext } from '../config/server-team';
 import type {
   AuthContext,
   MatchAttendeeRow,
@@ -10,14 +11,14 @@ import type {
   TeamMembershipRow,
 } from '../types/domain';
 
-type MatchMembership = Pick<TeamMembershipRow, 'id' | 'clubId' | 'role' | 'status'>;
+type MatchMembership = Pick<TeamMembershipRow, 'id' | 'role' | 'status'>;
 
 export type MatchRepositories = {
   memberships: {
-    findByAccountAndClub(accountId: string, clubId: string): Promise<MatchMembership | null>;
+    findCurrentMembership(accountId: string, clubId: string): Promise<MatchMembership | null>;
   };
   seasons: {
-    findActiveByClub(clubId: string): Promise<{ id: string } | null>;
+    findActiveForTeam(clubId: string): Promise<{ id: string } | null>;
   };
   matches: {
     listUpcoming(input: { clubId: string; now: string }): Promise<MatchRow[]>;
@@ -35,7 +36,7 @@ export type MatchRepositories = {
       memo: string | null;
       createdByMembershipId: string;
     }): Promise<MatchRow>;
-    findById(matchId: string): Promise<MatchRow | null>;
+    findById(matchId: string, teamId: string): Promise<MatchRow | null>;
     cancel(input: {
       matchId: string;
       cancelledByMembershipId: string;
@@ -89,11 +90,15 @@ export type SaveMatchLineupEntry = {
   formationSlot?: number | null;
 };
 
-export function createMatchService(repositories: MatchRepositories) {
+export function createMatchService(
+  repositories: MatchRepositories,
+  teamContext: TeamContext,
+) {
+  const teamId = teamContext.teamId;
+
   return {
     async createMatch(input: {
       auth: AuthContext;
-      clubId: string;
       type: MatchEventType;
       title?: string | null;
       date: string;
@@ -101,10 +106,10 @@ export function createMatchService(repositories: MatchRepositories) {
       location: string;
       memo?: string | null;
     }) {
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, input.clubId);
+      const membership = await repositories.memberships.findCurrentMembership(input.auth.user.id, teamId);
       assertCanManageMatches(membership);
 
-      const season = await repositories.seasons.findActiveByClub(input.clubId);
+      const season = await repositories.seasons.findActiveForTeam(teamId);
       if (!season) {
         throw new AppError('bad_request', '활성 시즌이 없어 일정을 만들 수 없어요.');
       }
@@ -114,7 +119,7 @@ export function createMatchService(repositories: MatchRepositories) {
 
       if (type === 'match') {
         const existingMatch = await repositories.matches.findNonCancelledMatchOnDate({
-          clubId: input.clubId,
+          clubId: teamId,
           date: matchDate,
         });
         if (existingMatch) {
@@ -127,7 +132,7 @@ export function createMatchService(repositories: MatchRepositories) {
         : null;
 
       return repositories.matches.create({
-        clubId: input.clubId,
+        clubId: teamId,
         seasonId: season.id,
         round,
         title: normalizeMatchTitle(input.title, type, round),
@@ -141,28 +146,26 @@ export function createMatchService(repositories: MatchRepositories) {
 
     async listUpcomingMatches(input: {
       auth: AuthContext;
-      clubId: string;
     }) {
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, input.clubId);
+      const membership = await repositories.memberships.findCurrentMembership(input.auth.user.id, teamId);
       assertApprovedMember(membership);
 
       return repositories.matches.listUpcoming({
-        clubId: input.clubId,
+        clubId: teamId,
         now: new Date().toISOString(),
       });
     },
 
     async listCalendarMatches(input: {
       auth: AuthContext;
-      clubId: string;
       from: string;
       to: string;
     }) {
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, input.clubId);
+      const membership = await repositories.memberships.findCurrentMembership(input.auth.user.id, teamId);
       assertApprovedMember(membership);
 
       return repositories.matches.listCalendar({
-        clubId: input.clubId,
+        clubId: teamId,
         from: normalizeIsoDate(input.from),
         to: normalizeIsoDate(input.to),
       });
@@ -170,19 +173,15 @@ export function createMatchService(repositories: MatchRepositories) {
 
     async cancelMatch(input: {
       auth: AuthContext;
-      clubId: string;
       matchId: string;
       cancellationReason: string;
     }) {
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, input.clubId);
+      const membership = await repositories.memberships.findCurrentMembership(input.auth.user.id, teamId);
       assertCanManageMatches(membership);
 
-      const match = await repositories.matches.findById(input.matchId);
+      const match = await repositories.matches.findById(input.matchId, teamId);
       if (!match) {
         throw new AppError('not_found', 'Match was not found.');
-      }
-      if (match.clubId !== input.clubId) {
-        throw new AppError('not_found', 'Match was not found for this club.');
       }
       if (match.status !== 'scheduled' && match.status !== 'locker_room') {
         throw new AppError('conflict', 'Only upcoming matches can be cancelled.');
@@ -197,38 +196,35 @@ export function createMatchService(repositories: MatchRepositories) {
 
     async getMatchLineup(input: {
       auth: AuthContext;
-      clubId: string;
       matchId: string;
     }) {
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, input.clubId);
+      const membership = await repositories.memberships.findCurrentMembership(input.auth.user.id, teamId);
       assertApprovedMember(membership);
-      await assertMatchInClub(input.matchId, input.clubId);
+      await assertMatchInClub(input.matchId, teamId);
 
       return repositories.lineups.listForMatch(input.matchId);
     },
 
     async getMatchAttendees(input: {
       auth: AuthContext;
-      clubId: string;
       matchId: string;
     }) {
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, input.clubId);
+      const membership = await repositories.memberships.findCurrentMembership(input.auth.user.id, teamId);
       assertApprovedMember(membership);
-      await assertMatchInClub(input.matchId, input.clubId);
+      await assertMatchInClub(input.matchId, teamId);
 
       return repositories.attendees.listForMatch(input.matchId);
     },
 
     async addMatchAttendee(input: {
       auth: AuthContext;
-      clubId: string;
       matchId: string;
       membershipId?: string;
       membershipIds?: string[];
     }) {
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, input.clubId);
+      const membership = await repositories.memberships.findCurrentMembership(input.auth.user.id, teamId);
       assertCanManageMatches(membership);
-      await assertUpcomingMatchInClub(input.matchId, input.clubId);
+      await assertUpcomingMatchInClub(input.matchId, teamId);
 
       if (input.membershipIds && input.membershipIds.length > 0) {
         return repositories.attendees.add({
@@ -245,14 +241,13 @@ export function createMatchService(repositories: MatchRepositories) {
 
     async saveMatchLineup(input: {
       auth: AuthContext;
-      clubId: string;
       matchId: string;
       entries: SaveMatchLineupEntry[];
     }) {
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, input.clubId);
+      const membership = await repositories.memberships.findCurrentMembership(input.auth.user.id, teamId);
       assertApprovedMember(membership);
 
-      const match = await assertMatchInClub(input.matchId, input.clubId);
+      const match = await assertMatchInClub(input.matchId, teamId);
       if (match.status !== 'scheduled' && match.status !== 'locker_room') {
         throw new AppError('conflict', 'Only upcoming matches can receive lineup assignments.');
       }
@@ -282,13 +277,12 @@ export function createMatchService(repositories: MatchRepositories) {
 
     async pickLineupPlayer(input: {
       auth: AuthContext;
-      clubId: string;
       matchId: string;
       membershipId: string;
     }) {
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, input.clubId);
+      const membership = await repositories.memberships.findCurrentMembership(input.auth.user.id, teamId);
       assertApprovedMember(membership);
-      await assertUpcomingMatchInClub(input.matchId, input.clubId);
+      await assertUpcomingMatchInClub(input.matchId, teamId);
 
       const [attendees, lineup] = await Promise.all([
         repositories.attendees.listForMatch(input.matchId),
@@ -317,15 +311,14 @@ export function createMatchService(repositories: MatchRepositories) {
 
     async confirmMatchLineup(input: {
       auth: AuthContext;
-      clubId: string;
       matchId: string;
       teamNumber: MatchLineupTeamNumber;
       confirmed?: boolean;
     }) {
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, input.clubId);
+      const membership = await repositories.memberships.findCurrentMembership(input.auth.user.id, teamId);
       assertApprovedMember(membership);
 
-      const match = await assertUpcomingMatchInClub(input.matchId, input.clubId);
+      const match = await assertUpcomingMatchInClub(input.matchId, teamId);
       const teamNumber = normalizeTeamNumber(input.teamNumber);
       const lineup = await repositories.lineups.listForMatch(input.matchId);
       const teamLeader = lineup.find((entry) => entry.teamNumber === teamNumber && entry.isLeader);
@@ -350,13 +343,12 @@ export function createMatchService(repositories: MatchRepositories) {
 
     async publishMatchLineup(input: {
       auth: AuthContext;
-      clubId: string;
       matchId: string;
     }) {
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, input.clubId);
+      const membership = await repositories.memberships.findCurrentMembership(input.auth.user.id, teamId);
       assertCanManageMatches(membership);
 
-      const match = await assertUpcomingMatchInClub(input.matchId, input.clubId);
+      const match = await assertUpcomingMatchInClub(input.matchId, teamId);
 
       return repositories.matches.publishLineup({
         matchId: match.id,
@@ -365,17 +357,17 @@ export function createMatchService(repositories: MatchRepositories) {
     },
   };
 
-  async function assertMatchInClub(matchId: string, clubId: string) {
-    const match = await repositories.matches.findById(matchId);
-    if (!match || match.clubId !== clubId) {
+  async function assertMatchInClub(matchId: string, teamId: string) {
+    const match = await repositories.matches.findById(matchId, teamId);
+    if (!match) {
       throw new AppError('not_found', 'Match was not found for this club.');
     }
 
     return match;
   }
 
-  async function assertUpcomingMatchInClub(matchId: string, clubId: string) {
-    const match = await assertMatchInClub(matchId, clubId);
+  async function assertUpcomingMatchInClub(matchId: string, teamId: string) {
+    const match = await assertMatchInClub(matchId, teamId);
     if (match.status !== 'scheduled' && match.status !== 'locker_room') {
       throw new AppError('conflict', 'Only upcoming matches can be managed.');
     }

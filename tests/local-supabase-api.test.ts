@@ -1,11 +1,8 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
-const clubIds = {
-  guppy: '00000000-0000-0000-0000-000000000001',
-  orca: '00000000-0000-0000-0000-000000000002',
-  lynx: '00000000-0000-0000-0000-000000000003',
-} as const;
+const teamId = '00000000-0000-0000-0000-000000000001';
+const arbitraryTeamId = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
 const publicClubSummaryKeys = [
   'id',
   'name',
@@ -209,7 +206,7 @@ async function createMatchResultFixture(input: {
 }) {
   const admin = createAdminClient();
   const matchId = input.matchId ?? crypto.randomUUID();
-  const clubId = input.clubId ?? clubIds.guppy;
+  const clubId = input.clubId ?? teamId;
   const status = input.status ?? 'scheduled';
   const date = input.date ?? `2026-02-${String(resultFixtureDay++).padStart(2, '0')}T20:00:00.000+09:00`;
 
@@ -218,7 +215,7 @@ async function createMatchResultFixture(input: {
     .insert({
       id: matchId,
       club_id: clubId,
-      season_id: clubId === clubIds.guppy ? '00000000-0000-0000-0000-000000000101' : '00000000-0000-0000-0000-000000000102',
+      season_id: '00000000-0000-0000-0000-000000000101',
       round: null,
       title: 'QA Result Round',
       date,
@@ -324,22 +321,24 @@ describeLocal('local Supabase API integration', () => {
     expect(listResponse.status).toBe(200);
     expect(teamResponse.status).toBe(200);
     expect(clubs).toHaveLength(1);
-    expect(clubs[0]).toEqual(expect.objectContaining({ id: clubIds.guppy, name: 'FC Guppy' }));
-    expect(team).toEqual(expect.objectContaining({ id: clubIds.guppy, name: 'FC Guppy' }));
+    expect(clubs[0]).toEqual(expect.objectContaining({ id: teamId, name: 'FC Guppy' }));
+    expect(team).toEqual(expect.objectContaining({ name: 'FC Guppy' }));
+    expect(team).not.toHaveProperty('id');
+    expect(team).not.toHaveProperty('slug');
     for (const club of clubs) {
       expect(Object.keys(club).sort()).toEqual([...publicClubSummaryKeys].sort());
     }
 
     const detailResponse = await detailRoute.GET(
-      new Request(`http://localhost/api/public/clubs/${clubIds.lynx}`),
-      { params: Promise.resolve({ clubId: clubIds.lynx }) },
+      new Request(`http://localhost/api/public/clubs/${arbitraryTeamId}`),
+      { params: Promise.resolve({ clubId: arbitraryTeamId }) },
     );
     const detail = await detailResponse.json();
 
     expect(detailResponse.status).toBe(200);
     expect(Object.keys(detail).sort()).toEqual([...publicClubDetailKeys].sort());
     expect(detail).toEqual(expect.objectContaining({
-      id: clubIds.guppy,
+      id: teamId,
       name: 'FC Guppy',
       recentMatches: expect.any(Array),
       upcomingMatches: expect.any(Array),
@@ -363,7 +362,7 @@ describeLocal('local Supabase API integration', () => {
     expect(body).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          clubId: clubIds.guppy,
+          clubId: teamId,
           role: 'operator',
           status: 'approved',
         }),
@@ -372,8 +371,9 @@ describeLocal('local Supabase API integration', () => {
     expect(currentResponse.status).toBe(200);
     expect(current).toEqual(expect.objectContaining({
       membershipState: 'approved',
-      membership: expect.objectContaining({ clubId: clubIds.guppy, role: 'operator' }),
+      membership: expect.objectContaining({ role: 'operator' }),
     }));
+    expect(current.membership).not.toHaveProperty('clubId');
   });
 
   it('filters compatibility memberships to FC Guppy', async () => {
@@ -385,13 +385,13 @@ describeLocal('local Supabase API integration', () => {
 
     expect(response.status).toBe(200);
     expect(body).toEqual([
-      expect.objectContaining({ clubId: clubIds.guppy, clubName: 'FC Guppy', status: 'approved' }),
+      expect.objectContaining({ clubId: teamId, clubName: 'FC Guppy', status: 'approved' }),
     ]);
   });
 
   it('patches profile stats, recalculates ovr, persists valid stats, and rejects invalid stats', async () => {
     const accountId = await signIn('qa-member1@fcmoim.test');
-    const membership = await getMembershipByAccount(accountId, clubIds.guppy);
+    const membership = await getMembershipByAccount(accountId, teamId);
     const profileRoute = await import('../src/app/api/membership/profile/route');
     const membershipRoute = await import('../src/app/api/membership/route');
     const admin = createAdminClient();
@@ -408,7 +408,7 @@ describeLocal('local Supabase API integration', () => {
       const updateResponse = await profileRoute.PATCH(new Request('http://localhost/api/membership/profile', {
         method: 'PATCH',
         body: JSON.stringify({
-          clubId: clubIds.guppy,
+          clubId: teamId,
           stats: nextStats,
           ovr: 99,
         }),
@@ -422,7 +422,7 @@ describeLocal('local Supabase API integration', () => {
       }));
 
       const snapshotResponse = await membershipRoute.GET(
-        new Request(`http://localhost/api/membership?clubId=${clubIds.guppy}`),
+        new Request(`http://localhost/api/membership?clubId=${teamId}`),
       );
       const snapshot = await snapshotResponse.json();
 
@@ -435,7 +435,7 @@ describeLocal('local Supabase API integration', () => {
       const invalidTotalResponse = await profileRoute.PATCH(new Request('http://localhost/api/membership/profile', {
         method: 'PATCH',
         body: JSON.stringify({
-          clubId: clubIds.guppy,
+          clubId: teamId,
           stats: {
             attack: 99,
             defense: 99,
@@ -451,7 +451,7 @@ describeLocal('local Supabase API integration', () => {
       const invalidShapeResponse = await profileRoute.PATCH(new Request('http://localhost/api/membership/profile', {
         method: 'PATCH',
         body: JSON.stringify({
-          clubId: clubIds.guppy,
+          clubId: teamId,
           stats: {
             attack: 70,
             defense: 60,
@@ -485,7 +485,7 @@ describeLocal('local Supabase API integration', () => {
     const joinResponse = await membershipRoute.POST(new Request('http://localhost/api/membership', {
       method: 'POST',
       body: JSON.stringify({
-        clubId: clubIds.lynx,
+        clubId: arbitraryTeamId,
         profile: {
           nickname: '추가대기',
           position: 'MF',
@@ -499,20 +499,20 @@ describeLocal('local Supabase API integration', () => {
 
     expect(listResponse.status).toBe(200);
     expect(body).toEqual([
-      expect.objectContaining({ clubId: clubIds.guppy, clubName: 'FC Guppy', status: 'approved' }),
+      expect.objectContaining({ clubId: teamId, clubName: 'FC Guppy', status: 'approved' }),
     ]);
   });
 
   it('ignores foreign clubId throughout join, review, and bootstrap flows', async () => {
     const newAccountId = await signIn('qa-new@fcmoim.test');
-    await deleteMembershipForAccountId(newAccountId, clubIds.guppy);
+    await deleteMembershipForAccountId(newAccountId, teamId);
     const membershipRoute = await import('../src/app/api/membership/route');
     const pendingRoute = await import('../src/app/api/membership/pending/route');
     const reviewRoute = await import('../src/app/api/membership/review/route');
 
     try {
       const initialResponse = await membershipRoute.GET(
-        new Request(`http://localhost/api/membership?clubId=${clubIds.lynx}`),
+        new Request(`http://localhost/api/membership?clubId=${arbitraryTeamId}`),
       );
       const initial = await initialResponse.json();
 
@@ -522,7 +522,7 @@ describeLocal('local Supabase API integration', () => {
       const createResponse = await membershipRoute.POST(new Request('http://localhost/api/membership', {
         method: 'POST',
         body: JSON.stringify({
-          clubId: clubIds.lynx,
+          clubId: arbitraryTeamId,
           profile: {
             nickname: '오현우',
             position: 'MF',
@@ -541,7 +541,6 @@ describeLocal('local Supabase API integration', () => {
 
       expect(createResponse.status, JSON.stringify(created)).toBe(201);
       expect(created).toEqual(expect.objectContaining({
-        clubId: clubIds.guppy,
         status: 'pending',
         nickname: '오현우',
       }));
@@ -549,7 +548,7 @@ describeLocal('local Supabase API integration', () => {
       const duplicateResponse = await membershipRoute.POST(new Request('http://localhost/api/membership', {
         method: 'POST',
         body: JSON.stringify({
-          clubId: clubIds.lynx,
+          clubId: arbitraryTeamId,
           profile: {
             nickname: '오현우',
             position: 'MF',
@@ -568,19 +567,19 @@ describeLocal('local Supabase API integration', () => {
 
       await signIn('qa-operator@fcmoim.test');
       const pendingResponse = await pendingRoute.GET(
-        new Request(`http://localhost/api/membership/pending?clubId=${clubIds.lynx}`),
+        new Request(`http://localhost/api/membership/pending?clubId=${arbitraryTeamId}`),
       );
       const pending = await pendingResponse.json();
 
       expect(pendingResponse.status).toBe(200);
       expect(pending).toEqual(expect.arrayContaining([
-        expect.objectContaining({ id: created.id, clubId: clubIds.guppy, nickname: '오현우' }),
+        expect.objectContaining({ id: created.id, nickname: '오현우' }),
       ]));
 
       const reviewResponse = await reviewRoute.PATCH(new Request('http://localhost/api/membership/review', {
         method: 'PATCH',
         body: JSON.stringify({
-          clubId: clubIds.lynx,
+          clubId: arbitraryTeamId,
           membershipId: created.id,
           decision: 'approved',
         }),
@@ -590,13 +589,12 @@ describeLocal('local Supabase API integration', () => {
       expect(reviewResponse.status).toBe(200);
       expect(reviewed).toEqual(expect.objectContaining({
         id: created.id,
-        clubId: clubIds.guppy,
         status: 'approved',
       }));
 
       await signIn('qa-new@fcmoim.test');
       const approvedResponse = await membershipRoute.GET(
-        new Request(`http://localhost/api/membership?clubId=${clubIds.lynx}`),
+        new Request(`http://localhost/api/membership?clubId=${arbitraryTeamId}`),
       );
       const approved = await approvedResponse.json();
 
@@ -604,11 +602,10 @@ describeLocal('local Supabase API integration', () => {
       expect(approved.membershipState).toBe('approved');
       expect(approved.membership).toEqual(expect.objectContaining({
         id: created.id,
-        clubId: clubIds.guppy,
         status: 'approved',
       }));
     } finally {
-      await deleteMembershipForAccountId(newAccountId, clubIds.guppy);
+      await deleteMembershipForAccountId(newAccountId, teamId);
     }
   });
 
@@ -671,7 +668,7 @@ describeLocal('local Supabase API integration', () => {
     const reviewRoute = await import('../src/app/api/membership/review/route');
 
     const pendingResponse = await pendingRoute.GET(
-      new Request(`http://localhost/api/membership/pending?clubId=${clubIds.lynx}`),
+      new Request(`http://localhost/api/membership/pending?clubId=${arbitraryTeamId}`),
     );
     const pending = await pendingResponse.json();
 
@@ -681,7 +678,7 @@ describeLocal('local Supabase API integration', () => {
     const reviewResponse = await reviewRoute.PATCH(new Request('http://localhost/api/membership/review', {
       method: 'PATCH',
       body: JSON.stringify({
-        clubId: clubIds.lynx,
+        clubId: arbitraryTeamId,
         membershipId: '00000000-0000-0000-0000-000000000404',
         decision: 'approved',
       }),
@@ -697,12 +694,12 @@ describeLocal('local Supabase API integration', () => {
     const route = await import('../src/app/api/schedule-polls/route');
     const commentsRoute = await import('../src/app/api/comments/route');
     const title = schedulePollTitle;
-    await deleteSchedulePollsByOptionDates(clubIds.guppy, schedulePollOptionDates);
+    await deleteSchedulePollsByOptionDates(teamId, schedulePollOptionDates);
 
     const createResponse = await route.POST(new Request('http://localhost/api/schedule-polls', {
       method: 'POST',
       body: JSON.stringify({
-        clubId: clubIds.guppy,
+        clubId: teamId,
         title,
         commonTime: '20:00',
         location: '로컬 풋살장',
@@ -716,7 +713,6 @@ describeLocal('local Supabase API integration', () => {
     expect(createResponse.status).toBe(201);
     const firstOptionId = created.options[0]?.id;
     expect(created).toEqual(expect.objectContaining({
-      clubId: clubIds.guppy,
       title,
       status: 'open',
       eligibleVoterCount: expect.any(Number),
@@ -725,10 +721,12 @@ describeLocal('local Supabase API integration', () => {
         expect.objectContaining({ optionDate: schedulePollOptionDates[1] }),
       ]),
     }));
+    expect(created).not.toHaveProperty('clubId');
+    expect(created).not.toHaveProperty('teamId');
 
     expect(typeof firstOptionId).toBe('string');
     const emptyCommentsResponse = await commentsRoute.GET(
-      new Request(`http://localhost/api/comments?clubId=${clubIds.guppy}&targetType=schedule_poll_option&targetId=${firstOptionId}`),
+      new Request(`http://localhost/api/comments?clubId=${teamId}&targetType=schedule_poll_option&targetId=${firstOptionId}`),
     );
     const emptyComments = await emptyCommentsResponse.json();
 
@@ -738,7 +736,7 @@ describeLocal('local Supabase API integration', () => {
     const createCommentResponse = await commentsRoute.POST(new Request('http://localhost/api/comments', {
       method: 'POST',
       body: JSON.stringify({
-        clubId: clubIds.guppy,
+        clubId: teamId,
         targetType: 'schedule_poll_option',
         targetId: firstOptionId,
         content: 'poll option comment smoke',
@@ -754,7 +752,7 @@ describeLocal('local Supabase API integration', () => {
     }));
 
     const listResponse = await route.GET(
-      new Request(`http://localhost/api/schedule-polls?clubId=${clubIds.guppy}`),
+      new Request(`http://localhost/api/schedule-polls?clubId=${teamId}`),
     );
     const polls = await listResponse.json();
 
@@ -770,7 +768,7 @@ describeLocal('local Supabase API integration', () => {
     );
 
     await deleteCommentsByTargetIds([firstOptionId]);
-    await deleteSchedulePollsByOptionDates(clubIds.guppy, schedulePollOptionDates);
+    await deleteSchedulePollsByOptionDates(teamId, schedulePollOptionDates);
   });
 
   it('enforces feed media storage bucket policies for club members', async () => {
@@ -785,8 +783,8 @@ describeLocal('local Supabase API integration', () => {
       throw new Error('Expected authenticated Supabase client.');
     }
 
-    const ownedPath = `${clubIds.guppy}/local-api-${crypto.randomUUID()}.png`;
-    const deniedPath = `${clubIds.lynx}/local-api-${crypto.randomUUID()}.png`;
+    const ownedPath = `${teamId}/local-api-${crypto.randomUUID()}.png`;
+    const deniedPath = `${arbitraryTeamId}/local-api-${crypto.randomUUID()}.png`;
 
     try {
       const upload = await authClient.storage
@@ -825,7 +823,7 @@ describeLocal('local Supabase API integration', () => {
       const createResponse = await feedRoute.POST(new Request('http://localhost/api/feed-posts', {
         method: 'POST',
         body: JSON.stringify({
-          clubId: clubIds.guppy,
+          clubId: teamId,
           contentType: 'text',
           textContent: 'local feed post smoke',
         }),
@@ -836,7 +834,7 @@ describeLocal('local Supabase API integration', () => {
       expect(typeof created.id).toBe('string');
       createdPostIds.push(created.id);
       expect(created).toEqual(expect.objectContaining({
-        clubId: clubIds.guppy,
+        clubId: teamId,
         contentType: 'text',
         textContent: 'local feed post smoke',
       }));
@@ -844,7 +842,7 @@ describeLocal('local Supabase API integration', () => {
       const reactionResponse = await reactionRoute.POST(new Request(`http://localhost/api/feed-posts/${created.id}/react`, {
         method: 'POST',
         body: JSON.stringify({
-          clubId: clubIds.guppy,
+          clubId: teamId,
           reactionType: 'up',
         }),
       }), { params: Promise.resolve({ id: created.id }) });
@@ -858,7 +856,7 @@ describeLocal('local Supabase API integration', () => {
       const createCommentResponse = await commentsRoute.POST(new Request('http://localhost/api/comments', {
         method: 'POST',
         body: JSON.stringify({
-          clubId: clubIds.guppy,
+          clubId: teamId,
           targetType: 'feed_post',
           targetId: created.id,
           content: 'feed post comment smoke',
@@ -874,7 +872,7 @@ describeLocal('local Supabase API integration', () => {
       }));
 
       const listResponse = await feedRoute.GET(
-        new Request(`http://localhost/api/feed-posts?clubId=${clubIds.guppy}`),
+        new Request(`http://localhost/api/feed-posts?clubId=${teamId}`),
       );
       const posts = await listResponse.json();
 
@@ -897,7 +895,7 @@ describeLocal('local Supabase API integration', () => {
     const recordsRoute = await import('../src/app/api/records/season-summary/route');
 
     const announcementsResponse = await announcementsRoute.GET(
-      new Request(`http://localhost/api/announcements?clubId=${clubIds.guppy}`),
+      new Request(`http://localhost/api/announcements?clubId=${teamId}`),
     );
     const announcements = await announcementsResponse.json();
 
@@ -912,7 +910,7 @@ describeLocal('local Supabase API integration', () => {
     );
 
     const recordsResponse = await recordsRoute.GET(
-      new Request(`http://localhost/api/records/season-summary?clubId=${clubIds.guppy}`),
+      new Request(`http://localhost/api/records/season-summary?clubId=${teamId}`),
     );
     const records = await recordsResponse.json();
 
@@ -927,14 +925,14 @@ describeLocal('local Supabase API integration', () => {
   it('lets operators update and delete announcements through API routes', async () => {
     const route = await import('../src/app/api/announcements/route');
     const titles = ['QA Round 수정 전', 'QA Round 수정 후'];
-    await deleteAnnouncementsByTitles(clubIds.guppy, titles);
+    await deleteAnnouncementsByTitles(teamId, titles);
 
     try {
       await signIn('qa-operator@fcmoim.test');
       const createResponse = await route.POST(new Request('http://localhost/api/announcements', {
         method: 'POST',
         body: JSON.stringify({
-          clubId: clubIds.guppy,
+          clubId: teamId,
           seasonId: null,
           title: titles[0],
           content: '수정 전 공지입니다.',
@@ -969,28 +967,28 @@ describeLocal('local Supabase API integration', () => {
       expect(deleteResponse.status).toBe(200);
 
       const listResponse = await route.GET(
-        new Request(`http://localhost/api/announcements?clubId=${clubIds.guppy}`),
+        new Request(`http://localhost/api/announcements?clubId=${teamId}`),
       );
       const announcements = await listResponse.json();
       expect(announcements).not.toEqual(expect.arrayContaining([
         expect.objectContaining({ id: created.id }),
       ]));
     } finally {
-      await deleteAnnouncementsByTitles(clubIds.guppy, titles);
+      await deleteAnnouncementsByTitles(teamId, titles);
     }
   });
 
   it('rejects member announcement update and delete attempts through API routes', async () => {
     const route = await import('../src/app/api/announcements/route');
     const titles = ['QA Round 권한 확인', 'QA Round 권한 실패'];
-    await deleteAnnouncementsByTitles(clubIds.guppy, titles);
+    await deleteAnnouncementsByTitles(teamId, titles);
 
     try {
       await signIn('qa-operator@fcmoim.test');
       const createResponse = await route.POST(new Request('http://localhost/api/announcements', {
         method: 'POST',
         body: JSON.stringify({
-          clubId: clubIds.guppy,
+          clubId: teamId,
           seasonId: null,
           title: titles[0],
           content: '권한 확인용 공지입니다.',
@@ -1018,7 +1016,7 @@ describeLocal('local Supabase API integration', () => {
       }));
       expect(deleteResponse.status).toBe(403);
     } finally {
-      await deleteAnnouncementsByTitles(clubIds.guppy, titles);
+      await deleteAnnouncementsByTitles(teamId, titles);
     }
   });
 
@@ -1027,8 +1025,8 @@ describeLocal('local Supabase API integration', () => {
     const route = await import('../src/app/api/match-results/route');
     const memberAccountId = await signIn('qa-member1@fcmoim.test');
     await signIn('qa-operator@fcmoim.test');
-    const operatorMembership = await getMembershipByAccount(operatorAccountId, clubIds.guppy);
-    const memberMembership = await getMembershipByAccount(memberAccountId, clubIds.guppy);
+    const operatorMembership = await getMembershipByAccount(operatorAccountId, teamId);
+    const memberMembership = await getMembershipByAccount(memberAccountId, teamId);
     const operatorSnapshot = { ...operatorMembership };
     const memberSnapshot = { ...memberMembership };
     const matchId = await createMatchResultFixture({
@@ -1040,7 +1038,7 @@ describeLocal('local Supabase API integration', () => {
       const response = await route.POST(new Request('http://localhost/api/match-results', {
         method: 'POST',
         body: JSON.stringify({
-          clubId: clubIds.guppy,
+          clubId: teamId,
           matchId,
           score: { home: 2, away: 1 },
           playerStats: [
@@ -1108,7 +1106,7 @@ describeLocal('local Supabase API integration', () => {
     const memberAccountId = await signIn('qa-member1@fcmoim.test');
     const purchaseRoute = await import('../src/app/api/membership/traits/purchase/route');
     const equipRoute = await import('../src/app/api/membership/traits/equip/route');
-    const memberMembership = await getMembershipByAccount(memberAccountId, clubIds.guppy);
+    const memberMembership = await getMembershipByAccount(memberAccountId, teamId);
     const memberSnapshot = { ...memberMembership };
     const admin = createAdminClient();
     const traitId = 'dummy-runner';
@@ -1124,7 +1122,7 @@ describeLocal('local Supabase API integration', () => {
       const purchaseResponse = await purchaseRoute.POST(new Request('http://localhost/api/membership/traits/purchase', {
         method: 'POST',
         body: JSON.stringify({
-          clubId: clubIds.guppy,
+          clubId: teamId,
           traitId,
         }),
       }));
@@ -1141,7 +1139,7 @@ describeLocal('local Supabase API integration', () => {
       const duplicateResponse = await purchaseRoute.POST(new Request('http://localhost/api/membership/traits/purchase', {
         method: 'POST',
         body: JSON.stringify({
-          clubId: clubIds.guppy,
+          clubId: teamId,
           traitId,
         }),
       }));
@@ -1153,7 +1151,7 @@ describeLocal('local Supabase API integration', () => {
       const equipResponse = await equipRoute.PATCH(new Request('http://localhost/api/membership/traits/equip', {
         method: 'PATCH',
         body: JSON.stringify({
-          clubId: clubIds.guppy,
+          clubId: teamId,
           traitId,
         }),
       }));
@@ -1165,7 +1163,7 @@ describeLocal('local Supabase API integration', () => {
       const lockedResponse = await equipRoute.PATCH(new Request('http://localhost/api/membership/traits/equip', {
         method: 'PATCH',
         body: JSON.stringify({
-          clubId: clubIds.guppy,
+          clubId: teamId,
           traitId: 'line-breaker',
         }),
       }));
@@ -1195,8 +1193,8 @@ describeLocal('local Supabase API integration', () => {
     const operatorAccountId = await signIn('qa-operator@fcmoim.test');
     const memberAccountId = await signIn('qa-member1@fcmoim.test');
     const route = await import('../src/app/api/match-results/route');
-    const operatorMembership = await getMembershipByAccount(operatorAccountId, clubIds.guppy);
-    const memberMembership = await getMembershipByAccount(memberAccountId, clubIds.guppy);
+    const operatorMembership = await getMembershipByAccount(operatorAccountId, teamId);
+    const memberMembership = await getMembershipByAccount(memberAccountId, teamId);
     const matchIds: string[] = [];
 
     try {
@@ -1210,7 +1208,7 @@ describeLocal('local Supabase API integration', () => {
       const memberResponse = await route.POST(new Request('http://localhost/api/match-results', {
         method: 'POST',
         body: JSON.stringify({
-          clubId: clubIds.guppy,
+          clubId: teamId,
           matchId: scheduledMatchId,
           score: { home: 1, away: 0 },
           playerStats: [],
@@ -1234,7 +1232,7 @@ describeLocal('local Supabase API integration', () => {
         const response = await route.POST(new Request('http://localhost/api/match-results', {
           method: 'POST',
           body: JSON.stringify({
-            clubId: clubIds.guppy,
+            clubId: teamId,
             matchId,
             score: { home: 1, away: 0 },
             playerStats: [],
@@ -1246,7 +1244,7 @@ describeLocal('local Supabase API integration', () => {
       const crossClubResponse = await route.POST(new Request('http://localhost/api/match-results', {
         method: 'POST',
         body: JSON.stringify({
-          clubId: clubIds.orca,
+          clubId: arbitraryTeamId,
           matchId: scheduledMatchId,
           score: { home: 1, away: 0 },
           playerStats: [],

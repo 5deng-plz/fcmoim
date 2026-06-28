@@ -101,9 +101,9 @@ type AccountMembershipService = {
 };
 
 type MembershipRepository = {
-  findByAccountAndClub: ReturnType<typeof vi.fn>;
+  findCurrentMembership: ReturnType<typeof vi.fn>;
   findById: ReturnType<typeof vi.fn>;
-  listPendingByClub: ReturnType<typeof vi.fn>;
+  listPendingForTeam: ReturnType<typeof vi.fn>;
   createPending: ReturnType<typeof vi.fn>;
   updateStatus: ReturnType<typeof vi.fn>;
   updateRole: ReturnType<typeof vi.fn>;
@@ -172,7 +172,7 @@ function createRepositories(options?: {
   };
 
   const memberships: MembershipRepository = {
-    findByAccountAndClub: vi.fn(async (accountId: string) => {
+    findCurrentMembership: vi.fn(async (accountId: string) => {
       if (accountId === 'reviewer-auth-user') {
         return reviewerMembership;
       }
@@ -180,7 +180,7 @@ function createRepositories(options?: {
       return existingMembership;
     }),
     findById: vi.fn(async () => createMembershipRow()),
-    listPendingByClub: vi.fn(async () => [
+    listPendingForTeam: vi.fn(async () => [
       {
         id: 'membership-under-review',
         accountId: 'joining-account',
@@ -251,7 +251,7 @@ describe('v1.0 Account + TeamMembership flows', () => {
       id: 'auth-current-user',
       email: 'player@example.com',
     });
-    expect(repositories.memberships.findByAccountAndClub).toHaveBeenCalledWith(
+    expect(repositories.memberships.findCurrentMembership).toHaveBeenCalledWith(
       'auth-current-user',
       'club-1',
     );
@@ -621,7 +621,7 @@ describe('v1.0 Account + TeamMembership flows', () => {
       }),
     ]);
 
-    expect(repositories.memberships.listPendingByClub).toHaveBeenCalledWith('club-1');
+    expect(repositories.memberships.listPendingForTeam).toHaveBeenCalledWith('club-1');
   });
 
   it('denies pending membership list to non-operators', async () => {
@@ -644,7 +644,7 @@ describe('v1.0 Account + TeamMembership flows', () => {
       code: 'forbidden',
     });
 
-    expect(repositories.memberships.listPendingByClub).not.toHaveBeenCalled();
+    expect(repositories.memberships.listPendingForTeam).not.toHaveBeenCalled();
   });
 
   it('allows approved operators to withdraw approved non-admin members', async () => {

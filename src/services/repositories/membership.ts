@@ -1,0 +1,1 @@
+export { createSupabaseAccountMembershipRepositories } from './implementation';

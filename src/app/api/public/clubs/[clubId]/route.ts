@@ -2,7 +2,7 @@ import { appErrorResponse } from '../../../../../types/api';
 import { getServerTeamContext } from '../../../../../config/server-team';
 import { createSupabaseServerClient } from '../../../../../lib/supabase-server';
 import { createPublicClubService } from '../../../../../services/public-clubs';
-import { createSupabasePublicClubRepositories } from '../../../../../services/supabase-repositories';
+import { createSupabasePublicClubRepositories } from '../../../../../services/repositories';
 
 type RouteContext = {
   params: Promise<{ clubId: string }>;
@@ -17,7 +17,12 @@ export async function GET(_request: Request, context: RouteContext) {
       getServerTeamContext(),
     );
 
-    return Response.json(await service.getTeam());
+    const teamContext = getServerTeamContext();
+    return Response.json({
+      id: teamContext.teamId,
+      slug: 'fc-guppy',
+      ...await service.getTeam(),
+    });
   } catch (error) {
     return appErrorResponse(error);
   }

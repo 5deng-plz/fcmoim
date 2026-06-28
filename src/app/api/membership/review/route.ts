@@ -3,7 +3,7 @@ import { getServerTeamContext } from '../../../../config/server-team';
 import { createPrivilegedSupabaseClient, createSupabaseServerClient, getRequiredServerAuthContext } from '../../../../lib/supabase-server';
 import { fireAndForgetPush, sendPushToMembership } from '../../../../lib/push-sender';
 import { createAccountMembershipService } from '../../../../services/account-membership';
-import { createSupabaseAccountMembershipRepositories } from '../../../../services/supabase-repositories';
+import { createSupabaseAccountMembershipRepositories } from '../../../../services/repositories';
 
 export async function PATCH(request: Request) {
   try {
@@ -27,7 +27,7 @@ export async function PATCH(request: Request) {
       type: isApproved ? 'JOIN_APPROVED' : 'JOIN_REJECTED',
       title: isApproved ? '입단이 승인됐어요' : '입단 신청이 반려됐어요',
       targetUrl: isApproved ? '/?tab=home' : '/',
-      metadata: { clubId: membership.clubId, membershipId: membership.id },
+      metadata: { clubId: getServerTeamContext().teamId, membershipId: membership.id },
     }));
 
     return Response.json(membership);

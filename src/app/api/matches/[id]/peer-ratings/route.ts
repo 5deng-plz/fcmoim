@@ -1,9 +1,9 @@
 import { appErrorResponse } from '../../../../../types/api';
 import { AppError } from '../../../../../types/api';
-import { getServerTeamId } from '@/config/server-team';
+import { getServerTeamContext } from '@/config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../../../lib/supabase-server';
 import { createMatchFeedbackService } from '../../../../../services/match-feedback';
-import { createSupabaseMatchFeedbackRepositories } from '../../../../../services/supabase-repositories';
+import { createSupabaseMatchFeedbackRepositories } from '../../../../../services/repositories';
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -12,18 +12,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (!isRecord(body)) {
       throw new AppError('bad_request', 'Request body is required.');
     }
-    const clubId = getServerTeamId();
     if (!Array.isArray(body.ratings)) {
       throw new AppError('bad_request', 'ratings must be an array.');
     }
 
     const supabase = await createSupabaseServerClient();
     const auth = await getRequiredServerAuthContext(supabase);
-    const service = createMatchFeedbackService(createSupabaseMatchFeedbackRepositories(supabase));
+    const service = createMatchFeedbackService(createSupabaseMatchFeedbackRepositories(supabase), getServerTeamContext());
 
     return Response.json(await service.submitPeerRatings({
       auth,
-      clubId,
       matchId,
       ratings: body.ratings.map((rating) => {
         if (!isRecord(rating)) {

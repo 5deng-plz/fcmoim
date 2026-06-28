@@ -1,8 +1,8 @@
 import { appErrorResponse } from '../../../../../types/api';
-import { getServerTeamId } from '@/config/server-team';
+import { getServerTeamContext } from '@/config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../../../lib/supabase-server';
 import { createMatchService } from '../../../../../services/matches';
-import { createSupabaseMatchRepositories } from '../../../../../services/supabase-repositories';
+import { createSupabaseMatchRepositories } from '../../../../../services/repositories';
 
 export async function POST(request: Request) {
   try {
@@ -19,11 +19,10 @@ export async function POST(request: Request) {
 
     const supabase = await createSupabaseServerClient();
     const auth = await getRequiredServerAuthContext(supabase);
-    const service = createMatchService(createSupabaseMatchRepositories(supabase));
+    const service = createMatchService(createSupabaseMatchRepositories(supabase), getServerTeamContext());
 
     return Response.json(await service.publishMatchLineup({
       auth,
-      clubId: getServerTeamId(),
       matchId: body.matchId,
     }));
   } catch (error) {

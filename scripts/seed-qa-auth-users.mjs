@@ -54,7 +54,7 @@ for (const qaUser of qaUsers) {
   console.log(`${qaUser.email}: auth ready`);
 }
 
-console.log(`Seeded ${qaUsers.length} QA auth users. Demo memberships are seeded by seed-local-demo-data.`);
+console.log(`Seeded ${qaUsers.length} QA auth users. Demo memberships are seeded by rebuild-local-demo-data.`);
 
 async function ensureAuthUser(qaUser) {
   const existing = await findUserByEmail(qaUser.email);

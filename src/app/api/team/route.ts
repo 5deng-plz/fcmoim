@@ -1,7 +1,7 @@
 import { getServerTeamContext } from '../../../config/server-team';
 import { createSupabaseServerClient } from '../../../lib/supabase-server';
 import { createPublicClubService } from '../../../services/public-clubs';
-import { createSupabasePublicClubRepositories } from '../../../services/supabase-repositories';
+import { createSupabasePublicClubRepositories } from '../../../services/repositories';
 import { appErrorResponse } from '../../../types/api';
 
 export async function GET() {

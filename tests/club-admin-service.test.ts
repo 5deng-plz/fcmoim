@@ -6,7 +6,7 @@ const teamContext = { teamId: '00000000-0000-0000-0000-000000000001' } as const;
 function createRepositories(role: 'admin' | 'operator' | 'member' = 'operator'): ClubAdminRepositories {
   return {
     memberships: {
-      findByAccountAndClub: vi.fn(async () => ({ role, status: 'approved' as const })),
+      findCurrentMembership: vi.fn(async () => ({ role, status: 'approved' as const })),
     },
     clubs: {
       findSettings: vi.fn(async () => ({

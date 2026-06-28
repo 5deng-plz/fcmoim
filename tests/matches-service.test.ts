@@ -6,10 +6,10 @@ type MatchStatus = 'scheduled' | 'locker_room' | 'finished' | 'cancelled';
 
 async function loadService(repositories: {
   memberships: {
-    findByAccountAndClub: ReturnType<typeof vi.fn>;
+    findCurrentMembership: ReturnType<typeof vi.fn>;
   };
   seasons?: {
-    findActiveByClub: ReturnType<typeof vi.fn>;
+    findActiveForTeam: ReturnType<typeof vi.fn>;
   };
   matches: {
     listUpcoming: ReturnType<typeof vi.fn>;
@@ -34,7 +34,7 @@ async function loadService(repositories: {
 }) {
   const { createMatchService } = await import('../src/services/matches');
 
-  return createMatchService(repositories as unknown as Parameters<typeof createMatchService>[0]);
+  return createMatchService(repositories as unknown as Parameters<typeof createMatchService>[0], { teamId: 'club-1' });
 }
 
 function createRepositories(options?: {
@@ -45,13 +45,11 @@ function createRepositories(options?: {
 }) {
   const membership = {
     id: 'operator-membership',
-    clubId: 'club-1',
     role: options?.role ?? 'operator',
     status: options?.membershipStatus ?? 'approved',
   };
   const match = {
     id: 'match-1',
-    clubId: 'club-1',
     seasonId: 'season-1',
     round: null as number | null,
     title: '3월 친선 경기',
@@ -73,10 +71,10 @@ function createRepositories(options?: {
 
   return {
     memberships: {
-      findByAccountAndClub: vi.fn(async () => membership),
+      findCurrentMembership: vi.fn(async () => membership),
     },
     seasons: {
-      findActiveByClub: vi.fn(async () => (options?.hasActiveSeason === false ? null : { id: 'season-active' })),
+      findActiveForTeam: vi.fn(async () => (options?.hasActiveSeason === false ? null : { id: 'season-active' })),
     },
     matches: {
       listUpcoming: vi.fn(async () => [match]),
@@ -151,7 +149,6 @@ describe('upcoming match service', () => {
               email: 'operator@example.com',
             },
           },
-          clubId: 'club-1',
         }),
       ).resolves.toEqual([expect.objectContaining({ id: 'match-1' })]);
 
@@ -178,7 +175,6 @@ describe('manual match creation service', () => {
             email: 'operator@example.com',
           },
         },
-        clubId: 'club-1',
         type: 'match',
         title: '   ',
         date: '2026-03-21',
@@ -219,7 +215,6 @@ describe('manual match creation service', () => {
     const repositories = createRepositories();
     repositories.matches.findNonCancelledMatchOnDate.mockResolvedValueOnce({
       id: 'existing-match',
-      clubId: 'club-1',
       seasonId: 'season-active',
       round: 7,
       title: 'Round 7',
@@ -248,7 +243,6 @@ describe('manual match creation service', () => {
             email: 'operator@example.com',
           },
         },
-        clubId: 'club-1',
         type: 'match',
         title: 'Round 8',
         date: '2026-05-20',
@@ -273,7 +267,6 @@ describe('manual match creation service', () => {
           email: 'operator@example.com',
         },
       },
-      clubId: 'club-1',
       type: 'match',
       title: '  컵대회 결승전  ',
       date: '2026-05-27',
@@ -300,7 +293,6 @@ describe('manual match creation service', () => {
           email: 'operator@example.com',
         },
       },
-      clubId: 'club-1',
       type: 'training',
       title: '전지훈련',
       date: '2026-05-20',
@@ -328,7 +320,6 @@ describe('manual match creation service', () => {
             email: 'operator@example.com',
           },
         },
-        clubId: 'club-1',
         type: 'match',
         title: null,
         date: '2026-03-21',
@@ -361,7 +352,6 @@ describe('manual match creation service', () => {
               email: 'operator@example.com',
             },
           },
-          clubId: 'club-1',
           type: 'match',
           title: null,
           date: '2026-03-21',
@@ -388,7 +378,6 @@ describe('calendar match service', () => {
             email: 'operator@example.com',
           },
         },
-        clubId: 'club-1',
         from: '2026-03-01',
         to: '2026-04-01',
       }),
@@ -409,7 +398,6 @@ describe('calendar match service', () => {
     repositories.matches.listCalendar.mockResolvedValueOnce([
       {
         id: 'past-scheduled-match',
-        clubId: 'club-1',
         seasonId: 'season-1',
         round: null,
         title: 'Round 6',
@@ -439,7 +427,6 @@ describe('calendar match service', () => {
             email: 'operator@example.com',
           },
         },
-        clubId: 'club-1',
         from: '2026-05-01',
         to: '2026-06-01',
       }),
@@ -463,7 +450,6 @@ describe('match cancellation service', () => {
             email: 'operator@example.com',
           },
         },
-        clubId: 'club-1',
         matchId: 'match-1',
         cancellationReason: '  강설로 인한 취소  ',
       }),
@@ -499,7 +485,6 @@ describe('match cancellation service', () => {
               email: 'operator@example.com',
             },
           },
-          clubId: 'club-1',
           matchId: 'match-1',
           cancellationReason: '강설로 인한 취소',
         }),
@@ -520,7 +505,6 @@ describe('match cancellation service', () => {
             email: 'operator@example.com',
           },
         },
-        clubId: 'club-1',
         matchId: 'match-1',
         cancellationReason: '   ',
       }),
@@ -542,7 +526,6 @@ describe('match lineup service', () => {
             email: 'operator@example.com',
           },
         },
-        clubId: 'club-1',
         matchId: 'match-1',
         entries: [
           { membershipId: 'red-player', teamNumber: 1, isLeader: true, position: 'FW' },
@@ -579,7 +562,6 @@ describe('match lineup service', () => {
             email: 'member@example.com',
           },
         },
-        clubId: 'club-1',
         matchId: 'match-1',
         entries: [
           { membershipId: 'operator-membership', teamNumber: 1, isLeader: true, position: 'MF', formationSlot: 6 },
@@ -622,7 +604,6 @@ describe('match lineup service', () => {
             email: 'member@example.com',
           },
         },
-        clubId: 'club-1',
         matchId: 'match-1',
         entries: [
           { membershipId: 'operator-membership', teamNumber: 1, isLeader: true, position: 'MF', formationSlot: 6 },
@@ -658,7 +639,6 @@ describe('match lineup service', () => {
             email: 'member@example.com',
           },
         },
-        clubId: 'club-1',
         matchId: 'match-1',
         entries: [
           { membershipId: 'operator-membership', teamNumber: 1, isLeader: true, position: 'MF', formationSlot: 6 },
@@ -691,7 +671,6 @@ describe('match lineup service', () => {
             email: 'operator@example.com',
           },
         },
-        clubId: 'club-1',
         matchId: 'match-1',
         membershipId: 'draft-target',
       }),
@@ -718,7 +697,6 @@ describe('match lineup service', () => {
             email: 'member@example.com',
           },
         },
-        clubId: 'club-1',
         matchId: 'match-1',
       }),
     ).resolves.toEqual([]);
@@ -744,7 +722,6 @@ describe('match lineup service', () => {
               email: 'operator@example.com',
             },
           },
-          clubId: 'club-1',
           matchId: 'match-1',
           entries: [
             { membershipId: 'red-player', teamNumber: 1, isLeader: true, position: 'FW' },
@@ -768,7 +745,6 @@ describe('match lineup service', () => {
             email: 'operator@example.com',
           },
         },
-        clubId: 'club-1',
         matchId: 'match-1',
         entries: [
           { membershipId: 'same-player', teamNumber: 1, isLeader: true, position: 'FW' },
@@ -795,7 +771,6 @@ describe('match lineup service', () => {
             email: 'operator@example.com',
           },
         },
-        clubId: 'club-1',
         matchId: 'match-1',
         teamNumber: 1,
       }),
@@ -837,7 +812,6 @@ describe('match lineup service', () => {
             email: 'member@example.com',
           },
         },
-        clubId: 'club-1',
         matchId: 'match-1',
         teamNumber: 1,
         confirmed: false,
@@ -880,7 +854,6 @@ describe('match lineup service', () => {
             email: 'operator@example.com',
           },
         },
-        clubId: 'club-1',
         matchId: 'match-1',
         teamNumber: 2,
         confirmed: false,
@@ -908,7 +881,6 @@ describe('match lineup service', () => {
             email: 'member@example.com',
           },
         },
-        clubId: 'club-1',
         matchId: 'match-1',
         teamNumber: 1,
       }),
@@ -922,7 +894,6 @@ describe('match lineup service', () => {
             email: 'member@example.com',
           },
         },
-        clubId: 'club-1',
         matchId: 'match-1',
         teamNumber: 2,
         confirmed: false,
@@ -951,7 +922,6 @@ describe('match lineup service', () => {
             email: 'operator@example.com',
           },
         },
-        clubId: 'club-1',
         matchId: 'match-1',
         teamNumber: 2,
       }),
@@ -977,7 +947,6 @@ describe('match lineup service', () => {
             email: 'operator@example.com',
           },
         },
-        clubId: 'club-1',
         matchId: 'match-1',
         teamNumber: 1,
       }),
@@ -997,7 +966,6 @@ describe('match lineup service', () => {
             email: 'operator@example.com',
           },
         },
-        clubId: 'club-1',
         matchId: 'match-1',
       }),
     ).resolves.toMatchObject({
@@ -1024,7 +992,6 @@ describe('match lineup service', () => {
             email: 'admin@example.com',
           },
         },
-        clubId: 'club-1',
         matchId: 'match-1',
       }),
     ).resolves.toMatchObject({ tacticsCompleted: true });
@@ -1042,7 +1009,6 @@ describe('match lineup service', () => {
             email: 'member@example.com',
           },
         },
-        clubId: 'club-1',
         matchId: 'match-1',
       }),
     ).rejects.toMatchObject({ code: 'forbidden' });

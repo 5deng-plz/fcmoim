@@ -1,4 +1,5 @@
 import { AppError } from '../types/api';
+import type { TeamContext } from '../config/server-team';
 import type { AuthContext, MatchRow, TeamMembershipRow } from '../types/domain';
 
 export const MATCH_FEEDBACK_BADGES = [
@@ -14,7 +15,7 @@ export const MATCH_FEEDBACK_BADGES = [
 
 export type MatchFeedbackBadge = typeof MATCH_FEEDBACK_BADGES[number];
 
-export type MatchFeedbackMembership = Pick<TeamMembershipRow, 'id' | 'clubId' | 'role' | 'status'>;
+export type MatchFeedbackMembership = Pick<TeamMembershipRow, 'id' | 'role' | 'status'>;
 
 export type MatchFeedbackParticipant = {
   membershipId: string;
@@ -59,10 +60,10 @@ export type MatchFeedbackResponse = {
 
 export type MatchFeedbackRepositories = {
   memberships: {
-    findByAccountAndClub(accountId: string, clubId: string): Promise<MatchFeedbackMembership | null>;
+    findCurrentMembership(accountId: string, clubId: string): Promise<MatchFeedbackMembership | null>;
   };
   matches: {
-    findById(matchId: string): Promise<(MatchRow & { feedbackDeadline: string | null }) | null>;
+    findById(matchId: string, teamId: string): Promise<(MatchRow & { feedbackDeadline: string | null }) | null>;
   };
   participants: {
     listForMatch(matchId: string): Promise<MatchFeedbackParticipant[]>;
@@ -96,16 +97,20 @@ export type MatchFeedbackRepositories = {
   };
 };
 
-export function createMatchFeedbackService(repositories: MatchFeedbackRepositories) {
+export function createMatchFeedbackService(
+  repositories: MatchFeedbackRepositories,
+  teamContext: TeamContext,
+) {
+  const teamId = teamContext.teamId;
+
   return {
     async voteMvp(input: {
       auth: AuthContext;
-      clubId: string;
       matchId: string;
       candidateMembershipId: string;
     }) {
-      const membership = await requireApprovedMembership(input.auth, input.clubId);
-      const match = await requireFeedbackMatch(input.matchId, input.clubId);
+      const membership = await requireApprovedMembership(input.auth, teamId);
+      const match = await requireFeedbackMatch(input.matchId, teamId);
       assertFeedbackOpen(match);
 
       const participants = await repositories.participants.listForMatch(input.matchId);
@@ -122,7 +127,6 @@ export function createMatchFeedbackService(repositories: MatchFeedbackRepositori
 
     async submitPeerRatings(input: {
       auth: AuthContext;
-      clubId: string;
       matchId: string;
       ratings: Array<{
         rateeMembershipId: string;
@@ -130,8 +134,8 @@ export function createMatchFeedbackService(repositories: MatchFeedbackRepositori
         badges?: string[] | null;
       }>;
     }) {
-      const membership = await requireApprovedMembership(input.auth, input.clubId);
-      const match = await requireFeedbackMatch(input.matchId, input.clubId);
+      const membership = await requireApprovedMembership(input.auth, teamId);
+      const match = await requireFeedbackMatch(input.matchId, teamId);
       assertFeedbackOpen(match);
 
       const participants = await repositories.participants.listForMatch(input.matchId);
@@ -151,11 +155,10 @@ export function createMatchFeedbackService(repositories: MatchFeedbackRepositori
 
     async getFeedback(input: {
       auth: AuthContext;
-      clubId: string;
       matchId: string;
     }): Promise<MatchFeedbackResponse> {
-      const membership = await requireApprovedMembership(input.auth, input.clubId);
-      const match = await requireFeedbackMatch(input.matchId, input.clubId);
+      const membership = await requireApprovedMembership(input.auth, teamId);
+      const match = await requireFeedbackMatch(input.matchId, teamId);
       const [participants, votes, ratings] = await Promise.all([
         repositories.participants.listForMatch(input.matchId),
         repositories.feedback.listMvpVotes(input.matchId),
@@ -194,17 +197,20 @@ export function createMatchFeedbackService(repositories: MatchFeedbackRepositori
     },
   };
 
-  async function requireApprovedMembership(auth: AuthContext, clubId: string) {
-    const membership = await repositories.memberships.findByAccountAndClub(auth.user.id, clubId);
+  async function requireApprovedMembership(auth: AuthContext, teamId: string) {
+    const membership = await repositories.memberships.findCurrentMembership(auth.user.id, teamId);
     if (!membership || membership.status !== 'approved') {
       throw new AppError('membership_not_approved', '승인된 회원만 매치 피드백을 사용할 수 있어요.');
     }
     return membership;
   }
 
-  async function requireFeedbackMatch(matchId: string, clubId: string) {
-    const match = await repositories.matches.findById(normalizeRequiredText(matchId, 'matchId is required.'));
-    if (!match || match.clubId !== clubId || match.type !== 'match') {
+  async function requireFeedbackMatch(matchId: string, teamId: string) {
+    const match = await repositories.matches.findById(
+      normalizeRequiredText(matchId, 'matchId is required.'),
+      teamId,
+    );
+    if (!match || match.type !== 'match') {
       throw new AppError('not_found', '피드백 대상 경기를 찾을 수 없어요.');
     }
     if (match.status !== 'finished') {

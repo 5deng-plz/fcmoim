@@ -32,15 +32,6 @@ export type AccountRow = {
   avatarUrl: string | null;
 };
 
-export type ClubMembershipSummaryRow = {
-  membershipId: string;
-  clubId: string;
-  clubName: string;
-  logoUrl: string | null;
-  role: MembershipRole;
-  status: MembershipStatus;
-};
-
 export type PublicMatchSummaryRow = {
   id: string;
   title: string;
@@ -61,10 +52,8 @@ export type PublicSeasonSummaryRow = {
   endDate: string;
 };
 
-export type PublicClubSummaryRow = {
-  id: string;
+export type TeamProfile = {
   name: string;
-  slug: string;
   description: string | null;
   logoUrl: string | null;
   isPublic: boolean;
@@ -74,7 +63,7 @@ export type PublicClubSummaryRow = {
   upcomingMatchCount: number;
 };
 
-export type PublicClubDetailRow = PublicClubSummaryRow & {
+export type TeamProfileDetail = TeamProfile & {
   recentMatches: PublicMatchSummaryRow[];
   upcomingMatches: PublicMatchSummaryRow[];
 };
@@ -82,7 +71,6 @@ export type PublicClubDetailRow = PublicClubSummaryRow & {
 export type TeamMembershipRow = {
   id: string;
   accountId: string;
-  clubId: string;
   role: MembershipRole;
   status: MembershipStatus;
   nickname: string;
@@ -103,7 +91,6 @@ export type TeamMembershipRow = {
 export type PendingMembershipReviewRow = {
   id: string;
   accountId: string;
-  clubId: string;
   nickname: string;
   position: PositionCode | string | null;
   heightCm: number | null;
@@ -129,7 +116,6 @@ export type SchedulePollVoteRow = {
 
 export type SchedulePollRow = {
   id: string;
-  clubId: string;
   seasonId: string | null;
   title: string;
   status: SchedulePollStatus;
@@ -148,7 +134,6 @@ export type SchedulePollRow = {
 
 export type MatchRow = {
   id: string;
-  clubId: string;
   seasonId: string;
   round: number | null;
   title: string;
@@ -207,7 +192,6 @@ export type EventCommentRow = {
 
 export type AnnouncementRow = {
   id: string;
-  clubId: string;
   seasonId: string | null;
   title: string;
   content: string;

@@ -1,4 +1,5 @@
 import { AppError } from '../types/api';
+import type { TeamContext } from '../config/server-team';
 import type {
   AuthContext,
   EventCommentRow,
@@ -8,11 +9,11 @@ import type {
 
 const MAX_COMMENT_CONTENT_LENGTH = 1000;
 
-type CommentMembership = Pick<TeamMembershipRow, 'id' | 'clubId' | 'role' | 'status'>;
+type CommentMembership = Pick<TeamMembershipRow, 'id' | 'role' | 'status'>;
 
 export type CommentRepositories = {
   memberships: {
-    findByAccountAndClub(accountId: string, clubId: string): Promise<CommentMembership | null>;
+    findCurrentMembership(accountId: string, clubId: string): Promise<CommentMembership | null>;
   };
   targets: {
     findClubId(targetType: EventCommentTargetType, targetId: string): Promise<string | null>;
@@ -31,18 +32,22 @@ export type CommentRepositories = {
   };
 };
 
-export function createCommentService(repositories: CommentRepositories) {
+export function createCommentService(
+  repositories: CommentRepositories,
+  teamContext: TeamContext,
+) {
+  const teamId = teamContext.teamId;
+
   return {
     async listComments(input: {
       auth: AuthContext;
-      clubId: string;
       targetType: string;
       targetId: string;
     }) {
       const targetType = normalizeTargetType(input.targetType);
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, input.clubId);
+      const membership = await repositories.memberships.findCurrentMembership(input.auth.user.id, teamId);
       assertApprovedMember(membership);
-      await assertTargetInClub(repositories, targetType, input.targetId, input.clubId);
+      await assertTargetInClub(repositories, targetType, input.targetId, teamId);
 
       return repositories.comments.listForTarget({
         targetType,
@@ -52,15 +57,14 @@ export function createCommentService(repositories: CommentRepositories) {
 
     async createComment(input: {
       auth: AuthContext;
-      clubId: string;
       targetType: string;
       targetId: string;
       content: string;
     }) {
       const targetType = normalizeTargetType(input.targetType);
-      const membership = await repositories.memberships.findByAccountAndClub(input.auth.user.id, input.clubId);
+      const membership = await repositories.memberships.findCurrentMembership(input.auth.user.id, teamId);
       assertApprovedMember(membership);
-      await assertTargetInClub(repositories, targetType, input.targetId, input.clubId);
+      await assertTargetInClub(repositories, targetType, input.targetId, teamId);
 
       return repositories.comments.create({
         targetType,

@@ -1,23 +1,21 @@
 import { appErrorResponse } from '../../../types/api';
 import { AppError } from '../../../types/api';
-import { getServerTeamId } from '@/config/server-team';
+import { getServerTeamContext } from '@/config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../lib/supabase-server';
 import { createFeedPostService } from '../../../services/feed-posts';
-import { createSupabaseFeedPostRepositories } from '../../../services/supabase-repositories';
+import { createSupabaseFeedPostRepositories } from '../../../services/repositories';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     searchParams.get('clubId');
-    const clubId = getServerTeamId();
 
     const supabase = await createSupabaseServerClient();
     const auth = await getRequiredServerAuthContext(supabase);
-    const service = createFeedPostService(createSupabaseFeedPostRepositories(supabase));
+    const service = createFeedPostService(createSupabaseFeedPostRepositories(supabase), getServerTeamContext());
 
     return Response.json(await service.listPosts({
       auth,
-      clubId,
       contentType: searchParams.get('contentType'),
       page: Number(searchParams.get('page') ?? 1),
       limit: Number(searchParams.get('limit') ?? 20),
@@ -36,11 +34,10 @@ export async function POST(request: Request) {
 
     const supabase = await createSupabaseServerClient();
     const auth = await getRequiredServerAuthContext(supabase);
-    const service = createFeedPostService(createSupabaseFeedPostRepositories(supabase));
+    const service = createFeedPostService(createSupabaseFeedPostRepositories(supabase), getServerTeamContext());
 
     return Response.json(await service.createPost({
       auth,
-      clubId: getServerTeamId(),
       contentType: readRequiredText(body.contentType, 'contentType is required.'),
       textContent: readOptionalText(body.textContent),
       mediaUrl: readOptionalText(body.mediaUrl),

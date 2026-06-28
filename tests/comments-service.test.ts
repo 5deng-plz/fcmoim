@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 async function loadService(repositories: {
   memberships: {
-    findByAccountAndClub: ReturnType<typeof vi.fn>;
+    findCurrentMembership: ReturnType<typeof vi.fn>;
   };
   targets: {
     findClubId: ReturnType<typeof vi.fn>;
@@ -14,7 +14,10 @@ async function loadService(repositories: {
 }) {
   const { createCommentService } = await import('../src/services/comments');
 
-  return createCommentService(repositories as unknown as Parameters<typeof createCommentService>[0]);
+  return createCommentService(
+    repositories as unknown as Parameters<typeof createCommentService>[0],
+    { teamId: 'club-1' },
+  );
 }
 
 function createRepositories(options?: {
@@ -30,7 +33,7 @@ function createRepositories(options?: {
 
   return {
     memberships: {
-      findByAccountAndClub: vi.fn(async () => membership),
+      findCurrentMembership: vi.fn(async () => membership),
     },
     targets: {
       findClubId: vi.fn(async () => options?.targetClubId ?? 'club-1'),
@@ -58,7 +61,6 @@ describe('event comment service', () => {
     await expect(
       service.createComment({
         auth: { user: { id: 'operator-auth-user', email: 'operator@example.com' } },
-        clubId: 'club-1',
         targetType: 'match',
         targetId: 'match-1',
         content: '  결과 확인 완료  ',
@@ -83,7 +85,6 @@ describe('event comment service', () => {
 
     await service.listComments({
       auth: { user: { id: 'operator-auth-user', email: 'operator@example.com' } },
-      clubId: 'club-1',
       targetType: 'schedule_poll_option',
       targetId: 'option-a',
     });
@@ -101,7 +102,6 @@ describe('event comment service', () => {
     await expect(
       service.createComment({
         auth: { user: { id: 'operator-auth-user', email: 'operator@example.com' } },
-        clubId: 'club-1',
         targetType: 'feed_post',
         targetId: 'post-1',
         content: '  사진 좋다  ',
@@ -127,7 +127,6 @@ describe('event comment service', () => {
     await expect(
       service.listComments({
         auth: { user: { id: 'operator-auth-user', email: 'operator@example.com' } },
-        clubId: 'club-1',
         targetType: 'match',
         targetId: 'match-1',
       }),
@@ -141,7 +140,6 @@ describe('event comment service', () => {
     await expect(
       service.listComments({
         auth: { user: { id: 'operator-auth-user', email: 'operator@example.com' } },
-        clubId: 'club-1',
         targetType: 'match',
         targetId: 'match-1',
       }),
@@ -158,7 +156,6 @@ describe('event comment service', () => {
     await expect(
       service.createComment({
         auth: { user: { id: 'operator-auth-user', email: 'operator@example.com' } },
-        clubId: 'club-1',
         targetType: 'match',
         targetId: 'match-1',
         content: '참석합니다',
@@ -176,13 +173,12 @@ describe('event comment service', () => {
     await expect(
       service.listComments({
         auth: { user: { id: 'operator-auth-user', email: 'operator@example.com' } },
-        clubId: 'club-1',
         targetType: 'training',
         targetId: 'match-1',
       }),
     ).rejects.toMatchObject({ code: 'bad_request', status: 400 });
 
-    expect(repositories.memberships.findByAccountAndClub).not.toHaveBeenCalled();
+    expect(repositories.memberships.findCurrentMembership).not.toHaveBeenCalled();
     expect(repositories.targets.findClubId).not.toHaveBeenCalled();
   });
 
@@ -193,7 +189,6 @@ describe('event comment service', () => {
     await expect(
       service.listComments({
         auth: { user: { id: 'operator-auth-user', email: 'operator@example.com' } },
-        clubId: 'club-1',
         targetType: 'match',
         targetId: '   ',
       }),
@@ -210,7 +205,6 @@ describe('event comment service', () => {
     await expect(
       service.createComment({
         auth: { user: { id: 'operator-auth-user', email: 'operator@example.com' } },
-        clubId: 'club-1',
         targetType: 'match',
         targetId: 'match-1',
         content: '   ',
@@ -227,7 +221,6 @@ describe('event comment service', () => {
     await expect(
       service.createComment({
         auth: { user: { id: 'operator-auth-user', email: 'operator@example.com' } },
-        clubId: 'club-1',
         targetType: 'match',
         targetId: 'match-1',
         content: 'a'.repeat(1001),

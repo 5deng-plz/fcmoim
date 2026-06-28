@@ -2,13 +2,13 @@ import { describe, expect, it, vi } from 'vitest';
 
 async function loadService(repositories = createRepositories()) {
   const { createFeedPostService } = await import('../src/services/feed-posts');
-  return createFeedPostService(repositories);
+  return createFeedPostService(repositories, { teamId: 'club-1' });
 }
 
 function createRepositories() {
   return {
     memberships: {
-      findByAccountAndClub: vi.fn(async () => ({
+      findCurrentMembership: vi.fn(async () => ({
         id: 'member-1',
         clubId: 'club-1',
         role: 'member' as const,
@@ -62,7 +62,6 @@ describe('feed post service', () => {
 
     await expect(service.createPost({
       auth,
-      clubId: 'club-1',
       contentType: 'text',
       textContent: '오늘 경기 수고!',
       mediaUrl: null,
@@ -74,7 +73,6 @@ describe('feed post service', () => {
     });
 
     expect(repositories.posts.create).toHaveBeenCalledWith(expect.objectContaining({
-      clubId: 'club-1',
       membershipId: 'member-1',
       contentType: 'text',
       textContent: '오늘 경기 수고!',
@@ -88,7 +86,6 @@ describe('feed post service', () => {
 
     await expect(service.createPost({
       auth,
-      clubId: 'club-1',
       contentType: 'image',
       textContent: '사진',
       mediaUrl: null,
@@ -105,7 +102,6 @@ describe('feed post service', () => {
 
     await expect(service.toggleReaction({
       auth,
-      clubId: 'club-1',
       postId: 'post-1',
       reactionType: 'up',
     })).resolves.toEqual({
