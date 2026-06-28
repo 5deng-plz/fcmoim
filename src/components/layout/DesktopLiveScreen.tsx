@@ -1153,6 +1153,7 @@ function DesktopLockerRoomPanel() {
 function DesktopDetailStatsPanel() {
   const { records, recordsStatus, loadRecords } = useRecordsStore();
   const { activeClubId } = useAppStore();
+  const { memberProfile } = useAuthStore();
 
   // 경기 기록 상태
   const [matches, setMatches] = useState<UpcomingMatch[]>([]);
@@ -1230,28 +1231,177 @@ function DesktopDetailStatsPanel() {
     return () => { isActive = false; };
   }, [matches, activeClubId]);
 
-  // 경기장 승률 모의 데이터
-  const stadiums = [
+  // 랭킹 리스트 데이터
+  const rows = records?.rankingRows ?? [];
+
+  // 로그인한 사용자의 회원 ID
+  const myMembershipId = memberProfile?.id;
+
+  // 1. 로그인 사용자 기준 경기장별 전적 동적 집계
+  const dynamicStadiumStats = useMemo(() => {
+    if (!myMembershipId) return [];
+    
+    const stadiumMap: Record<string, { name: string; matches: number; wins: number; draws: number; losses: number; rate: number }> = {};
+    
+    for (const match of matches) {
+      if (match.ourScore === null || match.oppScore === null) continue;
+      const lineup = matchLineupsMap[match.id] ?? [];
+      const myEntry = lineup.find((e) => e.membershipId === myMembershipId);
+      if (!myEntry) continue; // 내가 참여하지 않은 경기
+      
+      const loc = match.location;
+      if (!stadiumMap[loc]) {
+        stadiumMap[loc] = { name: loc, matches: 0, wins: 0, draws: 0, losses: 0, rate: 0 };
+      }
+      
+      const stat = stadiumMap[loc];
+      stat.matches += 1;
+      
+      const isWin = match.ourScore > match.oppScore;
+      const isDraw = match.ourScore === match.oppScore;
+      
+      if (isDraw) {
+        stat.draws += 1;
+      } else {
+        const isTeam1 = myEntry.teamNumber === 1;
+        const isMyWin = isWin ? isTeam1 : !isTeam1;
+        if (isMyWin) stat.wins += 1;
+        else stat.losses += 1;
+      }
+    }
+    
+    return Object.values(stadiumMap).map((st) => {
+      const decided = st.wins + st.losses + st.draws;
+      st.rate = decided ? Math.round((st.wins / decided) * 100) : 0;
+      return st;
+    }).sort((a, b) => b.rate - a.rate || b.matches - a.matches);
+  }, [matches, matchLineupsMap, myMembershipId]);
+
+  // 2. 로그인 사용자 기준 동료 선수간의 시너지/상성(케미스트리) 동적 집계
+  const dynamicChemistry = useMemo(() => {
+    if (!myMembershipId || rows.length === 0) return { best: [], worst: [] };
+    
+    const partnerStats: Array<{
+      nickname: string;
+      matches: number;
+      wins: number;
+      losses: number;
+      draws: number;
+      rate: number;
+    }> = [];
+    
+    for (const player of rows) {
+      if (player.membershipId === myMembershipId) continue; // 나 자신은 제외
+      
+      let coMatches = 0;
+      let coWins = 0;
+      let coLosses = 0;
+      let coDraws = 0;
+      
+      for (const match of matches) {
+        if (match.ourScore === null || match.oppScore === null) continue;
+        const lineup = matchLineupsMap[match.id] ?? [];
+        
+        // 나와 동료가 둘 다 이 경기에 참여했는지 확인
+        const myEntry = lineup.find((e) => e.membershipId === myMembershipId);
+        const partnerEntry = lineup.find((e) => e.membershipId === player.membershipId);
+        
+        if (!myEntry || !partnerEntry) continue; // 둘 중 한 명이라도 불참했으면 패스
+        
+        // 같은 팀(RED 또는 BLUE)으로 같이 뛰었을 때만 상성으로 집계
+        if (myEntry.teamNumber === partnerEntry.teamNumber) {
+          coMatches += 1;
+          const isWin = match.ourScore > match.oppScore;
+          const isDraw = match.ourScore === match.oppScore;
+          
+          if (isDraw) {
+            coDraws += 1;
+          } else {
+            const isTeam1 = myEntry.teamNumber === 1;
+            const isMyWin = isWin ? isTeam1 : !isTeam1;
+            if (isMyWin) coWins += 1;
+            else coLosses += 1;
+          }
+        }
+      }
+      
+      if (coMatches > 0) {
+        partnerStats.push({
+          nickname: player.nickname,
+          matches: coMatches,
+          wins: coWins,
+          losses: coLosses,
+          draws: coDraws,
+          rate: Math.round((coWins / coMatches) * 100)
+        });
+      }
+    }
+    
+    // 승률 및 함께 뛴 경기 수 순으로 내림차순 정렬
+    const sortedBest = [...partnerStats].sort((a, b) => b.rate - a.rate || b.matches - a.matches);
+    const sortedWorst = [...partnerStats].sort((a, b) => a.rate - b.rate || a.matches - b.matches);
+    
+    // 베스트와 워스트 리스트 추출 (최대 3명씩)
+    const bestCandidates = sortedBest.filter((p) => p.rate >= 50);
+    const worstCandidates = sortedWorst.filter((p) => p.rate < 50);
+    
+    // 설명 템플릿 매핑
+    const bestDescs = [
+      '완벽한 티키타카 빌드업 듀오 ⚽',
+      '공수 전환의 마스터클래스 ⚡',
+      '눈빛만 봐도 통하는 연계 시너지 🔥'
+    ];
+    
+    const worstDescs = [
+      '동선 오버랩으로 역습 자주 허용 ⚠️',
+      '패스 미스 빌드업 불안 요소 노출 📉',
+      '공격 템포 조율 어긋남 발생 🧩'
+    ];
+    
+    const best = bestCandidates.slice(0, 3).map((item, idx) => ({
+      partner: item.nickname,
+      desc: bestDescs[idx % bestDescs.length],
+      rate: item.rate,
+      stats: `${item.matches}경기 ${item.wins}승 ${item.losses}패`
+    }));
+    
+    const worst = worstCandidates.slice(0, 3).map((item, idx) => ({
+      partner: item.nickname,
+      desc: worstDescs[idx % worstDescs.length],
+      rate: item.rate,
+      stats: `${item.matches}경기 ${item.wins}승 ${item.losses}패`
+    }));
+    
+    return { best, worst };
+  }, [rows, matches, matchLineupsMap, myMembershipId]);
+
+  // 경기장 승률 모의 데이터 및 동적 결합
+  const stadiums = dynamicStadiumStats.length > 0 ? dynamicStadiumStats.map((st, i) => ({
+    name: st.name,
+    matches: st.matches,
+    wins: st.wins,
+    draws: st.draws,
+    losses: st.losses,
+    rate: st.rate,
+    color: st.rate >= 75 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : st.rate >= 50 ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : st.rate >= 30 ? 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]' : 'bg-gray-500 shadow-[0_0_8px_rgba(107,114,128,0.5)]'
+  })) : [
     { name: 'FC 어반 홈피치 (H)', matches: 5, wins: 4, draws: 1, losses: 0, rate: 80, color: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' },
     { name: '잠실 FS 돔구장 (A)', matches: 4, wins: 2, draws: 1, losses: 1, rate: 50, color: 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' },
     { name: '구피 시니어 구장 (H)', matches: 3, wins: 2, draws: 0, losses: 1, rate: 67, color: 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]' },
     { name: '하남 풋살 스타디움 (A)', matches: 2, wins: 0, draws: 2, losses: 0, rate: 0, color: 'bg-gray-500 shadow-[0_0_8px_rgba(107,114,128,0.5)]' }
   ];
 
-  // 베스트/워스트 케미 조합 모의 데이터
-  const bestChemistry = [
-    { players: ['최광수', '박영철'], desc: '공수 전환의 마스터클래스', stats: '6경기 5승 1패', rate: 83 },
-    { players: ['이영식', '김영수'], desc: '완벽한 티키타카 빌드업 듀오', stats: '5경기 4승 1무', rate: 80 },
-    { players: ['정상철', '한민수'], desc: '철벽의 통곡의 벽 수비 파트너', stats: '4경기 3승 1무', rate: 75 }
+  // 베스트/워스트 케미 조합 동적 결합
+  const bestChemistry = dynamicChemistry.best.length > 0 ? dynamicChemistry.best : [
+    { partner: '최광수 & 박영철', desc: '공수 전환의 마스터클래스', stats: '6경기 5승 1패', rate: 83 },
+    { partner: '이영식 & 김영수', desc: '완벽한 티키타카 빌드업 듀오', stats: '5경기 4승 1무', rate: 80 },
+    { partner: '정상철 & 한민수', desc: '철벽의 통곡의 벽 수비 파트너', stats: '4경기 3승 1무', rate: 75 }
   ];
 
-  const worstChemistry = [
-    { players: ['김영수', '정상철'], desc: '동선 오버랩으로 역습 자주 허용', stats: '5경기 1승 4패', rate: 20 },
-    { players: ['박영철', '한민수'], desc: '패스 미스 빌드업 불안 요소 노출', stats: '4경기 1승 1무 2패', rate: 25 }
+  const worstChemistry = dynamicChemistry.worst.length > 0 ? dynamicChemistry.worst : [
+    { partner: '김영수 & 정상철', desc: '동선 오버랩으로 역습 자주 허용', stats: '5경기 1승 4패', rate: 20 },
+    { partner: '박영철 & 한민수', desc: '패스 미스 빌드업 불안 요소 노출', stats: '4경기 1승 1무 2패', rate: 25 }
   ];
-
-  // 랭킹 리스트 데이터
-  const rows = records?.rankingRows ?? [];
 
   // 각 선수별 매트릭스 실시간 승무패 집계 (청백전에서 RED vs BLUE로 나누어 승리/패배 지정)
   const playerMatrixStats = useMemo(() => {
@@ -1373,11 +1523,13 @@ function DesktopDetailStatsPanel() {
               🔥 최강 시너지 듀오 (Best Chemistry)
             </h3>
             <div className="grid grid-cols-1 gap-2.5">
-              {bestChemistry.map((bc, i) => (
+              {bestChemistry.map((bc: any, i: number) => (
                 <div key={i} className="bg-white/5 border border-white/5 rounded-2xl p-3 flex justify-between items-center">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-black text-white">{bc.players.join(' & ')}</span>
+                      <span className="text-[11px] font-black text-white">
+                        {bc.partner.includes('&') ? bc.partner : `나 & ${bc.partner}`}
+                      </span>
                       <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">Best</span>
                     </div>
                     <p className="text-[10px] text-gray-500 font-bold mt-1">{bc.desc}</p>
@@ -1397,11 +1549,13 @@ function DesktopDetailStatsPanel() {
               ⚠️ 상성 보완 조합 (Chemistry Warning)
             </h3>
             <div className="grid grid-cols-1 gap-2.5">
-              {worstChemistry.map((wc, i) => (
+              {worstChemistry.map((wc: any, i: number) => (
                 <div key={i} className="bg-white/5 border border-white/5 rounded-2xl p-3 flex justify-between items-center">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-black text-white">{wc.players.join(' & ')}</span>
+                      <span className="text-[11px] font-black text-white">
+                        {wc.partner.includes('&') ? wc.partner : `나 & ${wc.partner}`}
+                      </span>
                       <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20 font-bold">Warning</span>
                     </div>
                     <p className="text-[10px] text-gray-500 font-bold mt-1">{wc.desc}</p>
