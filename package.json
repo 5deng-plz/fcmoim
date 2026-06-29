@@ -33,7 +33,7 @@
     "db:local:reset": "npx supabase db reset --local",
     "db:local:status": "npx supabase status",
     "db:local:seed-demo": "node scripts/with-local-supabase-env.mjs node scripts/rebuild-local-demo-data.mjs",
-    "test:api:local": "node scripts/with-local-supabase-env.mjs npx vitest run tests/local-supabase-api.test.ts",
+    "test:api:local": "node scripts/with-local-supabase-env.mjs npx vitest run tests/local-supabase-api.test.ts tests/local-multi-club-readiness.test.ts",
     "verify:db:local": "npm run db:local:reset && npm run qa:seed-auth:local && npm run db:local:seed-demo && npm run test:api:local",
     "verify:baseline": "npm run harness:validate && npm run lint && npm run typecheck && npm run test",
     "verify:harness": "npm run verify:baseline && npm run db:check",

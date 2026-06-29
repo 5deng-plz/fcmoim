@@ -66,6 +66,7 @@ function assertSqlFilesAreTracked(sqlFiles) {
 }
 
 function parseSqlSchema(sql) {
+  const normalizedSql = sql.replace(/"([a-z_][\w]*)"/gi, '$1');
   const tables = new Map();
   const enumValues = new Map();
 
@@ -79,18 +80,18 @@ function parseSqlSchema(sql) {
     return enumValues.get(enumName);
   };
 
-  for (const match of sql.matchAll(/create\s+type\s+(?:public\.)?([a-z_][\w]*)\s+as\s+enum\s*\(([\s\S]*?)\);/gi)) {
+  for (const match of normalizedSql.matchAll(/create\s+type\s+(?:public\.)?([a-z_][\w]*)\s+as\s+enum\s*\(([\s\S]*?)\);/gi)) {
     const values = ensureEnum(match[1]);
     for (const value of match[2].matchAll(/'((?:''|[^'])*)'/g)) {
       values.add(value[1].replaceAll("''", "'"));
     }
   }
 
-  for (const match of sql.matchAll(/alter\s+type\s+(?:public\.)?([a-z_][\w]*)\s+add\s+value\s+(?:if\s+not\s+exists\s+)?'((?:''|[^'])*)'/gi)) {
+  for (const match of normalizedSql.matchAll(/alter\s+type\s+(?:public\.)?([a-z_][\w]*)\s+add\s+value\s+(?:if\s+not\s+exists\s+)?'((?:''|[^'])*)'/gi)) {
     ensureEnum(match[1]).add(match[2].replaceAll("''", "'"));
   }
 
-  for (const match of sql.matchAll(/create\s+table\s+(?:if\s+not\s+exists\s+)?(?:public\.)?([a-z_][\w]*)\s*\(([\s\S]*?)\);/gi)) {
+  for (const match of normalizedSql.matchAll(/create\s+table\s+(?:if\s+not\s+exists\s+)?(?:public\.)?([a-z_][\w]*)\s*\(([\s\S]*?)\);/gi)) {
     const columns = ensureTable(match[1]);
     for (const fragment of splitTopLevel(match[2])) {
       const trimmed = fragment.trim();
@@ -102,7 +103,7 @@ function parseSqlSchema(sql) {
     }
   }
 
-  for (const match of sql.matchAll(/alter\s+table\s+(?:public\.)?([a-z_][\w]*)\s+([\s\S]*?);/gi)) {
+  for (const match of normalizedSql.matchAll(/alter\s+table\s+(?:public\.)?([a-z_][\w]*)\s+([\s\S]*?);/gi)) {
     const columns = ensureTable(match[1]);
     for (const columnMatch of match[2].matchAll(/add\s+column\s+(?:if\s+not\s+exists\s+)?"?([a-z_][\w]*)"?/gi)) {
       columns.add(columnMatch[1]);
@@ -148,6 +149,7 @@ function splitTopLevel(input) {
 const sqlFiles = walk('supabase')
   .filter((file) => file.endsWith('.sql'))
   .sort();
+const migrationFiles = sqlFiles.filter((file) => file.startsWith(`supabase${path.sep}migrations${path.sep}`));
 
 if (sqlFiles.length === 0) {
   errors.push('No Supabase SQL files found under supabase/.');
@@ -155,8 +157,38 @@ if (sqlFiles.length === 0) {
   assertSqlFilesAreTracked(sqlFiles);
 }
 
+if (migrationFiles.length !== 1) {
+  errors.push(`Expected exactly one executable migration baseline, found ${migrationFiles.length}.`);
+}
+if (exists('supabase/stage1_init.sql')) {
+  errors.push('Remove duplicate supabase/stage1_init.sql; migrations are the only schema entrypoint.');
+}
+
 const sql = sqlFiles.map((file) => read(file)).join('\n\n');
+const migrationSql = migrationFiles.map((file) => read(file)).join('\n\n');
 const schema = parseSqlSchema(sql);
+
+for (const requiredSql of [
+  `00000000-0000-0000-0000-000000000001`,
+  `INSERT INTO "storage"."buckets"`,
+  `INSERT INTO "public"."trait_catalog"`,
+  `INSERT INTO "public"."reward_badges"`,
+  `CREATE OR REPLACE FUNCTION "public"."create_club_with_owner"`,
+]) {
+  if (!migrationSql.includes(requiredSql)) {
+    errors.push(`Missing migration baseline contract: ${requiredSql}`);
+  }
+}
+
+for (const forbiddenSql of [
+  'clubs_fc_guppy_singleton_check',
+  'team_memberships_fc_guppy_check',
+  'current_team_id()',
+]) {
+  if (migrationSql.includes(forbiddenSql)) {
+    errors.push(`Forbidden permanent single-team database contract: ${forbiddenSql}`);
+  }
+}
 
 for (const contract of requiredContracts) {
   if (contract.type === 'column') {
