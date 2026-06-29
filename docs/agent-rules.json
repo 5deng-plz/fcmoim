@@ -184,6 +184,9 @@
   "scopeControlPolicy": {
     "uiSensitivePaths": ["src/app/**", "src/components/**", "src/stores/**", "public/**"]
   },
+  "roleBoundaries": {
+    "config": "docs/agent-role-boundaries.json"
+  },
   "loopPolicy": {
     "maxGuardRetries": 3,
     "maxReviewRounds": 3,

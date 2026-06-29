@@ -42,13 +42,9 @@ execFileSync('git', ['worktree', 'add', '-b', branch, target, 'HEAD'], {
   cwd: root,
   stdio: 'inherit',
 });
-const sourceModules = path.join(root, 'node_modules');
-const targetModules = path.join(target, 'node_modules');
-if (fs.existsSync(sourceModules) && !fs.existsSync(targetModules)) {
-  fs.symlinkSync(sourceModules, targetModules, 'dir');
-}
 console.log(`Created ${role} worktree: ${target}`);
 console.log(`Branch: ${branch}`);
+console.log(`Next: cd ${target} && npm ci`);
 
 function getArg(name) {
   const prefix = `--${name}=`;

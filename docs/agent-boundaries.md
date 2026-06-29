@@ -30,7 +30,7 @@ npm run agents:worktree:create -- --role=agy --task=<task-slug>
 - 대상 경로는 저장소 형제 디렉터리 `fcmoim-codex`, `fcmoim-agy`입니다.
 - branch 이름은 `agent/codex/<task-slug>`, `agent/agy/<task-slug>`입니다.
 - 기존 worktree, branch 또는 dirty target은 helper가 덮어쓰지 않습니다.
-- 최초 생성 시 root `node_modules`가 있으면 worktree에 symlink해 중복 설치를 피합니다.
+- 최초 생성 후 각 worktree에서 `npm ci`를 실행합니다. Turbopack 호환을 위해 `node_modules`를 다른 worktree에서 symlink하지 않습니다.
 - 다음 작업은 기존 worktree에서 main을 fast-forward한 뒤 새 `agent/<role>/<task>` branch를 생성합니다.
 - 두 Agent는 같은 branch나 worktree에서 동시에 작업하지 않습니다.
 
