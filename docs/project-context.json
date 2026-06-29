@@ -1,118 +1,134 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 117,
-  "updatedAt": "2026-06-29T02:39:00+09:00",
+  "updateVersion": 118,
+  "updatedAt": "2026-06-29T09:15:00+09:00",
   "updatedBy": "codex-backend",
-  "currentPhase": "backend-single-team-domain-repository-cleanup",
+  "currentPhase": "multi-club-ready-backend-baseline",
   "activeWork": {
-    "taskId": "backend-single-team-phase2",
-    "status": "ready",
+    "taskId": "backend-multi-club-readiness-phase1-3",
+    "status": "blocked",
     "designMode": "maintenance",
-    "baselineCommit": "6ea8411",
+    "baselineCommit": "9b139c9",
     "changedFiles": [
+      ".env.local.example",
       "package.json",
-      "scripts/local-demo-fixtures.mjs",
-      "scripts/rebuild-local-demo-data.mjs",
-      "scripts/seed-local-demo-data.mjs",
-      "scripts/seed-qa-auth-users.mjs",
+      "scripts/check-supabase-contract.mjs",
       "src/app/api/**",
+      "src/config/server-team.ts",
       "src/services/**",
-      "src/types/domain.ts",
-      "tests/backend-single-team-domain-contract.test.ts",
-      "tests/local-supabase-api.test.ts",
-      "tests/*-service.test.ts",
-      "tests/account-membership-flows.test.ts",
-      "tests/match-result-transaction.test.ts",
-      "docs/handoff/backend-single-team-phase2-frontend.md",
+      "supabase/**",
+      "tests/server-team.test.ts",
+      "tests/single-team-api-contract.test.ts",
+      "tests/local-multi-club-readiness.test.ts",
+      "docs/README.md",
+      "docs/decisions.md",
+      "docs/handoff/multi-club-readiness-frontend.md",
+      "docs/plan/backend-single-team-cleanup/**",
       "docs/project-context.json"
     ],
     "changedSurfaces": [
       "api",
       "services",
+      "data",
       "tests",
+      "infra",
       "scripts",
       "docs"
     ],
     "allowedPaths": [
+      ".env.local.example",
       "package.json",
-      "scripts/local-demo-fixtures.mjs",
-      "scripts/rebuild-local-demo-data.mjs",
-      "scripts/seed-local-demo-data.mjs",
-      "scripts/seed-qa-auth-users.mjs",
+      "scripts/check-supabase-contract.mjs",
       "src/app/api/**",
+      "src/config/server-team.ts",
       "src/services/**",
-      "src/types/domain.ts",
-      "tests/backend-single-team-domain-contract.test.ts",
-      "tests/local-supabase-api.test.ts",
-      "tests/account-membership-flows.test.ts",
-      "tests/club-admin-service.test.ts",
-      "tests/comments-service.test.ts",
-      "tests/feed-posts-service.test.ts",
-      "tests/match-feedback-service.test.ts",
-      "tests/match-result-transaction.test.ts",
-      "tests/matches-service.test.ts",
-      "tests/public-clubs-service.test.ts",
-      "tests/records-service.test.ts",
-      "tests/schedule-polls-service.test.ts",
-      "docs/handoff/backend-single-team-phase2-frontend.md",
+      "supabase/**",
+      "tests/server-team.test.ts",
+      "tests/single-team-api-contract.test.ts",
+      "tests/local-multi-club-readiness.test.ts",
+      "docs/README.md",
+      "docs/decisions.md",
+      "docs/handoff/multi-club-readiness-frontend.md",
+      "docs/plan/backend-single-team-cleanup/**",
       "docs/project-context.json"
     ],
     "evidence": {
-      "phase1Prerequisite": {
+      "productModeContract": {
         "status": "passed",
-        "provider": "Git, Vitest, Harness",
-        "command": "git merge-base --is-ancestor dd787d4 HEAD && npx vitest run ... && npm run harness:guard:standard",
-        "summary": "1단계 커밋 존재, Backend 계약 41개 및 Harness standard 통과."
+        "provider": "TypeScript and Vitest",
+        "command": "npm run typecheck && npx vitest run tests/server-team.test.ts tests/single-team-api-contract.test.ts",
+        "summary": "기본 single mode, 404 feature gate, fixed/membership provider 승인·거부 계약 9개 통과."
       },
       "baseline": {
         "status": "passed",
         "provider": "Harness, ESLint, TypeScript, Vitest",
-        "command": "npm run verify:baseline",
-        "summary": "25 test files passed, 239 tests passed, 47 Local API tests skipped."
+        "command": "npm run verify",
+        "summary": "Harness validate, lint 0 errors, typecheck, 25 files 242 tests, DB contract와 Local Supabase 검증 통과."
       },
       "localDatabase": {
         "status": "passed",
         "provider": "Local Supabase CLI and PostgreSQL",
-        "command": "npm run verify:db:local; docker exec ... psql ...",
-        "summary": "Reset 및 단일 seed 성공. clubs=1 FC Guppy, seasons=1, memberships=6, Local API 17 tests passed after poll DTO fix."
+        "command": "npm run verify:db:local; npx supabase db lint --local --fail-on error; SQL RLS/GRANT audit",
+        "summary": "단일 baseline reset 성공, Local API 17개와 multi-club 격리 4개 통과, public 25 tables RLS enabled, schema lint 오류 0."
       },
-      "domainContract": {
+      "migrationBaseline": {
         "status": "passed",
-        "provider": "Vitest",
-        "command": "npx vitest run tests/backend-single-team-domain-contract.test.ts",
-        "summary": "TeamContext 주입, service 공개 clubId 제거, repository 실제 구현 분리, legacy seed 제거 계약 4개 통과."
+        "provider": "Supabase CLI and tracked SQL",
+        "command": "npx supabase migration squash --local --version 20260629000427; npm run db:local:reset; npm run db:check",
+        "summary": "실행 migration 1개. FC Guppy, 24 traits, reward badge, club-logos/feed-media DML 포함. 영구 singleton constraint 없음."
       },
-      "repositorySplit": {
+      "multiClubIsolation": {
         "status": "passed",
-        "provider": "TypeScript AST dependency closure and Vitest",
-        "command": "npm run typecheck && npx vitest run tests/backend-single-team-domain-contract.test.ts",
-        "summary": "implementation.ts 제거. team, membership, schedule, records, community가 각 factory와 필요한 로컬 DB row type/helper를 직접 소유하고 index가 조합."
+        "provider": "Local Supabase API and RLS",
+        "command": "npx vitest run tests/local-multi-club-readiness.test.ts",
+        "summary": "service-role 두 번째 club 생성, 비회원 cross-club 차단, 동일 account 복수 approved membership 접근, authenticated 직접 club insert 거부 4개 통과."
       },
       "browserRuntime": {
         "status": "passed",
         "provider": "npm run dev, in-app browser, server log",
-        "command": "npm run dev; open http://localhost:3000/",
-        "summary": "dev server ready. 새 브라우저 탭에서 FC Guppy 로그인 first screen 렌더, browser console error/warn 0건, server log의 GET / 및 /api/dev-test 200 확인. package.json 변경은 legacy DB seed script 제거에 따른 runtime command 정리이며 앱 dependency/startup 변경은 없음."
+        "command": "유지 중인 npm run dev; reload http://localhost:3000/?tab=home",
+        "summary": "dev server 유지 상태에서 FC Guppy 로그인 first screen 렌더, browser console error/warn 0건, server log의 GET / 및 /api/dev-test 200. package.json 변경은 Local API test script에 multi-club RLS 테스트 파일을 추가한 검증 범위 변경이며 dependency, app startup, production runtime module에는 영향 없음."
+      },
+      "remoteMigration": {
+        "status": "blocked",
+        "provider": "Supabase CLI",
+        "command": "npx supabase migration list --linked",
+        "summary": "로컬 project link가 없어 project ref를 확인할 수 없음. production push와 history repair는 수행하지 않음."
+      },
+      "harnessFull": {
+        "status": "passed",
+        "provider": "Agent Harness",
+        "command": "npm run harness:guard:full",
+        "summary": "validate, token sync, design, diff, baseline, DB contract, evidence guard 전체 통과."
       }
     },
     "retrospective": {
       "issuesObserved": [
-        "Repository 내부 teamId가 schedule poll 응답에 노출됐으며 Local API 테스트로 발견 후 제거.",
-        "기존 탭의 stale Supabase refresh token을 새 탭 분리로 격리하고 정상 첫 화면을 검증."
+        "초기 Phase 3 계획이 출시 데이터 한 팀과 영구 singleton schema를 혼동해 multi-club 확장성을 차단할 뻔함.",
+        "schema-only squash가 launch와 catalog DML을 생략해 baseline에 명시적으로 복원함."
       ],
-      "missedEvidence": [],
+      "missedEvidence": [
+        "linked project identity, remote history, linked schema diff는 project link 부재로 수집하지 못함."
+      ],
       "harnessImprovementProposal": [],
       "promotionRecommendation": "none",
-      "reason": "프로젝트 로컬 구현 및 stale 인증 상태로 재사용 가능한 Harness 정책 변경 대상이 아님."
+      "reason": "제품의 장기 tenant 전략과 project 연결 상태는 프로젝트 로컬 결정이며 재사용 Harness 변경 대상이 아님."
     },
-    "reviewStatus": "ready",
+    "reviewStatus": "blocked",
     "loopCounters": {
       "reviewRounds": 1,
-      "guardRetries": 0
+      "guardRetries": 1
     }
   },
   "workstreams": [
+    {
+      "id": "multi-club-ready-backend-baseline",
+      "status": "blocked",
+      "completedAt": null,
+      "commit": "fd60f75",
+      "blocker": "Supabase linked project ref is not configured; remote history and linked diff remain unverified."
+    },
     {
       "id": "single-team-api-contract",
       "status": "complete",
@@ -162,8 +178,17 @@
       "commit": "a1ede07bc849a82749853401aeacc70dc0054fc3"
     }
   ],
-  "blockers": [],
+  "blockers": [
+    {
+      "id": "supabase-project-link-missing",
+      "status": "blocked",
+      "command": "npx supabase migration list --linked",
+      "message": "Cannot find project ref. Have you run supabase link?",
+      "impact": "Production migration push, history repair, remote row count and linked schema diff are intentionally not executed."
+    }
+  ],
   "nextActions": [
-    "03_database_singleton_and_migration_squash.md에 따라 Phase 3 DB singleton 및 migration squash를 진행합니다."
+    "운영 Supabase project identity와 link를 별도 확인합니다.",
+    "로컬과 동일한 baseline version 20260629000427을 운영 schema에 적용한 뒤 history repair와 linked diff를 수행합니다."
   ]
 }
