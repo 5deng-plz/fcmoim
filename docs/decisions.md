@@ -60,7 +60,9 @@ This file starts clean for `prototype v0.1`.
 
 ### FC Guppy Single-Team Backend
 
-- FC Guppy is the only product team; users cannot create, browse, or switch teams.
-- The server-only `TeamContext` owns the canonical FC Guppy UUID and is the sole Backend data-scope authority.
+- FC Guppy is the only launch-visible product team while `MULTI_CLUB_ENABLED` is disabled.
+- Database schema, RLS, and repository boundaries remain multi-club capable; launch data is not a permanent singleton constraint.
+- A server-only `TeamContextProvider` resolves the data scope. Single mode uses the canonical FC Guppy UUID, while multi mode requires a public team or approved membership.
 - Legacy `clubId` request fields and club-shaped response fields are compatibility adapters only and must not influence authorization or repository scope.
-- `clubs` and `club_id` remain internal persistence anchors until the dedicated schema cleanup phase.
+- Club creation RPC remains service-role only, and its API surface returns 404 while the multi-club feature flag is disabled.
+- `clubs`, `club_id`, slug, visibility, and creator metadata are durable tenant boundaries.

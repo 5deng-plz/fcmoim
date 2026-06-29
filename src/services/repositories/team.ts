@@ -9,6 +9,7 @@ import type { MatchEventType, MatchStatus, TeamProfile, TeamProfileDetail, Publi
 import type { ClubAdminRepositories } from '../club-admin';
 
 import type { PublicClubRepositories } from '../public-clubs';
+import type { TeamContextAuthorizer } from '../../config/server-team';
 
 type PublicClubDbRow = {
   id: string;
@@ -51,6 +52,38 @@ type PublicMembershipCountDbRow = {
 type PublicAttendanceDbRow = {
   match_id: string;
 };
+
+export function createSupabaseTeamContextAuthorizer(
+  supabase: SupabaseClient,
+): TeamContextAuthorizer {
+  return {
+    async isPublicTeam(teamId) {
+      const { data, error } = await supabase
+        .from('clubs')
+        .select('id')
+        .eq('id', teamId)
+        .eq('is_public', true)
+        .maybeSingle<{ id: string }>();
+      if (error) {
+        throw new AppError('internal_error', 'Failed to authorize public team.', { cause: error });
+      }
+      return Boolean(data);
+    },
+    async hasApprovedMembership(accountId, teamId) {
+      const { data, error } = await supabase
+        .from('team_memberships')
+        .select('id')
+        .eq('account_id', accountId)
+        .eq('club_id', teamId)
+        .eq('status', 'approved')
+        .maybeSingle<{ id: string }>();
+      if (error) {
+        throw new AppError('internal_error', 'Failed to authorize team membership.', { cause: error });
+      }
+      return Boolean(data);
+    },
+  };
+}
 
 export function createSupabasePublicClubRepositories(
   supabase: SupabaseClient,

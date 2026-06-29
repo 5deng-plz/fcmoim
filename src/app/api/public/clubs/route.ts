@@ -1,18 +1,24 @@
 import { appErrorResponse } from '../../../../types/api';
-import { getServerTeamContext } from '../../../../config/server-team';
 import { createSupabaseServerClient } from '../../../../lib/supabase-server';
 import { createPublicClubService } from '../../../../services/public-clubs';
 import { createSupabasePublicClubRepositories } from '../../../../services/repositories';
+import { resolveTeamContext } from '../../../../services/team-context';
 
-export async function GET() {
+export async function GET(request?: Request) {
   try {
     const supabase = await createSupabaseServerClient();
+    const requestedTeamId = request
+      ? new URL(request.url).searchParams.get('clubId')
+      : null;
+    const teamContext = await resolveTeamContext(supabase, {
+      requestedTeamId,
+      access: 'public',
+    });
     const service = createPublicClubService(
       createSupabasePublicClubRepositories(supabase),
-      getServerTeamContext(),
+      teamContext,
     );
 
-    const teamContext = getServerTeamContext();
     const team = await service.getTeam();
     return Response.json([{
       id: teamContext.teamId,
