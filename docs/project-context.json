@@ -1,127 +1,115 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 118,
-  "updatedAt": "2026-06-29T09:15:00+09:00",
-  "updatedBy": "codex-backend",
-  "currentPhase": "multi-club-ready-backend-baseline",
+  "updateVersion": 119,
+  "updatedAt": "2026-06-29T10:00:00+09:00",
+  "updatedBy": "codex-infra",
+  "currentPhase": "codex-agy-shared-environment",
   "activeWork": {
-    "taskId": "backend-multi-club-readiness-phase1-3",
-    "status": "blocked",
+    "taskId": "codex-agy-role-boundaries",
+    "status": "ready",
     "designMode": "maintenance",
-    "baselineCommit": "9b139c9",
+    "baselineCommit": "134685c",
     "changedFiles": [
-      ".env.local.example",
+      "AGENT.md",
+      "AGENTS.md",
+      ".agents/AGENTS.md",
+      ".agents/rules/agy-frontend-design.md",
+      ".agents/scripts/guard-role.mjs",
+      ".agents/scripts/role-boundaries.mjs",
+      ".agents/scripts/validate-harness.mjs",
+      ".agents/fixtures/negative-fixtures.json",
       "package.json",
-      "scripts/check-supabase-contract.mjs",
-      "src/app/api/**",
-      "src/config/server-team.ts",
-      "src/services/**",
-      "supabase/**",
-      "tests/server-team.test.ts",
-      "tests/single-team-api-contract.test.ts",
-      "tests/local-multi-club-readiness.test.ts",
+      "scripts/setup-agent-worktree.mjs",
       "docs/README.md",
-      "docs/decisions.md",
-      "docs/handoff/multi-club-readiness-frontend.md",
-      "docs/plan/backend-single-team-cleanup/**",
+      "docs/agent-boundaries.md",
+      "docs/agent-role-boundaries.json",
+      "docs/handoff/TEMPLATE.md",
       "docs/project-context.json"
     ],
     "changedSurfaces": [
-      "api",
-      "services",
-      "data",
-      "tests",
       "infra",
       "scripts",
       "docs"
     ],
     "allowedPaths": [
-      ".env.local.example",
+      "AGENT.md",
+      "AGENTS.md",
+      ".agents/AGENTS.md",
+      ".agents/rules/agy-frontend-design.md",
+      ".agents/scripts/guard-role.mjs",
+      ".agents/scripts/role-boundaries.mjs",
+      ".agents/scripts/validate-harness.mjs",
+      ".agents/fixtures/negative-fixtures.json",
       "package.json",
-      "scripts/check-supabase-contract.mjs",
-      "src/app/api/**",
-      "src/config/server-team.ts",
-      "src/services/**",
-      "supabase/**",
-      "tests/server-team.test.ts",
-      "tests/single-team-api-contract.test.ts",
-      "tests/local-multi-club-readiness.test.ts",
+      "scripts/setup-agent-worktree.mjs",
       "docs/README.md",
-      "docs/decisions.md",
-      "docs/handoff/multi-club-readiness-frontend.md",
-      "docs/plan/backend-single-team-cleanup/**",
+      "docs/agent-boundaries.md",
+      "docs/agent-role-boundaries.json",
+      "docs/handoff/TEMPLATE.md",
       "docs/project-context.json"
     ],
     "evidence": {
-      "productModeContract": {
+      "roleInstructions": {
         "status": "passed",
-        "provider": "TypeScript and Vitest",
-        "command": "npm run typecheck && npx vitest run tests/server-team.test.ts tests/single-team-api-contract.test.ts",
-        "summary": "기본 single mode, 404 feature gate, fixed/membership provider 승인·거부 계약 9개 통과."
+        "provider": "Codex AGENTS and Antigravity rules",
+        "command": "manual inspection of AGENTS.md and .agents/rules/agy-frontend-design.md",
+        "summary": "Codex Backend/Infra와 Agy Frontend/Design 역할, 교차 handoff와 상태 파일 통합 규칙을 지속 지침으로 분리."
+      },
+      "roleGuards": {
+        "status": "passed",
+        "provider": "Agent Harness",
+        "command": "npm run harness:test; npm run guard:role:codex; npm run guard:role:agy",
+        "summary": "22개 Harness fixture 통과, Codex 변경 14개 경로 허용, clean Agy worktree 역할 guard 통과."
+      },
+      "worktrees": {
+        "status": "passed",
+        "provider": "Git worktree and npm",
+        "command": "npm run agents:worktree:create -- --role=<role> --task=shared-environment; npm ci",
+        "summary": "fcmoim-codex와 fcmoim-agy worktree 및 agent별 branch 생성, 각 worktree 독립 node_modules 설치 완료."
       },
       "baseline": {
         "status": "passed",
         "provider": "Harness, ESLint, TypeScript, Vitest",
-        "command": "npm run verify",
-        "summary": "Harness validate, lint 0 errors, typecheck, 25 files 242 tests, DB contract와 Local Supabase 검증 통과."
-      },
-      "localDatabase": {
-        "status": "passed",
-        "provider": "Local Supabase CLI and PostgreSQL",
-        "command": "npm run verify:db:local; npx supabase db lint --local --fail-on error; SQL RLS/GRANT audit",
-        "summary": "단일 baseline reset 성공, Local API 17개와 multi-club 격리 4개 통과, public 25 tables RLS enabled, schema lint 오류 0."
-      },
-      "migrationBaseline": {
-        "status": "passed",
-        "provider": "Supabase CLI and tracked SQL",
-        "command": "npx supabase migration squash --local --version 20260629000427; npm run db:local:reset; npm run db:check",
-        "summary": "실행 migration 1개. FC Guppy, 24 traits, reward badge, club-logos/feed-media DML 포함. 영구 singleton constraint 없음."
-      },
-      "multiClubIsolation": {
-        "status": "passed",
-        "provider": "Local Supabase API and RLS",
-        "command": "npx vitest run tests/local-multi-club-readiness.test.ts",
-        "summary": "service-role 두 번째 club 생성, 비회원 cross-club 차단, 동일 account 복수 approved membership 접근, authenticated 직접 club insert 거부 4개 통과."
+        "command": "npm run verify:baseline && npm run db:check",
+        "summary": "Harness validation, lint 0 errors, typecheck, 25 files 242 tests와 DB contract 통과."
       },
       "browserRuntime": {
         "status": "passed",
-        "provider": "npm run dev, in-app browser, server log",
-        "command": "유지 중인 npm run dev; reload http://localhost:3000/?tab=home",
-        "summary": "dev server 유지 상태에서 FC Guppy 로그인 first screen 렌더, browser console error/warn 0건, server log의 GET / 및 /api/dev-test 200. package.json 변경은 Local API test script에 multi-club RLS 테스트 파일을 추가한 검증 범위 변경이며 dependency, app startup, production runtime module에는 영향 없음."
-      },
-      "remoteMigration": {
-        "status": "blocked",
-        "provider": "Supabase CLI",
-        "command": "npx supabase migration list --linked",
-        "summary": "로컬 project link가 없어 project ref를 확인할 수 없음. production push와 history repair는 수행하지 않음."
+        "provider": "npm run dev:agy, in-app browser, server log",
+        "command": "npm run dev:agy; open http://localhost:3001/?tab=home",
+        "summary": "Agy dev server 포트 3001 ready, FC Guppy first screen 렌더, browser console error/warn 0건, server log의 GET / 및 /api/dev-test 200. package.json 변경은 agent role guard, worktree helper와 Agy dev-server script 추가이며 기존 port 3000 startup과 production runtime dependency에는 영향 없음."
       },
       "harnessFull": {
         "status": "passed",
         "provider": "Agent Harness",
         "command": "npm run harness:guard:full",
-        "summary": "validate, token sync, design, diff, baseline, DB contract, evidence guard 전체 통과."
+        "summary": "validate, token sync, design, diff, baseline, DB contract와 evidence guard 전체 통과."
       }
     },
     "retrospective": {
       "issuesObserved": [
-        "초기 Phase 3 계획이 출시 데이터 한 팀과 영구 singleton schema를 혼동해 multi-club 확장성을 차단할 뻔함.",
-        "schema-only squash가 launch와 catalog DML을 생략해 baseline에 명시적으로 복원함."
+        "Turbopack이 worktree 밖 node_modules symlink를 거부해 worktree별 npm ci 방식으로 수정.",
+        "역할 경로 설정을 agent-rules에 직접 넣으면 200줄 제한을 초과해 별도 JSON으로 분리."
       ],
-      "missedEvidence": [
-        "linked project identity, remote history, linked schema diff는 project link 부재로 수집하지 못함."
-      ],
+      "missedEvidence": [],
       "harnessImprovementProposal": [],
       "promotionRecommendation": "none",
-      "reason": "제품의 장기 tenant 전략과 project 연결 상태는 프로젝트 로컬 결정이며 재사용 Harness 변경 대상이 아님."
+      "reason": "역할 guard는 구현 완료됐고 추가 재사용 Harness 승격 제안이 필요하지 않음."
     },
-    "reviewStatus": "blocked",
+    "reviewStatus": "ready",
     "loopCounters": {
       "reviewRounds": 1,
-      "guardRetries": 1
+      "guardRetries": 2
     }
   },
   "workstreams": [
+    {
+      "id": "codex-agy-role-boundaries",
+      "status": "complete",
+      "completedAt": "2026-06-29T10:00:00+09:00",
+      "commit": "ce9e6fa"
+    },
     {
       "id": "multi-club-ready-backend-baseline",
       "status": "blocked",
@@ -178,16 +166,10 @@
       "commit": "a1ede07bc849a82749853401aeacc70dc0054fc3"
     }
   ],
-  "blockers": [
-    {
-      "id": "supabase-project-link-missing",
-      "status": "blocked",
-      "command": "npx supabase migration list --linked",
-      "message": "Cannot find project ref. Have you run supabase link?",
-      "impact": "Production migration push, history repair, remote row count and linked schema diff are intentionally not executed."
-    }
-  ],
+  "blockers": [],
   "nextActions": [
+    "Backend/Infra 작업은 fcmoim-codex, Frontend/Design 작업은 fcmoim-agy worktree에서 시작합니다.",
+    "교차 요구사항은 docs/handoff/TEMPLATE.md로 전달하고 Codex 통합 단계에서 project context를 갱신합니다.",
     "운영 Supabase project identity와 link를 별도 확인합니다.",
     "로컬과 동일한 baseline version 20260629000427을 운영 schema에 적용한 뒤 history repair와 linked diff를 수행합니다."
   ]
