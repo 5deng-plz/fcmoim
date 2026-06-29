@@ -6,10 +6,15 @@ const root = process.cwd();
 const apiRoot = path.join(root, 'src/app/api');
 
 describe('single-team API contract', () => {
-  it('removes team creation Backend entrypoints', () => {
-    expect(fs.existsSync(path.join(apiRoot, 'clubs/route.ts'))).toBe(false);
-    expect(fs.existsSync(path.join(apiRoot, 'clubs/check-slug/route.ts'))).toBe(false);
-    expect(fs.existsSync(path.join(root, 'src/services/club-create.ts'))).toBe(false);
+  it('keeps multi-club entrypoints behind the server-only feature gate', () => {
+    for (const relativePath of [
+      'clubs/route.ts',
+      'clubs/check-slug/route.ts',
+    ]) {
+      const source = fs.readFileSync(path.join(apiRoot, relativePath), 'utf8');
+      expect(source, relativePath).toContain('assertMultiClubEnabled()');
+    }
+    expect(fs.existsSync(path.join(root, 'src/services/club-create.ts'))).toBe(true);
   });
 
   it('provides canonical single-team entrypoints', () => {
