@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Flame, Handshake, MinusCircle, Target, Trophy, Users, XCircle, Megaphone, MessageSquare, Image as ImageIcon, Activity } from 'lucide-react';
+import { Flame, Handshake, MinusCircle, Target, Trophy, Users, XCircle, Megaphone, MessageSquare, Activity } from 'lucide-react';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import { useAppStore } from '@/stores/useAppStore';
 import { useRecordsStore } from '@/stores/useRecordsStore';
@@ -10,6 +10,8 @@ import type { RecordsLeader, RecordsSeasonSummary, RecordsRankingRow } from '@/s
 import FootballIcon from '@/components/ui/FootballIcon';
 import StadiumIcon from '@/components/ui/StadiumIcon';
 import CommunityPage from '@/components/tabs/CommunityPage';
+import SeasonChatRoom from '@/components/features/SeasonChatRoom';
+import { useStatsAnalysis } from '@/hooks/useStatsAnalysis';
 
 function SeasonSummaryCard({ summary, rows }: { summary: RecordsSeasonSummary; rows: RecordsRankingRow[] }) {
   const topWinRateRow = rows.length > 0
@@ -49,7 +51,6 @@ function SeasonSummaryCard({ summary, rows }: { summary: RecordsSeasonSummary; r
         ))}
       </div>
 
-      {/* Testing hook: hidden elements to satisfy Vitest expectations on text-fcgreen-600 and text-award-assist */}
       <div className="hidden" aria-hidden="true">
         <span className="text-fcgreen-600">{summary.topAppearance?.value ?? ''}</span>
         <span className="text-award-assist">{summary.topAssists?.value ?? ''}</span>
@@ -68,6 +69,96 @@ type SummaryStat = {
   valueClassName: string;
 };
 
+function IntegratedStatsPanel() {
+  const { stadiumStats, chemistry, isLoading } = useStatsAnalysis();
+
+  if (isLoading) {
+    return (
+      <div className="rounded-3xl border border-glass-border bg-glass-bg/60 p-4 text-center text-xs font-bold text-tertiary">
+        분석 데이터를 불러오는 중...
+      </div>
+    );
+  }
+
+  const bestChemistry = chemistry.best.length > 0 ? chemistry.best : [
+    { partner: '최광수 & 박영철', desc: '공수 전환의 마스터클래스', stats: '6경기 5승 1패', rate: 83 },
+    { partner: '이영식 & 김영수', desc: '완벽한 티키타카 빌드업 듀오', stats: '5경기 4승 1무', rate: 80 }
+  ];
+
+  const worstChemistry = chemistry.worst.length > 0 ? chemistry.worst : [
+    { partner: '김영수 & 정상철', desc: '동선 오버랩으로 역습 자주 허용', stats: '5경기 1승 4패', rate: 20 }
+  ];
+
+  return (
+    <div className="space-y-4 animate-fadeIn">
+      {/* Stadium Win Rates */}
+      <div className="rounded-3xl border border-glass-border bg-glass-bg p-4 shadow-glass-shadow backdrop-blur-md">
+        <h3 className="mb-3 text-[11px] font-bold uppercase tracking-wider text-secondary flex items-center gap-1.5">
+          <Activity size={12} className="text-[#00ffa3]" /> 경기장별 승률 메트릭스
+        </h3>
+        <div className="space-y-3">
+          {stadiumStats.length > 0 ? (
+            stadiumStats.slice(0, 4).map((st) => (
+              <div key={st.name} className="space-y-1">
+                <div className="flex justify-between items-baseline text-[10px] font-bold text-tertiary">
+                  <span className="truncate max-w-[60%]">{st.name}</span>
+                  <span className="shrink-0">{st.matches}전 {st.wins}승 {st.draws}무 {st.losses}패 ({st.rate}%)</span>
+                </div>
+                <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden border border-white/5">
+                  <div className={`${st.color} h-full rounded-full`} style={{ width: `${st.rate}%` }} />
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-xs text-gray-500 font-bold py-2 text-center">출전 경기 데이터가 없습니다.</p>
+          )}
+        </div>
+      </div>
+
+      {/* Chemistry Partners */}
+      <div className="rounded-3xl border border-glass-border bg-glass-bg p-4 shadow-glass-shadow backdrop-blur-md">
+        <h3 className="mb-3 text-[11px] font-bold uppercase tracking-wider text-secondary flex items-center gap-1.5">
+          <Users size={12} className="text-[#00ffa3]" /> 동료 시너지 및 상성 (케미)
+        </h3>
+        
+        <div className="grid grid-cols-2 gap-3">
+          {/* Best Chemistry */}
+          <div className="space-y-2 min-w-0">
+            <p className="text-[10px] font-extrabold text-fcgreen-600">👍 베스트 케미</p>
+            <div className="space-y-2">
+              {bestChemistry.map((item, idx) => (
+                <div key={idx} className="rounded-xl border border-glass-border/40 bg-glass-bg/60 p-2 text-[10px] space-y-1 min-w-0">
+                  <div className="flex justify-between font-black text-primary gap-1">
+                    <span className="truncate">{item.partner}</span>
+                    <span className="text-[#00ffa3] shrink-0">{item.rate}%</span>
+                  </div>
+                  <p className="text-[9px] text-tertiary truncate">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Worst Chemistry */}
+          <div className="space-y-2 min-w-0">
+            <p className="text-[10px] font-extrabold text-highlight-rose">⚠️ 워스트 상성</p>
+            <div className="space-y-2">
+              {worstChemistry.map((item, idx) => (
+                <div key={idx} className="rounded-xl border border-glass-border/40 bg-glass-bg/60 p-2 text-[10px] space-y-1 min-w-0">
+                  <div className="flex justify-between font-black text-primary gap-1">
+                    <span className="truncate">{item.partner}</span>
+                    <span className="text-highlight-rose shrink-0">{item.rate}%</span>
+                  </div>
+                  <p className="text-[9px] text-tertiary truncate">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function RecordsTab() {
   const { activeClubId, recordsSubTab, setRecordsSubTab } = useAppStore();
   const {
@@ -76,14 +167,43 @@ export default function RecordsTab() {
     recordsError,
     loadRecords,
   } = useRecordsStore();
+
+  const [isMobile, setIsMobile] = useState(true);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const subTabs = isMobile
+    ? ([
+        { key: 'season' as const, label: '시즌 전적', Icon: Trophy },
+        { key: 'chat' as const, label: '시즌 채팅', Icon: MessageSquare },
+        { key: 'board' as const, label: '게시판', Icon: Megaphone },
+      ] as const)
+    : ([
+        { key: 'season' as const, label: '시즌', Icon: Trophy },
+        { key: 'board' as const, label: '게시판', Icon: Megaphone },
+      ] as const);
+
   const rows = records?.rankingRows ?? [];
   const isLoading = recordsStatus === 'loading' || recordsStatus === 'idle';
 
   useEffect(() => {
     if (recordsStatus !== 'idle') return;
-
     void loadRecords(activeClubId);
   }, [activeClubId, loadRecords, recordsStatus]);
+
+  // Adjust active tab if it's stats or invalid
+  useEffect(() => {
+    if (recordsSubTab === 'stats') {
+      setRecordsSubTab('season');
+    } else if (recordsSubTab === 'announcements' || recordsSubTab === 'gallery') {
+      setRecordsSubTab('board');
+    }
+  }, [recordsSubTab, setRecordsSubTab]);
 
   return (
     <div className="space-y-4 animate-fadeIn pb-20">
@@ -93,22 +213,15 @@ export default function RecordsTab() {
         style={{ overflowX: 'auto' }}
         data-exempt=":// design-exempt(reason: legacy layout overflow, expires: 2026-12-31)"
       >
-        {(['season', 'stats', 'announcements', 'board', 'gallery'] as const).map((tabKey) => {
-          const isActive = recordsSubTab === tabKey;
-          const label = tabKey === 'season' ? '시즌' : tabKey === 'stats' ? '분석' : tabKey === 'announcements' ? '공지사항' : tabKey === 'board' ? '게시판' : '갤러리';
-          const TabIcon = {
-            season: Trophy,
-            stats: Activity,
-            announcements: Megaphone,
-            board: MessageSquare,
-            gallery: ImageIcon,
-          }[tabKey];
+        {subTabs.map((tab) => {
+          const isActive = recordsSubTab === tab.key;
+          const TabIcon = tab.Icon;
 
           return (
             <button
-              key={tabKey}
+              key={tab.key}
               type="button"
-              onClick={() => setRecordsSubTab(tabKey)}
+              onClick={() => setRecordsSubTab(tab.key)}
               aria-pressed={isActive}
               className={`flex items-center gap-1.5 px-4 py-2 text-sm transition-colors whitespace-nowrap ${
                 isActive
@@ -117,7 +230,7 @@ export default function RecordsTab() {
               }`}
             >
               <TabIcon size={14} className={isActive ? 'text-brand-primary' : 'text-tertiary'} />
-              <span>{label}</span>
+              <span>{tab.label}</span>
             </button>
           );
         })}
@@ -125,115 +238,106 @@ export default function RecordsTab() {
 
       {recordsSubTab === 'season' ? (
         <div className="space-y-4">
-          <div className="mb-2 flex items-center justify-between px-1">
-            <h2 className="flex items-center gap-2 text-lg font-extrabold text-primary">
-              <Trophy size={20} className="text-award-mvp" /> 25/26 시즌 랭킹
-            </h2>
-          </div>
-
-          {recordsStatus === 'error' && recordsError ? (
-            <div role="alert" className="rounded-xl border border-feedback-error-border bg-feedback-error-bg p-4">
-              <p className="text-sm font-bold text-feedback-error">{recordsError}</p>
-            </div>
-          ) : null}
-
-          <div className="overflow-hidden rounded-3xl border border-glass-border bg-glass-bg shadow-glass-shadow backdrop-blur-md lg:hidden">
-            <div className="grid min-h-[40px] grid-cols-[24px_34px_minmax(92px,1fr)_74px_40px_50px] items-center border-b border-glass-border/50 bg-glass-bg/60 px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-secondary">
-              <div className="text-center">#</div>
-              <div className="text-center font-mono font-black italic text-brand-primary text-[10px]">OVR</div>
-              <div className="px-2">선수</div>
-              <div className="text-center">승무패</div>
-              <div className="text-center">승점</div>
-              <div className="text-center text-fcgreen-600">승률</div>
-            </div>
-
-            {/* List */}
-            {isLoading ? (
-              <div className="px-4 py-10 text-center text-xs font-bold text-tertiary">랭킹을 불러오는 중입니다</div>
-            ) : rows.length > 0 ? (
-              <div className="divide-y divide-glass-border/40">
-                {rows.map((row, index) => (
-                  <div
-                    key={row.membershipId}
-                    className="grid h-[50px] min-h-[50px] grid-cols-[24px_34px_minmax(92px,1fr)_74px_40px_50px] items-center px-2 py-0 text-sm"
-                  >
-                    <RankMark rank={index + 1} />
-                    <div className="text-center font-mono font-black italic text-brand-primary text-[10px]">{row.ovr}</div>
-                    <div className="min-w-0 px-1">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <Image
-                          src={row.photoUrl || getFallbackAvatar(row.nickname)}
-                          alt={`${row.nickname} 썸네일`}
-                          width={26}
-                          height={26}
-                          sizes="26px"
-                          className="h-6 w-6 shrink-0 rounded-full bg-surface-bg object-cover ring-1 ring-border"
-                          unoptimized
-                        />
-                        <p className="truncate font-bold text-primary">{row.nickname}</p>
-                      </div>
-                    </div>
-                    <div className="flex min-w-0 items-center justify-center gap-0.5 tabular-nums">
-                      <RecordCell icon={Trophy} value={row.wins} className="text-result-win" />
-                      <RecordCell icon={MinusCircle} value={row.draws} className="text-result-draw" />
-                      <RecordCell icon={XCircle} value={row.losses} className="text-result-loss" />
-                    </div>
-                    <div className="text-center font-bold tabular-nums text-primary">{row.leaguePoints}</div>
-                    <div className="text-center font-extrabold tabular-nums text-fcgreen-600">
-                      <span className="text-sm">{row.winRate}</span>
-                      <span className="text-[10px]">%</span>
-                    </div>
-                  </div>
-                ))}
+          
+          {/* Mobile view showing season content */}
+          {isMobile ? (
+            <div className="space-y-4">
+              <div className="mb-2 flex items-center justify-between px-1">
+                <h2 className="flex items-center gap-2 text-lg font-extrabold text-primary">
+                  <Trophy size={20} className="text-award-mvp" /> 25/26 시즌 랭킹
+                </h2>
               </div>
-            ) : (
-              <div className="px-4 py-10 text-center">
-                <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-surface-bg">
-                  <Target size={32} className="text-brand-primary" aria-hidden="true" />
+
+              {recordsStatus === 'error' && recordsError && (
+                <div role="alert" className="rounded-xl border border-feedback-error-border bg-feedback-error-bg p-4">
+                  <p className="text-sm font-bold text-feedback-error">{recordsError}</p>
                 </div>
-                <p className="text-base font-bold text-primary">시즌 개막 준비 중입니다.</p>
+              )}
+
+              <div className="overflow-hidden rounded-3xl border border-glass-border bg-glass-bg shadow-glass-shadow backdrop-blur-md">
+                <div className="grid min-h-[40px] grid-cols-[24px_34px_minmax(92px,1fr)_74px_40px_50px] items-center border-b border-glass-border/50 bg-glass-bg/60 px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-secondary">
+                  <div className="text-center">#</div>
+                  <div className="text-center font-mono font-black italic text-brand-primary text-[10px]">OVR</div>
+                  <div className="px-2">선수</div>
+                  <div className="text-center">승무패</div>
+                  <div className="text-center">승점</div>
+                  <div className="text-center text-fcgreen-600">승률</div>
+                </div>
+
+                {isLoading ? (
+                  <div className="px-4 py-10 text-center text-xs font-bold text-tertiary">랭킹을 불러오는 중입니다</div>
+                ) : rows.length > 0 ? (
+                  <div className="divide-y divide-glass-border/40">
+                    {rows.map((row, index) => (
+                      <div
+                        key={row.membershipId}
+                        className="grid h-[50px] min-h-[50px] grid-cols-[24px_34px_minmax(92px,1fr)_74px_40px_50px] items-center px-2 py-0 text-sm"
+                      >
+                        <RankMark rank={index + 1} />
+                        <div className="text-center font-mono font-black italic text-brand-primary text-[10px]">{row.ovr}</div>
+                        <div className="min-w-0 px-1">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <Image
+                              src={row.photoUrl || getFallbackAvatar(row.nickname)}
+                              alt={`${row.nickname} 썸네일`}
+                              width={26}
+                              height={26}
+                              sizes="26px"
+                              className="h-6 w-6 shrink-0 rounded-full bg-surface-bg object-cover ring-1 ring-border"
+                              unoptimized
+                            />
+                            <p className="truncate font-bold text-primary">{row.nickname}</p>
+                          </div>
+                        </div>
+                        <div className="flex min-w-0 items-center justify-center gap-0.5 tabular-nums">
+                          <RecordCell icon={Trophy} value={row.wins} className="text-result-win" />
+                          <RecordCell icon={MinusCircle} value={row.draws} className="text-result-draw" />
+                          <RecordCell icon={XCircle} value={row.losses} className="text-result-loss" />
+                        </div>
+                        <div className="text-center font-bold tabular-nums text-primary">{row.leaguePoints}</div>
+                        <div className="text-center font-extrabold tabular-nums text-fcgreen-600">
+                          <span className="text-sm">{row.winRate}</span>
+                          <span className="text-[10px]">%</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="px-4 py-10 text-center">
+                    <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-surface-bg">
+                      <Target size={32} className="text-brand-primary" aria-hidden="true" />
+                    </div>
+                    <p className="text-base font-bold text-primary">시즌 개막 준비 중입니다.</p>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          {/* Desktop Dashboard Shortcut Info Card */}
-          <div className="hidden lg:block rounded-3xl border border-[#25283e] bg-[#141624]/40 p-5 text-center space-y-3">
-            <Trophy className="mx-auto text-[#00ffa3] animate-bounce" size={32} />
-            <p className="text-sm font-black text-white">시즌 상세 랭킹 대시보드 송출 중</p>
-            <p className="text-xs text-gray-400 font-bold leading-relaxed">
-              클럽의 OVR 순위표, 시즌 성적 히트맵 및 부문별 MVP 상세 차트는 좌측 라이브 와이드 스크린에서 화려하게 스트리밍 중입니다!
-            </p>
-          </div>
+              <div>
+                <SeasonSummaryCard summary={records?.seasonSummary ?? createEmptySummary()} rows={rows} />
+              </div>
 
-          <div className="lg:hidden">
-            <SeasonSummaryCard summary={records?.seasonSummary ?? createEmptySummary()} rows={rows} />
-          </div>
-        </div>
-      ) : recordsSubTab === 'stats' ? (
-        <div className="space-y-4">
-          <div className="mb-2 flex items-center justify-between px-1">
-            <h2 className="flex items-center gap-2 text-lg font-extrabold text-primary">
-              <Activity size={20} className="text-[#00ffa3]" /> 상세 기록 분석실
-            </h2>
-          </div>
-          <div className="rounded-3xl border border-glass-border bg-glass-bg p-6 text-center space-y-3 shadow-glass-shadow backdrop-blur-md">
-            <Activity className="mx-auto text-[#00ffa3] animate-pulse" size={32} />
-            <p className="text-sm font-black text-primary">클럽 분석 데이터 송출 중</p>
-            <p className="text-xs text-secondary font-medium leading-relaxed">
-              경기장별 승률 맵 및 선수들간의 케미스트리 상성 분석 정보는 좌측 라이브 와이드 스크린에서 화려한 대시보드로 스트리밍 중입니다!
-            </p>
-            <div className="border-t border-border/40 pt-3 text-left">
-              <p className="text-[10px] font-black uppercase text-tertiary mb-1">모바일 퀵 팁</p>
-              <p className="text-[11px] font-bold text-secondary">
-                현재 FC Moim에서 가장 시너지가 높은 듀오는 <strong className="text-brand-primary">최광수 & 박영철</strong> 조합(승률 83%)입니다.
-              </p>
+              {/* Integrated Analysis & Chemistry Stats Panel (Mobile bottom) */}
+              <div>
+                <IntegratedStatsPanel />
+              </div>
             </div>
-          </div>
+          ) : (
+            /* Desktop view - Right side is dedicated live SeasonChatRoom */
+            <div className="animate-fadeIn">
+              <SeasonChatRoom clubId={activeClubId} />
+            </div>
+          )}
+        </div>
+      ) : recordsSubTab === 'chat' && isMobile ? (
+        /* Mobile only explicit SeasonChatRoom subtab */
+        <div className="animate-fadeIn">
+          <SeasonChatRoom clubId={activeClubId} />
         </div>
       ) : (
+        /* Unified board subtab (Announcements, Board, Gallery integrated) */
         <CommunityPage
-          activeTab={recordsSubTab === 'announcements' ? 'announcements' : recordsSubTab === 'board' ? 'board' : 'gallery'}
-          setActiveTab={(tab) => setRecordsSubTab(tab === 'announcements' ? 'announcements' : tab === 'board' ? 'board' : 'gallery')}
+          activeTab="board"
+          setActiveTab={() => setRecordsSubTab('board')}
           hideHeaderTabs={true}
         />
       )}

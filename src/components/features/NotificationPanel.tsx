@@ -230,7 +230,7 @@ function openTargetUrl(
   if (tab === 'home' || tab === 'schedule' || tab === 'records' || tab === 'locker_room' || tab === 'community') {
     actions.setActiveTab(tab);
     if (tab === 'records' && section === 'announcements') {
-      actions.setRecordsSubTab('announcements');
+      actions.setRecordsSubTab('board');
     }
     return;
   }

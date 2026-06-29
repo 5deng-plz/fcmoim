@@ -30,8 +30,8 @@ interface AppState {
   // ─── 탭 네비게이션 ───
   activeTab: Tab;
   setActiveTab: (tab: Tab) => void;
-  recordsSubTab: 'season' | 'stats' | 'announcements' | 'board' | 'gallery';
-  setRecordsSubTab: (subTab: 'season' | 'stats' | 'announcements' | 'board' | 'gallery') => void;
+  recordsSubTab: 'season' | 'chat' | 'board' | 'stats' | 'announcements' | 'gallery';
+  setRecordsSubTab: (subTab: 'season' | 'chat' | 'board' | 'stats' | 'announcements' | 'gallery') => void;
 
   // ─── 서브페이지 ───
   showMyPage: boolean;

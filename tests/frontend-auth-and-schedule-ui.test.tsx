@@ -4137,13 +4137,13 @@ describe('records and header polish UI', () => {
 
     render(<CommunityPage />);
 
-    await user.click(screen.getByRole('button', { name: '게시판' }));
-    expect(screen.getByText('아직 피드가 없어요')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '게시판' })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: '일반' }));
+    expect(screen.getByText('해당 카테고리에 등록된 피드가 없습니다.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '일반' })).toHaveAttribute('aria-pressed', 'true');
 
-    await user.click(screen.getByRole('button', { name: '갤러리' }));
-    expect(screen.getByText('아직 미디어 피드가 없어요')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '갤러리' })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: '미디어' }));
+    expect(screen.getByText('해당 카테고리에 등록된 피드가 없습니다.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '미디어' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it.skip('uses inline feed compose, simple emoji reactions, 24h time, and live comment count', async () => {

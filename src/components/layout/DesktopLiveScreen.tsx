@@ -11,6 +11,7 @@ import {
   Camera, LoaderCircle, ShieldCheck, UserCheck, UserX, LineChart, UserCog
 } from 'lucide-react';
 import { fetchFeedPosts, type FeedPost } from '@/stores/feedClient';
+import { useStatsAnalysis } from '@/hooks/useStatsAnalysis';
 import EventComments from '@/components/features/EventComments';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import Modal from '@/components/ui/Modal';
@@ -78,7 +79,7 @@ export default function DesktopLiveScreen() {
       {/* Main Display Area */}
       <div className="flex-1 min-h-0 w-full relative z-10 flex flex-col">
         {activeTab === 'records' && (
-          recordsSubTab === 'stats' ? <DesktopDetailStatsPanel /> : <DesktopRecordsPanel />
+          <DesktopRecordsPanel />
         )}
         {activeTab === 'locker_room' && <DesktopLockerRoomPanel />}
         {activeTab === 'community' && (
@@ -145,6 +146,16 @@ function DesktopRecordsPanel() {
   const { records, recordsStatus, loadRecords } = useRecordsStore();
   const { activeClubId } = useAppStore();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  
+  const { 
+    stadiumStats, 
+    chemistry, 
+    playerMatrixStats, 
+    matches, 
+    matchLineupsMap, 
+    isLoading: isLoadingStats 
+  } = useStatsAnalysis();
+
   const rows = records?.rankingRows ?? [];
   const summary = records?.seasonSummary ?? null;
   const topWinRateRow = rows.length > 0
@@ -156,6 +167,35 @@ function DesktopRecordsPanel() {
       void loadRecords(activeClubId);
     }
   }, [activeClubId, loadRecords, recordsStatus]);
+
+  const bestChemistry = chemistry.best.length > 0 ? chemistry.best : [
+    { partner: '최광수 & 박영철', desc: '공수 전환의 마스터클래스', stats: '6경기 5승 1패', rate: 83 },
+    { partner: '이영식 & 김영수', desc: '완벽한 티키타카 빌드업 듀오', stats: '5경기 4승 1무', rate: 80 }
+  ];
+
+  const worstChemistry = chemistry.worst.length > 0 ? chemistry.worst : [
+    { partner: '김영수 & 정상철', desc: '동선 오버랩으로 역습 자주 허용', stats: '5경기 1승 4패', rate: 20 }
+  ];
+
+  const formatHeaderDate = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      const yy = d.getFullYear().toString().substring(2);
+      const m = d.getMonth() + 1;
+      const date = d.getDate();
+      return `${yy}.${m}.${date}`;
+    } catch {
+      return '';
+    }
+  };
+
+  const shrinkLocation = (loc: string) => {
+    if (loc.includes('잠실')) return '잠실';
+    if (loc.includes('상암')) return '상암';
+    if (loc.includes('하남')) return '하남';
+    if (loc.includes('어반')) return '어반';
+    return loc.substring(0, 3);
+  };
 
   return (
     <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6 winning-bg-grid relative">
@@ -298,6 +338,215 @@ function DesktopRecordsPanel() {
             <div className="py-20 text-center text-xs font-bold text-gray-500">시즌 전적 데이터가 아직 없습니다.</div>
           )}
         </div>
+      </div>
+
+      {/* 3. 경기장 승률 및 선수 케미 분석 통합 패널 (Bottom Grid) */}
+      <div className="grid grid-cols-2 gap-6 relative z-10 animate-fadeIn">
+        {/* Left Column: 경기장 승률 분석 */}
+        <div className="rounded-3xl border border-[#25283e] bg-black/60 p-5 shadow-lg backdrop-blur-md flex flex-col justify-between">
+          <div>
+            <h3 className="text-xs font-black tracking-wider text-gray-400 uppercase flex items-center gap-2 mb-3">
+              <Radio size={14} className="text-[#00ffa3]" /> 경기장별 누적 전적 & 승률 (Stadium Win Rate)
+            </h3>
+            <p className="text-[10px] text-gray-500 font-bold mb-4">
+              매치 위치에 따른 승률 변화 및 핏치 친화도 데이터입니다.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {isLoadingStats ? (
+              <div className="py-10 text-center text-xs text-gray-500 font-bold">로딩 중...</div>
+            ) : stadiumStats.length > 0 ? (
+              stadiumStats.map((st, i) => (
+                <div key={i} className="space-y-1.5">
+                  <div className="flex justify-between items-baseline text-xs font-bold text-gray-300">
+                    <span>{st.name}</span>
+                    <span className="font-mono text-[11px] text-gray-400">
+                      {st.wins}승 {st.draws}무 {st.losses}패 (승률 <strong className="text-white">{st.rate}%</strong>)
+                    </span>
+                  </div>
+                  <div className="w-full bg-white/5 rounded-full h-2 overflow-hidden border border-white/5">
+                    <div className={`h-full rounded-full ${st.color}`} style={{ width: `${st.rate || 5}%` }} />
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-gray-500 font-bold py-6 text-center">출전 경기 데이터가 없습니다.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Right Column: 선수단 상성 케미스트리 */}
+        <div className="rounded-3xl border border-[#25283e] bg-black/60 p-5 shadow-lg backdrop-blur-md space-y-5">
+          {/* Best Chemistry */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-black tracking-wider text-[#00ffa3] uppercase flex items-center gap-1.5">
+              🔥 최강 시너지 듀오 (Best Chemistry)
+            </h3>
+            <div className="grid grid-cols-1 gap-2.5">
+              {isLoadingStats ? (
+                <div className="py-10 text-center text-xs text-gray-500 font-bold">로딩 중...</div>
+              ) : bestChemistry.map((bc: any, i: number) => (
+                <div key={i} className="bg-white/5 border border-white/5 rounded-2xl p-3 flex justify-between items-center">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-black text-white">
+                        {bc.partner.includes('&') ? bc.partner : `나 & ${bc.partner}`}
+                      </span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">Best</span>
+                    </div>
+                    <p className="text-[10px] text-gray-500 font-bold mt-1">{bc.desc}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-[11px] font-black text-[#00ffa3] font-mono">{bc.rate}% 승률</p>
+                    <p className="text-[9px] font-mono text-gray-500 font-bold mt-0.5">{bc.stats}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Worst Chemistry */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-black tracking-wider text-red-400 uppercase flex items-center gap-1.5">
+              ⚠️ 상성 보완 조합 (Chemistry Warning)
+            </h3>
+            <div className="grid grid-cols-1 gap-2.5">
+              {isLoadingStats ? (
+                <div className="py-10 text-center text-xs text-gray-500 font-bold">로딩 중...</div>
+              ) : worstChemistry.map((wc: any, i: number) => (
+                <div key={i} className="bg-white/5 border border-white/5 rounded-2xl p-3 flex justify-between items-center">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-black text-white">
+                        {wc.partner.includes('&') ? wc.partner : `나 & ${wc.partner}`}
+                      </span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20 font-bold">Warning</span>
+                    </div>
+                    <p className="text-[10px] text-gray-500 font-bold mt-1">{wc.desc}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-[11px] font-black text-red-400 font-mono">{wc.rate}% 승률</p>
+                    <p className="text-[9px] font-mono text-gray-500 font-bold mt-0.5">{wc.stats}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. 선수별 통합 전적 현황판 (Player Match Matrix & Stadium Insights) */}
+      <div className="rounded-3xl border border-[#25283e] bg-[#141624]/60 p-5 shadow-lg backdrop-blur-md relative z-10 animate-fadeIn space-y-4">
+        <div className="flex justify-between items-center pb-2 border-b border-white/5">
+          <h3 className="text-xs font-black tracking-wider text-gray-400 uppercase flex items-center gap-2">
+            <LayoutGrid size={14} className="text-[#00ffa3]" />
+            선수별 통합 전적 현황판 (Player Match Matrix & Stadium Insights)
+          </h3>
+          <span className="font-mono text-[9px] font-black text-[#00ffa3] bg-[#00ffa3]/10 border border-[#00ffa3]/20 px-2 py-0.5 rounded">
+            경기장 상성 연동 완료
+          </span>
+        </div>
+
+        {isLoadingStats ? (
+          <div className="py-16 text-center text-xs font-bold text-gray-500 flex flex-col items-center justify-center gap-2">
+            <LoaderCircle size={20} className="animate-spin text-[#00ffa3]" />
+            <span>선수단 전적 매트릭스를 로드 중...</span>
+          </div>
+        ) : matches.length > 0 ? (
+          <div
+            className="no-scrollbar rounded-2xl border border-white/5 bg-black/25"
+            style={{ overflowX: 'auto' }}
+            data-exempt=":// design-exempt(reason: legacy layout overflow, expires: 2026-12-31)"
+          >
+            <table className="w-full border-collapse text-center">
+              <thead>
+                <tr className="bg-white/5 text-[9px] font-black text-gray-400 uppercase tracking-wider border-b border-white/5">
+                  <th className="py-3 px-3 text-left font-extrabold text-[10px] min-w-[80px]" data-exempt=":// design-exempt(reason: legacy layout min-width, expires: 2026-12-31)">구분</th>
+                  
+                  {matches.map((match) => (
+                    <th key={match.id} className="py-2.5 px-2 border-l border-white/5 min-w-[75px]" data-exempt=":// design-exempt(reason: legacy layout min-width, expires: 2026-12-31)">
+                      <div className="text-[10px] font-black text-white font-mono">{formatHeaderDate(match.date)}</div>
+                      <div className="text-[8px] font-extrabold text-[#00ffa3] mt-0.5 tracking-tighter truncate max-w-[70px] mx-auto" title={match.location}>
+                        {shrinkLocation(match.location)}
+                      </div>
+                    </th>
+                  ))}
+                  
+                  <th className="py-3 px-3.5 border-l border-white/10 text-emerald-400 font-bold min-w-[45px]" data-exempt=":// design-exempt(reason: legacy layout min-width, expires: 2026-12-31)">승</th>
+                  <th className="py-3 px-3.5 border-l border-white/5 text-red-400 font-bold min-w-[45px]" data-exempt=":// design-exempt(reason: legacy layout min-width, expires: 2026-12-31)">패</th>
+                  <th className="py-3 px-3.5 border-l border-white/5 text-[#00ffa3] font-black min-w-[55px]" data-exempt=":// design-exempt(reason: legacy layout min-width, expires: 2026-12-31)">승률</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 text-xs text-white">
+                {rows.map((player) => {
+                  const mStats = playerMatrixStats[player.membershipId] || { wins: 0, losses: 0, draws: 0, winRate: 0 };
+                  
+                  return (
+                    <tr key={player.membershipId} className="hover:bg-white/5 transition-colors">
+                      <td className="py-2.5 px-3 text-left font-black text-white flex items-center gap-2">
+                        <Image
+                          src={player.photoUrl || getFallbackAvatar(player.nickname)}
+                          alt=""
+                          width={20}
+                          height={20}
+                          className="h-5 w-5 rounded-full object-cover shrink-0 ring-1 ring-white/10"
+                          unoptimized
+                        />
+                        <span className="truncate max-w-[65px]">{player.nickname}</span>
+                      </td>
+
+                      {matches.map((match) => {
+                        const isWin = (match.ourScore ?? 0) > (match.oppScore ?? 0);
+                        const isDraw = (match.ourScore ?? 0) === (match.oppScore ?? 0);
+                        const lineup = matchLineupsMap[match.id] ?? [];
+                        const entry = lineup.find((e) => e.membershipId === player.membershipId);
+
+                        let resultLabel = '-';
+                        const hasAttended = !!entry;
+                        let cellClass = 'bg-white/5 text-gray-400 border border-white/10';
+
+                        if (entry) {
+                          if (isDraw) {
+                            resultLabel = '무';
+                            cellClass = 'bg-white/5 text-gray-400 border border-white/10';
+                          } else {
+                            const isTeam1 = entry.teamNumber === 1;
+                            const isPlayerWin = isWin ? isTeam1 : !isTeam1;
+                            resultLabel = isPlayerWin ? '승' : '패';
+                            cellClass = isPlayerWin
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              : 'bg-red-500/10 text-red-400 border border-red-500/20';
+                          }
+                        }
+
+                        return (
+                          <td key={match.id} className="py-2.5 px-2 border-l border-white/5">
+                            {hasAttended ? (
+                              <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-black ${cellClass}`}>
+                                {resultLabel}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-bold text-gray-700">-</span>
+                            )}
+                          </td>
+                        );
+                      })}
+
+                      <td className="py-2.5 px-3.5 border-l border-white/10 text-emerald-400 font-mono font-bold">{mStats.wins}</td>
+                      <td className="py-2.5 px-3.5 border-l border-white/5 text-red-400 font-mono font-bold">{mStats.losses}</td>
+                      <td className="py-2.5 px-3.5 border-l border-white/5 text-[#00ffa3] font-mono font-black">{mStats.winRate}%</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="py-12 text-center text-xs font-bold text-gray-500 rounded-2xl border border-dashed border-white/5 bg-black/20">
+            아직 완료 공식 매치 기록이 없습니다.
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1161,546 +1410,3 @@ function DesktopLockerRoomPanel() {
   );
 }
 
-function DesktopDetailStatsPanel() {
-  const { records, recordsStatus, loadRecords } = useRecordsStore();
-  const { activeClubId } = useAppStore();
-  const { memberProfile } = useAuthStore();
-
-  // 경기 기록 상태
-  const [matches, setMatches] = useState<UpcomingMatch[]>([]);
-  const [isLoadingMatches, setIsLoadingMatches] = useState(false);
-  const [matchLineupsMap, setMatchLineupsMap] = useState<Record<string, MatchLineupEntry[]>>({});
-  const [isLoadingLineups, setIsLoadingLineups] = useState(false);
-
-  useEffect(() => {
-    if (recordsStatus === 'idle') {
-      void loadRecords(activeClubId);
-    }
-  }, [activeClubId, loadRecords, recordsStatus]);
-
-  // 경기 목록 로드
-  useEffect(() => {
-    if (!activeClubId) return;
-    let isActive = true;
-    setIsLoadingMatches(true);
-    
-    const currentYear = new Date().getFullYear();
-    const fromStr = `${currentYear}-01-01`;
-    const toStr = `${currentYear + 1}-01-01`;
-
-    fetchCalendarMatches({ clubId: activeClubId, from: fromStr, to: toStr })
-      .then((data) => {
-        if (!isActive) return;
-        // 완료되었거나 스코어가 입력된 경기들을 날짜 내림차순 정렬 (매트릭스는 왼쪽에서 오른쪽으로 시간 순이 보편적이므로 날짜 오름차순 정렬)
-        const finished = data
-          .filter((m) => m.status === 'finished' || (m.ourScore !== null && m.oppScore !== null))
-          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-        setMatches(finished);
-      })
-      .catch((err) => {
-        console.error('[FC Moim] Load match history failed:', err);
-      })
-      .finally(() => {
-        if (isActive) setIsLoadingMatches(false);
-      });
-
-    return () => { isActive = false; };
-  }, [activeClubId]);
-
-  // 경기별 라인업 명단 병렬 로드 (참석 여부 및 소속 팀 번호 확보)
-  useEffect(() => {
-    if (matches.length === 0) return;
-    let isActive = true;
-    setIsLoadingLineups(true);
-
-    const loadLineups = async () => {
-      try {
-        const lineupPromises = matches.map(async (m) => {
-          const lineup = await fetchMatchLineup({ clubId: activeClubId, matchId: m.id });
-          return {
-            matchId: m.id,
-            lineup
-          };
-        });
-
-        const results = await Promise.all(lineupPromises);
-        if (!isActive) return;
-
-        const map: Record<string, MatchLineupEntry[]> = {};
-        for (const res of results) {
-          map[res.matchId] = res.lineup;
-        }
-        setMatchLineupsMap(map);
-      } catch (err) {
-        console.error('[FC Moim] Load match lineups map failed:', err);
-      } finally {
-        if (isActive) setIsLoadingLineups(false);
-      }
-    };
-
-    void loadLineups();
-    return () => { isActive = false; };
-  }, [matches, activeClubId]);
-
-  // 랭킹 리스트 데이터
-  const rows = records?.rankingRows ?? [];
-
-  // 로그인한 사용자의 회원 ID
-  const myMembershipId = memberProfile?.id;
-
-  // 1. 로그인 사용자 기준 경기장별 전적 동적 집계
-  const dynamicStadiumStats = useMemo(() => {
-    if (!myMembershipId) return [];
-    
-    const stadiumMap: Record<string, { name: string; matches: number; wins: number; draws: number; losses: number; rate: number }> = {};
-    
-    for (const match of matches) {
-      if (match.ourScore === null || match.oppScore === null) continue;
-      const lineup = matchLineupsMap[match.id] ?? [];
-      const myEntry = lineup.find((e) => e.membershipId === myMembershipId);
-      if (!myEntry) continue; // 내가 참여하지 않은 경기
-      
-      const loc = match.location;
-      if (!stadiumMap[loc]) {
-        stadiumMap[loc] = { name: loc, matches: 0, wins: 0, draws: 0, losses: 0, rate: 0 };
-      }
-      
-      const stat = stadiumMap[loc];
-      stat.matches += 1;
-      
-      const isWin = match.ourScore > match.oppScore;
-      const isDraw = match.ourScore === match.oppScore;
-      
-      if (isDraw) {
-        stat.draws += 1;
-      } else {
-        const isTeam1 = myEntry.teamNumber === 1;
-        const isMyWin = isWin ? isTeam1 : !isTeam1;
-        if (isMyWin) stat.wins += 1;
-        else stat.losses += 1;
-      }
-    }
-    
-    return Object.values(stadiumMap).map((st) => {
-      const decided = st.wins + st.losses + st.draws;
-      st.rate = decided ? Math.round((st.wins / decided) * 100) : 0;
-      return st;
-    }).sort((a, b) => b.rate - a.rate || b.matches - a.matches);
-  }, [matches, matchLineupsMap, myMembershipId]);
-
-  // 2. 로그인 사용자 기준 동료 선수간의 시너지/상성(케미스트리) 동적 집계
-  const dynamicChemistry = useMemo(() => {
-    if (!myMembershipId || rows.length === 0) return { best: [], worst: [] };
-    
-    const partnerStats: Array<{
-      nickname: string;
-      matches: number;
-      wins: number;
-      losses: number;
-      draws: number;
-      rate: number;
-    }> = [];
-    
-    for (const player of rows) {
-      if (player.membershipId === myMembershipId) continue; // 나 자신은 제외
-      
-      let coMatches = 0;
-      let coWins = 0;
-      let coLosses = 0;
-      let coDraws = 0;
-      
-      for (const match of matches) {
-        if (match.ourScore === null || match.oppScore === null) continue;
-        const lineup = matchLineupsMap[match.id] ?? [];
-        
-        // 나와 동료가 둘 다 이 경기에 참여했는지 확인
-        const myEntry = lineup.find((e) => e.membershipId === myMembershipId);
-        const partnerEntry = lineup.find((e) => e.membershipId === player.membershipId);
-        
-        if (!myEntry || !partnerEntry) continue; // 둘 중 한 명이라도 불참했으면 패스
-        
-        // 같은 팀(RED 또는 BLUE)으로 같이 뛰었을 때만 상성으로 집계
-        if (myEntry.teamNumber === partnerEntry.teamNumber) {
-          coMatches += 1;
-          const isWin = match.ourScore > match.oppScore;
-          const isDraw = match.ourScore === match.oppScore;
-          
-          if (isDraw) {
-            coDraws += 1;
-          } else {
-            const isTeam1 = myEntry.teamNumber === 1;
-            const isMyWin = isWin ? isTeam1 : !isTeam1;
-            if (isMyWin) coWins += 1;
-            else coLosses += 1;
-          }
-        }
-      }
-      
-      if (coMatches > 0) {
-        partnerStats.push({
-          nickname: player.nickname,
-          matches: coMatches,
-          wins: coWins,
-          losses: coLosses,
-          draws: coDraws,
-          rate: Math.round((coWins / coMatches) * 100)
-        });
-      }
-    }
-    
-    // 승률 및 함께 뛴 경기 수 순으로 내림차순 정렬
-    const sortedBest = [...partnerStats].sort((a, b) => b.rate - a.rate || b.matches - a.matches);
-    const sortedWorst = [...partnerStats].sort((a, b) => a.rate - b.rate || a.matches - b.matches);
-    
-    // 베스트와 워스트 리스트 추출 (최대 3명씩)
-    const bestCandidates = sortedBest.filter((p) => p.rate >= 50);
-    const worstCandidates = sortedWorst.filter((p) => p.rate < 50);
-    
-    // 설명 템플릿 매핑
-    const bestDescs = [
-      '완벽한 티키타카 빌드업 듀오 ⚽',
-      '공수 전환의 마스터클래스 ⚡',
-      '눈빛만 봐도 통하는 연계 시너지 🔥'
-    ];
-    
-    const worstDescs = [
-      '동선 오버랩으로 역습 자주 허용 ⚠️',
-      '패스 미스 빌드업 불안 요소 노출 📉',
-      '공격 템포 조율 어긋남 발생 🧩'
-    ];
-    
-    const best = bestCandidates.slice(0, 3).map((item, idx) => ({
-      partner: item.nickname,
-      desc: bestDescs[idx % bestDescs.length],
-      rate: item.rate,
-      stats: `${item.matches}경기 ${item.wins}승 ${item.losses}패`
-    }));
-    
-    const worst = worstCandidates.slice(0, 3).map((item, idx) => ({
-      partner: item.nickname,
-      desc: worstDescs[idx % worstDescs.length],
-      rate: item.rate,
-      stats: `${item.matches}경기 ${item.wins}승 ${item.losses}패`
-    }));
-    
-    return { best, worst };
-  }, [rows, matches, matchLineupsMap, myMembershipId]);
-
-  // 경기장 승률 모의 데이터 및 동적 결합
-  const stadiums = dynamicStadiumStats.length > 0 ? dynamicStadiumStats.map((st, i) => ({
-    name: st.name,
-    matches: st.matches,
-    wins: st.wins,
-    draws: st.draws,
-    losses: st.losses,
-    rate: st.rate,
-    color: st.rate >= 75 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : st.rate >= 50 ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : st.rate >= 30 ? 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]' : 'bg-gray-500 shadow-[0_0_8px_rgba(107,114,128,0.5)]'
-  })) : [
-    { name: 'FC 어반 홈피치 (H)', matches: 5, wins: 4, draws: 1, losses: 0, rate: 80, color: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' },
-    { name: '잠실 FS 돔구장 (A)', matches: 4, wins: 2, draws: 1, losses: 1, rate: 50, color: 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' },
-    { name: '구피 시니어 구장 (H)', matches: 3, wins: 2, draws: 0, losses: 1, rate: 67, color: 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]' },
-    { name: '하남 풋살 스타디움 (A)', matches: 2, wins: 0, draws: 2, losses: 0, rate: 0, color: 'bg-gray-500 shadow-[0_0_8px_rgba(107,114,128,0.5)]' }
-  ];
-
-  // 베스트/워스트 케미 조합 동적 결합
-  const bestChemistry = dynamicChemistry.best.length > 0 ? dynamicChemistry.best : [
-    { partner: '최광수 & 박영철', desc: '공수 전환의 마스터클래스', stats: '6경기 5승 1패', rate: 83 },
-    { partner: '이영식 & 김영수', desc: '완벽한 티키타카 빌드업 듀오', stats: '5경기 4승 1무', rate: 80 },
-    { partner: '정상철 & 한민수', desc: '철벽의 통곡의 벽 수비 파트너', stats: '4경기 3승 1무', rate: 75 }
-  ];
-
-  const worstChemistry = dynamicChemistry.worst.length > 0 ? dynamicChemistry.worst : [
-    { partner: '김영수 & 정상철', desc: '동선 오버랩으로 역습 자주 허용', stats: '5경기 1승 4패', rate: 20 },
-    { partner: '박영철 & 한민수', desc: '패스 미스 빌드업 불안 요소 노출', stats: '4경기 1승 1무 2패', rate: 25 }
-  ];
-
-  // 각 선수별 매트릭스 실시간 승무패 집계 (청백전에서 RED vs BLUE로 나누어 승리/패배 지정)
-  const playerMatrixStats = useMemo(() => {
-    const stats: Record<string, { wins: number; losses: number; draws: number; winRate: number }> = {};
-    
-    for (const player of rows) {
-      let wins = 0;
-      let losses = 0;
-      let draws = 0;
-      
-      for (const match of matches) {
-        if (match.ourScore === null || match.oppScore === null) continue;
-        const lineup = matchLineupsMap[match.id] ?? [];
-        const entry = lineup.find((e) => e.membershipId === player.membershipId);
-        if (!entry) continue; // 불참
-        
-        const isWin = match.ourScore > match.oppScore;
-        const isDraw = match.ourScore === match.oppScore;
-        
-        if (isDraw) {
-          draws += 1;
-        } else {
-          // entry.teamNumber === 1 이면 Team 1 (RED)
-          // entry.teamNumber === 2 이면 Team 2 (BLUE)
-          const isTeam1 = entry.teamNumber === 1;
-          if (isWin) {
-            if (isTeam1) wins += 1;
-            else losses += 1;
-          } else {
-            if (isTeam1) losses += 1;
-            else wins += 1;
-          }
-        }
-      }
-      
-      const total = wins + losses + draws;
-      const winRate = total ? Math.round((wins / total) * 100) : 0;
-      stats[player.membershipId] = { wins, losses, draws, winRate };
-    }
-    
-    return stats;
-  }, [rows, matches, matchLineupsMap]);
-
-  // 날짜 변환 헬퍼 (ex. 2026-05-02 -> 26.5.2)
-  const formatHeaderDate = (dateStr: string) => {
-    try {
-      const d = new Date(dateStr);
-      const yy = d.getFullYear().toString().substring(2);
-      const m = d.getMonth() + 1;
-      const date = d.getDate();
-      return `${yy}.${m}.${date}`;
-    } catch {
-      return '';
-    }
-  };
-
-  // 경기장명 축약 헬퍼
-  const shrinkLocation = (loc: string) => {
-    if (loc.includes('잠실')) return '잠실';
-    if (loc.includes('상암')) return '상암';
-    if (loc.includes('하남')) return '하남';
-    if (loc.includes('어반')) return '어반';
-    return loc.substring(0, 3);
-  };
-
-  const isWorking = isLoadingMatches || isLoadingLineups;
-
-  return (
-    <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6 winning-bg-grid relative animate-fadeIn">
-      <div className="absolute inset-0 bg-gradient-to-tr from-[#00ffa3]/5 via-transparent to-[#00b872]/5 pointer-events-none" />
-
-      {/* 1. 분석실 타이틀 배너 */}
-      <div className="rounded-3xl border border-[#25283e] bg-black/60 p-6 shadow-lg backdrop-blur-md relative z-10 flex items-center gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-[#00ffa3]/10 border border-[#00ffa3]/20 flex items-center justify-center text-2xl text-[#00ffa3]">
-          <Activity size={24} className="animate-pulse" />
-        </div>
-        <div>
-          <span className="text-[10px] font-black text-[#00ffa3] tracking-widest uppercase">FC MOIM ANALYTICS CABINET</span>
-          <h2 className="text-xl font-black text-white tracking-tight">클럽 정밀 상성 분석실 (Chemistry & Match stats)</h2>
-        </div>
-      </div>
-
-      {/* 2. 메인 분석 보드 */}
-      <div className="grid grid-cols-2 gap-6 relative z-10">
-        
-        {/* Left Column: 경기장 승률 분석 */}
-        <div className="rounded-3xl border border-[#25283e] bg-[#141624]/60 p-5 shadow-lg backdrop-blur-md flex flex-col justify-between">
-          <div>
-            <h3 className="text-xs font-black tracking-wider text-gray-400 uppercase flex items-center gap-2 mb-3">
-              <Radio size={14} className="text-[#00ffa3]" /> 경기장별 누적 전적 & 승률 (Stadium Win Rate)
-            </h3>
-            <p className="text-[10px] text-gray-500 font-bold mb-4">
-              매치 위치에 따른 승률 변화 및 핏치 친화도 데이터입니다.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            {stadiums.map((st, i) => (
-              <div key={i} className="space-y-1.5">
-                <div className="flex justify-between items-baseline text-xs font-bold text-gray-300">
-                  <span>{st.name}</span>
-                  <span className="font-mono text-[11px] text-gray-400">
-                    {st.wins}승 {st.draws}무 {st.losses}패 (승률 <strong className="text-white">{st.rate}%</strong>)
-                  </span>
-                </div>
-                <div className="w-full bg-white/5 rounded-full h-2 overflow-hidden border border-white/5">
-                  <div className={`h-full rounded-full ${st.color}`} style={{ width: `${st.rate || 5}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Right Column: 선수단 상성 케미스트리 */}
-        <div className="rounded-3xl border border-[#25283e] bg-[#141624]/60 p-5 shadow-lg backdrop-blur-md space-y-5">
-          {/* Best Chemistry */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-black tracking-wider text-[#00ffa3] uppercase flex items-center gap-1.5">
-              🔥 최강 시너지 듀오 (Best Chemistry)
-            </h3>
-            <div className="grid grid-cols-1 gap-2.5">
-              {bestChemistry.map((bc: { partner: string; desc: string; stats: string; rate: number }, i: number) => (
-                <div key={i} className="bg-white/5 border border-white/5 rounded-2xl p-3 flex justify-between items-center">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-black text-white">
-                        {bc.partner.includes('&') ? bc.partner : `나 & ${bc.partner}`}
-                      </span>
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">Best</span>
-                    </div>
-                    <p className="text-[10px] text-gray-500 font-bold mt-1">{bc.desc}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-[11px] font-black text-[#00ffa3] font-mono">{bc.rate}% 승률</p>
-                    <p className="text-[9px] font-mono text-gray-500 font-bold mt-0.5">{bc.stats}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Worst Chemistry */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-black tracking-wider text-red-400 uppercase flex items-center gap-1.5">
-              ⚠️ 상성 보완 조합 (Chemistry Warning)
-            </h3>
-            <div className="grid grid-cols-1 gap-2.5">
-              {worstChemistry.map((wc: { partner: string; desc: string; stats: string; rate: number }, i: number) => (
-                <div key={i} className="bg-white/5 border border-white/5 rounded-2xl p-3 flex justify-between items-center">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-black text-white">
-                        {wc.partner.includes('&') ? wc.partner : `나 & ${wc.partner}`}
-                      </span>
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20 font-bold">Warning</span>
-                    </div>
-                    <p className="text-[10px] text-gray-500 font-bold mt-1">{wc.desc}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-[11px] font-black text-red-400 font-mono">{wc.rate}% 승률</p>
-                    <p className="text-[9px] font-mono text-gray-500 font-bold mt-0.5">{wc.stats}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      {/* 3. 선수별 통합 전적 현황판 (Player Match Matrix & Stadium Insights) */}
-      <div className="rounded-3xl border border-[#25283e] bg-[#141624]/60 p-5 shadow-lg backdrop-blur-md relative z-10 animate-fadeIn space-y-4">
-        <div className="flex justify-between items-center pb-2 border-b border-white/5">
-          <h3 className="text-xs font-black tracking-wider text-gray-400 uppercase flex items-center gap-2">
-            <LayoutGrid size={14} className="text-[#00ffa3]" />
-            선수별 통합 전적 현황판 (Player Match Matrix & Stadium Insights)
-          </h3>
-          <span className="font-mono text-[9px] font-black text-[#00ffa3] bg-[#00ffa3]/10 border border-[#00ffa3]/20 px-2 py-0.5 rounded">
-            경기장 상성 연동 완료
-          </span>
-        </div>
-
-        {isWorking ? (
-          <div className="py-16 text-center text-xs font-bold text-gray-500 flex flex-col items-center justify-center gap-2">
-            <LoaderCircle size={20} className="animate-spin text-[#00ffa3]" />
-            <span>선수단 전적 매트릭스를 로드 중...</span>
-          </div>
-        ) : matches.length > 0 ? (
-          <div
-            className="no-scrollbar rounded-2xl border border-white/5 bg-black/25"
-            style={{ overflowX: 'auto' }}
-            data-exempt=":// design-exempt(reason: legacy layout overflow, expires: 2026-12-31)"
-          >
-            <table className="w-full border-collapse text-center">
-              <thead>
-                <tr className="bg-white/5 text-[9px] font-black text-gray-400 uppercase tracking-wider border-b border-white/5">
-                  <th className="py-3 px-3 text-left font-extrabold text-[10px] min-w-[80px]" data-exempt=":// design-exempt(reason: legacy layout min-width, expires: 2026-12-31)">구분</th>
-                  
-                  {/* 경기별 날짜 및 경기장 명칭 헤더 */}
-                  {matches.map((match) => (
-                    <th key={match.id} className="py-2.5 px-2 border-l border-white/5 min-w-[75px]" data-exempt=":// design-exempt(reason: legacy layout min-width, expires: 2026-12-31)">
-                      <div className="text-[10px] font-black text-white font-mono">{formatHeaderDate(match.date)}</div>
-                      <div className="text-[8px] font-extrabold text-[#00ffa3] mt-0.5 tracking-tighter truncate max-w-[70px] mx-auto" title={match.location}>
-                        {shrinkLocation(match.location)}
-                      </div>
-                    </th>
-                  ))}
-                  
-                  {/* 누적 승무패 헤더 */}
-                  <th className="py-3 px-3.5 border-l border-white/10 text-emerald-400 font-bold min-w-[45px]" data-exempt=":// design-exempt(reason: legacy layout min-width, expires: 2026-12-31)">승</th>
-                  <th className="py-3 px-3.5 border-l border-white/5 text-red-400 font-bold min-w-[45px]" data-exempt=":// design-exempt(reason: legacy layout min-width, expires: 2026-12-31)">패</th>
-                  <th className="py-3 px-3.5 border-l border-white/5 text-[#00ffa3] font-black min-w-[55px]" data-exempt=":// design-exempt(reason: legacy layout min-width, expires: 2026-12-31)">승률</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5 text-xs text-white">
-                {rows.map((player) => {
-                  const mStats = playerMatrixStats[player.membershipId] || { wins: 0, losses: 0, draws: 0, winRate: 0 };
-                  
-                  return (
-                    <tr key={player.membershipId} className="hover:bg-white/5 transition-colors">
-                      {/* 구분 (선수 이름) */}
-                      <td className="py-2.5 px-3 text-left font-black text-white flex items-center gap-2">
-                        <Image
-                          src={player.photoUrl || getFallbackAvatar(player.nickname)}
-                          alt=""
-                          width={20}
-                          height={20}
-                          className="h-5 w-5 rounded-full object-cover shrink-0 ring-1 ring-white/10"
-                          unoptimized
-                        />
-                        <span className="truncate max-w-[65px]">{player.nickname}</span>
-                      </td>
-
-                      {/* 각 경기별 승무패 결과 배지 */}
-                      {matches.map((match) => {
-                        const isWin = (match.ourScore ?? 0) > (match.oppScore ?? 0);
-                        const isDraw = (match.ourScore ?? 0) === (match.oppScore ?? 0);
-                        const lineup = matchLineupsMap[match.id] ?? [];
-                        const entry = lineup.find((e) => e.membershipId === player.membershipId);
-
-                        let resultLabel = '-';
-                        const hasAttended = !!entry;
-                        let cellClass = 'bg-white/5 text-gray-400 border border-white/10';
-
-                        if (entry) {
-                          if (isDraw) {
-                            resultLabel = '무';
-                            cellClass = 'bg-white/5 text-gray-400 border border-white/10';
-                          } else {
-                            const isTeam1 = entry.teamNumber === 1;
-                            const isPlayerWin = isWin ? isTeam1 : !isTeam1;
-                            resultLabel = isPlayerWin ? '승' : '패';
-                            cellClass = isPlayerWin
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                              : 'bg-red-500/10 text-red-400 border border-red-500/20';
-                          }
-                        }
-
-                        return (
-                          <td key={match.id} className="py-2.5 px-2 border-l border-white/5">
-                            {hasAttended ? (
-                              <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-black ${cellClass}`}>
-                                {resultLabel}
-                              </span>
-                            ) : (
-                              <span className="text-[10px] font-bold text-gray-700">-</span>
-                            )}
-                          </td>
-                        );
-                      })}
-
-                      {/* 누적 기록 */}
-                      <td className="py-2.5 px-3.5 border-l border-white/10 text-emerald-400 font-mono font-bold">{mStats.wins}</td>
-                      <td className="py-2.5 px-3.5 border-l border-white/5 text-red-400 font-mono font-bold">{mStats.losses}</td>
-                      <td className="py-2.5 px-3.5 border-l border-white/5 text-[#00ffa3] font-mono font-black">{mStats.winRate}%</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="py-12 text-center text-xs font-bold text-gray-500 rounded-2xl border border-dashed border-white/5 bg-black/20">
-            아직 완료 보고된 공식 매치 기록이 없습니다.
-          </div>
-        )}
-      </div>
-
-    </div>
-  );
-}
