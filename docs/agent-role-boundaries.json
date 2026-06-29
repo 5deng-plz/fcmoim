@@ -1,0 +1,43 @@
+{
+  "roles": {
+    "codex": {
+      "forbiddenPaths": [
+        "src/app/**",
+        "src/components/**",
+        "src/stores/**",
+        "public/**",
+        "tailwind.config.ts",
+        "tests/frontend-*.test.tsx",
+        "tests/*-ui.test.tsx"
+      ],
+      "allowedExceptions": [
+        "src/app/api/**",
+        "docs/handoff/**"
+      ]
+    },
+    "agy": {
+      "forbiddenPaths": [
+        "src/app/api/**",
+        "src/config/**",
+        "src/lib/**",
+        "src/services/**",
+        "supabase/**",
+        "scripts/**",
+        ".github/**",
+        ".agents/**",
+        "AGENT.md",
+        "apphosting.yaml",
+        "firebase.json",
+        ".env.local.example",
+        "docs/project-context.json",
+        "tests/local-*.test.ts",
+        "tests/*-service.test.ts",
+        "tests/*-contract.test.ts",
+        "tests/match-result-transaction.test.ts"
+      ],
+      "allowedExceptions": [
+        "docs/handoff/**"
+      ]
+    }
+  }
+}

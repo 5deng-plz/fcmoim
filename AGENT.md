@@ -18,11 +18,14 @@
 - Harness workflow: `docs/user/design-harness-workflow.md`
 - Design tokens: `docs/design-tokens.md`
 - Current state: `docs/project-context.json` (standard/full work only)
+- Cross-agent ownership: `docs/agent-boundaries.md`
+- Handoff template: `docs/handoff/TEMPLATE.md`
 
 ## Session Loop
 
 1. **Orient**: read `AGENT.md`, `docs/agent-rules.json`, `docs/agent-feedback.md`, `docs/user/design-harness-workflow.md`, and the relevant role prompt. Read `docs/project-context.json` when the task is standard/full.
 2. **Plan & Scope**: choose a work level. For standard/full, list expected changed files and confirm they fall within `allowedPaths`; quick work does not update project state by default.
+   Run the current session role guard (`npm run guard:role:codex` or `npm run guard:role:agy`) before implementation and commit.
 3. **Implement & Verify**: implement the task and run deterministic checks (`lint`, `typecheck`, `test`). Retry up to `loopPolicy.maxGuardRetries` times on guard failures, then escalate to user.
 4. **Self-Review**: run `guard-design`, compare changed files vs plan, confirm tests pass. Retry up to `loopPolicy.maxReviewRounds` times, then escalate to user.
 5. **Complete**: run the selected guard profile, commit the work, and summarize passed gates separately from omitted or blocked gates. Only standard/full work updates `docs/project-context.json`; retrospective is required only when reusable harness guidance is being proposed or full evidence guard is used.

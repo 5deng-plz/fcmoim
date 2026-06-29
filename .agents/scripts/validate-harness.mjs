@@ -122,6 +122,29 @@ if (rules) {
     errors.push('statePolicy.writer must be a string');
   }
 
+  let roleBoundaries = rules.roleBoundaries;
+  if (roleBoundaries?.config) {
+    if (!exists(roleBoundaries.config)) {
+      errors.push(`roleBoundaries.config path missing: ${roleBoundaries.config}`);
+      roleBoundaries = {};
+    } else {
+      try {
+        roleBoundaries = JSON.parse(fs.readFileSync(path.join(root, roleBoundaries.config), 'utf8'));
+      } catch {
+        errors.push('roleBoundaries.config is not valid JSON');
+        roleBoundaries = {};
+      }
+    }
+  }
+  for (const [role, boundary] of Object.entries(roleBoundaries?.roles || {})) {
+    if (!Array.isArray(boundary.forbiddenPaths)) {
+      errors.push(`roleBoundaries.roles.${role}.forbiddenPaths must be an array`);
+    }
+    if (!Array.isArray(boundary.allowedExceptions)) {
+      errors.push(`roleBoundaries.roles.${role}.allowedExceptions must be an array`);
+    }
+  }
+
   // Review policy
   const rp = rules.reviewPolicy;
   if (rp) {

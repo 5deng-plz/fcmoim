@@ -401,6 +401,44 @@
         { "path": "app/runtime/session.ts", "content": "export const value = true;\n" }
       ],
       "expectedExit": 1
+    },
+    {
+      "id": "role-guard-blocks-owned-boundary",
+      "description": "role guard rejects files owned by another role",
+      "command": "node .agents/scripts/guard-role.mjs --role=backend",
+      "rulesPatch": {
+        "roleBoundaries": {
+          "roles": {
+            "backend": {
+              "forbiddenPaths": ["app/view/**"],
+              "allowedExceptions": ["app/view/api/**"]
+            }
+          }
+        }
+      },
+      "mutations": [
+        { "path": "app/view/Widget.tsx", "content": "export const Widget = true;\n" }
+      ],
+      "expectedExit": 1
+    },
+    {
+      "id": "role-guard-allows-explicit-exception",
+      "description": "role guard permits configured exceptions inside a broader forbidden path",
+      "command": "node .agents/scripts/guard-role.mjs --role=backend",
+      "rulesPatch": {
+        "roleBoundaries": {
+          "roles": {
+            "backend": {
+              "forbiddenPaths": ["app/view/**"],
+              "allowedExceptions": ["app/view/api/**"]
+            }
+          }
+        }
+      },
+      "mutations": [
+        { "path": "app/view/api/route.ts", "content": "export const GET = true;\n" }
+      ],
+      "expectedExit": 0
     }
   ]
 }
