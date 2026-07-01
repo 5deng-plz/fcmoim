@@ -31,14 +31,14 @@
 
 ## 구현 결과
 
-- summary: Agy 역할의 기록/분석 탭 통합 및 실시간 채팅방, 커뮤니티 피드 개편을 완료하고, 실시간 웹소켓 구독을 위해 Codex 측에 comments 테이블 realtime replication 활성화를 요청합니다.
-- sourceCommit: 8a4e8ab
+- summary: Agy 역할의 기록/분석 탭 통합 및 실시간 채팅방, 커뮤니티 피드 개편을 완료하고, 실시간 웹소켓 구독을 위해 Codex 측에 comments 테이블 realtime replication 활성화를 요청합니다. (빌드를 깨트리던 TypeScript 타입 에러 수정 완료)
+- sourceCommit: eac450db34c9796089d1d8cca14ac7c6c114cd89
 
 ## 검증
 
-- command:
-- result:
-- runtimeOrVisualEvidence:
+- command: `npm run verify:baseline`
+- result: `Test Files 25 passed, Tests 242 passed (0 errors, 53 warnings)`
+- runtimeOrVisualEvidence: 242개 유닛 및 UI 테스트 전원 통과 확인
 
 ## 미해결 사항
 

@@ -385,7 +385,7 @@ export default function CommunityPage({
 
         {/* Pinned Announcements Render */}
         {filteredPinned.map((item) => {
-          const ann = item.data;
+          const ann = item.data as Announcement;
           const isExpanded = expandedId === ann.id;
           return (
             <article

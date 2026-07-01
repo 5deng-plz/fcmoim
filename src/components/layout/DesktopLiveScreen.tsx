@@ -11,7 +11,7 @@ import {
   Camera, LoaderCircle, ShieldCheck, UserCheck, UserX, LineChart, UserCog
 } from 'lucide-react';
 import { fetchFeedPosts, type FeedPost } from '@/stores/feedClient';
-import { useStatsAnalysis } from '@/hooks/useStatsAnalysis';
+import { useStatsAnalysis, type ChemistryInfo } from '@/hooks/useStatsAnalysis';
 import EventComments from '@/components/features/EventComments';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import Modal from '@/components/ui/Modal';
@@ -386,7 +386,7 @@ function DesktopRecordsPanel() {
             <div className="grid grid-cols-1 gap-2.5">
               {isLoadingStats ? (
                 <div className="py-10 text-center text-xs text-gray-500 font-bold">로딩 중...</div>
-              ) : bestChemistry.map((bc: any, i: number) => (
+              ) : bestChemistry.map((bc: ChemistryInfo, i: number) => (
                 <div key={i} className="bg-white/5 border border-white/5 rounded-2xl p-3 flex justify-between items-center">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
@@ -414,7 +414,7 @@ function DesktopRecordsPanel() {
             <div className="grid grid-cols-1 gap-2.5">
               {isLoadingStats ? (
                 <div className="py-10 text-center text-xs text-gray-500 font-bold">로딩 중...</div>
-              ) : worstChemistry.map((wc: any, i: number) => (
+              ) : worstChemistry.map((wc: ChemistryInfo, i: number) => (
                 <div key={i} className="bg-white/5 border border-white/5 rounded-2xl p-3 flex justify-between items-center">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">

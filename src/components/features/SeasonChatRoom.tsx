@@ -7,7 +7,7 @@ import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import { useAppStore } from '@/stores/useAppStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useRecordsStore } from '@/stores/useRecordsStore';
-import { createEventComment, fetchEventComments, type EventComment } from '@/stores/commentsClient';
+import { createEventComment, fetchEventComments, type EventComment, type EventCommentTargetType } from '@/stores/commentsClient';
 import { fetchFeedPosts, createFeedPost, type FeedPost } from '@/stores/feedClient';
 import { supabase } from '@/lib/supabase';
 
@@ -37,8 +37,8 @@ export default function SeasonChatRoom({ clubId }: SeasonChatRoomProps) {
     if (authorNameFromApi && authorNameFromApi !== '알 수 없는 멤버') {
       return authorNameFromApi;
     }
-    if (membershipId === myMembershipId && memberProfile?.nickname) {
-      return memberProfile.nickname;
+    if (membershipId === myMembershipId && memberProfile?.name) {
+      return memberProfile.name;
     }
     const match = rows.find((r) => r.membershipId === membershipId);
     return match ? match.nickname : '알 수 없는 멤버';
@@ -127,6 +127,15 @@ export default function SeasonChatRoom({ clubId }: SeasonChatRoomProps) {
       });
 
     // Subscribe to Supabase Postgres Realtime insertion
+    interface RawComment {
+      id: string;
+      target_type: EventCommentTargetType;
+      target_id: string;
+      membership_id: string;
+      content: string;
+      created_at: string;
+    }
+
     const channel = supabase
       .channel(`comments_room:${chatPost.id}`)
       .on(
@@ -139,7 +148,7 @@ export default function SeasonChatRoom({ clubId }: SeasonChatRoomProps) {
         },
         (payload) => {
           if (ignore) return;
-          const rawComment = payload.new as any;
+          const rawComment = payload.new as RawComment;
           
           const newComment: EventComment = {
             id: rawComment.id,
