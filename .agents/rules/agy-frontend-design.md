@@ -18,6 +18,9 @@
 
 - 변경된 Frontend 테스트와 Agy 역할 guard를 통과합니다.
 - 실제 브라우저에서 주요 viewport, console과 interaction을 확인합니다.
+- Antigravity의 macOS 브라우저 QA는 구성된 Chrome DevTools MCP를 우선 사용합니다.
+- `open_browser_url` 또는 Linux 전용 local Chrome mode를 호출하지 않으며, 해당 도구 오류를 브라우저 QA 불가 사유로 보고하지 않습니다.
+- Chrome DevTools MCP의 연결 가능 여부와 실제 오류를 확인하기 전에는 브라우저 QA를 blocked로 판정하지 않습니다.
 - screenshot 또는 영상 증적을 walkthrough와 handoff에 연결합니다.
 - 한글 커밋과 변경된 공유 파일 목록을 handoff에 기록합니다.
 

@@ -26,6 +26,7 @@
 - Backend, Supabase, migration, Infra와 production 설정을 직접 수정하지 않습니다.
 - Backend 계약이나 fixture 변경은 `docs/handoff/`로 Codex에 요청합니다.
 - Local Supabase를 공유하되 reset, migration, seed 구조 변경 명령을 실행하지 않습니다.
+- Antigravity macOS 브라우저 QA는 Chrome DevTools MCP를 사용하며 `open_browser_url`과 Linux 전용 local Chrome mode를 사용하지 않습니다.
 - Agy 전용 상세 규칙은 `.agents/rules/agy-frontend-design.md`를 따릅니다.
 
 ## 공유 파일

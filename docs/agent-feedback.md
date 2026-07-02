@@ -6,6 +6,7 @@
 
 - Runtime truth first without browser by default: 재현 가능한 문제는 사용자의 재확인에만 기대지 말고 로컬 서버, API, DB, 결정적 테스트로 확인합니다. 인앱 브라우저 또는 Browser tooling은 현재 턴에서 사용자가 명시적으로 브라우저 QA, 스크린샷, 직접 브라우저 조작을 요청한 경우에만 사용합니다.
 - Browser smoke for runtime entrypoints: Auth/session/API bootstrap, app entrypoint, package/runtime config를 바꿀 때는 `npm run dev`를 직접 띄우고 인앱 브라우저 첫 화면과 서버 콘솔을 evidence로 남깁니다.
+- Use the supported browser controller: Antigravity가 macOS에서 브라우저 QA를 수행할 때는 구성된 Chrome DevTools MCP를 사용합니다. Linux 전용 local Chrome mode의 `open_browser_url` 실패를 브라우저 기능 부재로 오판하지 않으며, Chrome DevTools MCP의 실제 연결 상태를 확인하기 전에는 blocked로 보고하지 않습니다.
 - Treat stale browser auth as runtime risk: Local Supabase reset 이후 브라우저에 남은 cookie/localStorage/sessionStorage 인증 상태는 별도 실패 경로로 검증합니다.
 - Name the gates honestly: "하네스 통과"라고 보고할 때 `harness:guard:verify`, `verify:db:local`, browser smoke 중 무엇이 포함되었고 빠졌는지 명시합니다.
 - Preserve existing entrypoints: 새 안전 경로나 래퍼를 추가해도 사용자가 이미 쓰는 기본 명령과 흐름을 깨지 않습니다.
@@ -22,4 +23,3 @@
 - Do not encode volatile specs in harness: 색상, 아이콘, 문구, 배치, 특정 URL처럼 현재 기획/리뷰 코멘트에 종속된 UI 세부사항은 사용자가 명시적으로 영구 정책화를 요청하지 않는 한 하네스 규칙이나 semantic slot에 추가하지 않습니다.
 - Reusable harness feedback only: 특정 기능 구현에서 유효한 코드 패턴을 하네스 개선으로 승격하지 않습니다. 여러 프로젝트와 Agent 작업에 재사용 가능한 판단 기준으로 일반화되는 실패만 기록합니다.
 - Strict branch and worktree scoping: 작업 세션이 시작될 때 항상 현재 Git 브랜치 상태를 확인합니다. 사용자의 명시적인 요청이 없는 한 `main` 브랜치에 직접 커밋하거나 푸시하지 않으며, 반드시 `agent/<role>/<task>` 규격 브랜치를 생성하여 작업하고 Git worktree를 사용해 격리를 보장합니다.
-
