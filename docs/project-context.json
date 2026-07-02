@@ -1,49 +1,56 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 126,
-  "updatedAt": "2026-07-03T00:09:02+09:00",
+  "updateVersion": 127,
+  "updatedAt": "2026-07-03T08:23:44+09:00",
   "updatedBy": "codex",
-  "currentPhase": "comment-realtime-client-transport",
+  "currentPhase": "local-handoff-coordination",
   "activeWork": {
-    "taskId": "comment-realtime-client-transport",
+    "taskId": "untracked-local-handoffs",
     "status": "ready",
     "designMode": "maintenance",
-    "baselineCommit": "8fc64b7",
+    "baselineCommit": "58004c1",
     "changedFiles": [
+      ".gitignore",
       "AGENTS.md",
       "docs/agent-boundaries.md",
+      "docs/decisions.md",
+      "docs/handoff/20260630-agy-to-codex-realtime-comments.md",
+      "docs/handoff/20260702-agy-to-codex-chat-refactoring.md",
+      "docs/handoff/20260702-agy-to-codex-instagram-board.md",
       "docs/handoff/20260702-codex-to-agy-comment-realtime.md",
       "docs/handoff/20260703-codex-to-agy-comment-realtime-ui-qa.md",
+      "docs/handoff/README.md",
       "docs/project-context.json",
-      "src/components/features/SeasonChatRoom.tsx",
-      "src/lib/comment-realtime-transport.ts",
-      "tests/comment-realtime-transport.test.ts",
-      "tests/local-supabase-realtime.test.ts"
+      "scripts/agent-handoff-inbox.mjs",
+      "tests/agent-handoff-inbox.test.ts"
     ],
     "changedSurfaces": [
-      "ui",
-      "api",
+      "infra",
       "docs",
       "tests"
     ],
     "allowedPaths": [
+      ".gitignore",
       "AGENTS.md",
       "docs/agent-boundaries.md",
+      "docs/decisions.md",
+      "docs/handoff/20260630-agy-to-codex-realtime-comments.md",
+      "docs/handoff/20260702-agy-to-codex-chat-refactoring.md",
+      "docs/handoff/20260702-agy-to-codex-instagram-board.md",
       "docs/handoff/20260702-codex-to-agy-comment-realtime.md",
       "docs/handoff/20260703-codex-to-agy-comment-realtime-ui-qa.md",
+      "docs/handoff/README.md",
       "docs/project-context.json",
-      "src/components/features/SeasonChatRoom.tsx",
-      "src/lib/comment-realtime-transport.ts",
-      "tests/comment-realtime-transport.test.ts",
-      "tests/local-supabase-realtime.test.ts"
+      "scripts/agent-handoff-inbox.mjs",
+      "tests/agent-handoff-inbox.test.ts"
     ],
     "evidence": {
       "roleGuard": {
         "status": "passed",
         "provider": "Codex role guard",
         "command": "npm run guard:role:codex",
-        "summary": "Component wiring은 Agy guard, transport·통합 테스트·handoff는 Codex guard로 분리 검증."
+        "summary": "Infra script, tests, tracked instructions와 handoff index 제거만 변경."
       },
       "baseline": {
         "status": "passed",
@@ -51,47 +58,34 @@
         "command": "npm run verify:baseline",
         "summary": "Harness validation, lint 0 errors, typecheck, 31 files 중 28 passed·3 skipped, 255 tests 통과."
       },
-      "clientTransport": {
+      "localHandoffInbox": {
         "status": "passed",
-        "provider": "Vitest, Local Supabase Realtime",
-        "command": "npx vitest run tests/comment-realtime-transport.test.ts; node scripts/with-local-supabase-env.mjs npx vitest run tests/local-supabase-realtime.test.ts",
-        "summary": "auth 선행, private topic, payload 검증, 오류·해제 처리 3개 단위 테스트와 API 저장→client transport 수신 통과."
+        "provider": "Vitest, registered Git worktrees",
+        "command": "npx vitest run tests/agent-handoff-inbox.test.ts; npm run agents:handoff:inbox -- --role=agy",
+        "summary": "ignored 파일의 cross-worktree 발견, metadata 필터, 상태·updatedAt 중복 제거, worktree 무변경 5개 테스트 통과."
       },
-      "localDatabase": {
-        "status": "passed",
-        "type": "database",
-        "provider": "Local Supabase CLI, Vitest",
-        "command": "npm run verify:db:local",
-        "summary": "직전 DB reset·QA seed 통과 상태에서 실제 API 저장→private Broadcast→client transport 수신 통과."
-      },
-      "browserRuntime": {
-        "status": "passed",
-        "provider": "npm run dev, in-app browser, server log",
-        "command": "npm run dev; open http://localhost:3000/",
-        "summary": "dev server ready, 로그인 first screen과 둘러보기 guest dashboard 렌더, browser console error/warn 0건, server log GET /·/api/dev-test·/api/team 200."
-      },
-      "harnessFull": {
+      "harnessStandard": {
         "status": "passed",
         "provider": "Agent Harness",
-        "command": "npm run harness:guard:full",
-        "summary": "validate, token sync, design, diff, baseline, DB contract와 evidence guard 전체 통과."
+        "command": "npm run harness:guard:standard",
+        "summary": "validate, token sync, design, diff와 baseline 통과."
       }
     },
     "retrospective": {
       "issuesObserved": [
-        "Agy 구현이 provider transport를 UI component에 직접 결합하고 scroll state 변경마다 channel 재구독 가능성을 만들었음.",
-        "Codex transport adapter와 stable ref wiring으로 provider 경계와 subscription lifecycle을 분리.",
-        "Agy 작업 브랜치를 제거하고 visual interaction QA만 별도 handoff로 축소."
+        "Git에 handoff 인스턴스를 commit하면 main history와 과거 요청 스캔이 불필요하게 복잡해짐.",
+        "Git 추적을 제거하면 기존 ref 기반 Inbox가 동작하지 않아 registered worktree 파일 스캔 방식으로 교체.",
+        "ignored handoff는 다른 장비로 자동 전달되지 않는 local-only 계약으로 범위를 명시."
       ],
       "missedEvidence": [],
       "harnessImprovementProposal": [],
       "promotionRecommendation": "none",
-      "reason": "client protocol transport를 Codex 소유로 명시해 동일 유형의 역할 오분류를 프로젝트 경계에서 해결."
+      "reason": "변경은 FC Moim의 local worktree 협업 정책이며 범용 Harness 엔진 변경 대상은 아님."
     },
     "reviewStatus": "ready",
     "loopCounters": {
       "reviewRounds": 1,
-      "guardRetries": 0
+      "guardRetries": 1
     }
   },
   "workstreams": [

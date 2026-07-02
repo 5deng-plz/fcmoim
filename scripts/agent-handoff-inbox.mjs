@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HANDOFF_DIRECTORY = 'docs/handoff';
+const TRACKED_HANDOFF_DOCS = new Set(['README.md', 'TEMPLATE.md']);
 const STATUS_PRIORITY = new Map([
   ['requested', 0],
   ['accepted', 1],
@@ -30,9 +32,7 @@ export function parseHandoff(content) {
 
   for (const line of content.split(/\r?\n/)) {
     const match = line.match(/^- (id|from|to|status|requestedAt|updatedAt):\s*(.+)$/);
-    if (match) {
-      metadata[match[1]] = stripCode(match[2]);
-    }
+    if (match) metadata[match[1]] = stripCode(match[2]);
   }
 
   const title = content.match(/^# Agent Handoff:\s*(.+)$/m)?.[1]?.trim();
@@ -43,52 +43,45 @@ export function parseHandoff(content) {
   return { ...metadata, title: title || metadata.id };
 }
 
-function listRefs(cwd) {
-  const output = runGit(
-    [
-      'for-each-ref',
-      '--format=%(refname)',
-      'refs/heads/main',
-      'refs/heads/agent',
-      'refs/remotes/origin/main',
-      'refs/remotes/origin/agent',
-    ],
+export function listWorktreeRoots(cwd = process.cwd()) {
+  const output = execFileSync('git', ['worktree', 'list', '--porcelain', '-z'], {
     cwd,
-  );
-
-  return output ? output.split('\n').filter(Boolean) : [];
-}
-
-function displayRef(ref) {
-  return ref.replace(/^refs\/heads\//, '').replace(/^refs\/remotes\//, '');
-}
-
-function listHandoffPaths(ref, cwd) {
-  const output = runGit(
-    ['ls-tree', '-r', '--name-only', ref, '--', HANDOFF_DIRECTORY],
-    cwd,
-  );
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
 
   return output
-    ? output
-        .split('\n')
-        .filter((file) => file.endsWith('.md') && !file.endsWith('/TEMPLATE.md'))
-    : [];
+    .split('\0')
+    .filter((line) => line.startsWith('worktree '))
+    .map((line) => line.slice('worktree '.length));
 }
 
-function getFileCommit(ref, file, cwd) {
-  return runGit(['log', '-1', '--format=%H%x09%cI', ref, '--', file], cwd);
+function listHandoffFiles(root) {
+  const directory = path.join(root, HANDOFF_DIRECTORY);
+  if (!fs.existsSync(directory)) return [];
+
+  return fs
+    .readdirSync(directory, { withFileTypes: true })
+    .filter(
+      (entry) =>
+        entry.isFile() &&
+        entry.name.endsWith('.md') &&
+        !TRACKED_HANDOFF_DOCS.has(entry.name),
+    )
+    .map((entry) => path.join(directory, entry.name));
+}
+
+function worktreeSource(root) {
+  try {
+    const branch = runGit(['branch', '--show-current'], root);
+    return branch || `detached:${path.basename(root)}`;
+  } catch {
+    return `local:${path.basename(root)}`;
+  }
 }
 
 function candidatePriority(candidate) {
   return STATUS_PRIORITY.get(candidate.status) ?? -1;
-}
-
-function sourcePriority(ref) {
-  if (ref === 'refs/heads/main') return 4;
-  if (ref.startsWith('refs/heads/agent/')) return 3;
-  if (ref === 'refs/remotes/origin/main') return 2;
-  return 1;
 }
 
 function chooseCurrentCandidate(current, candidate) {
@@ -99,50 +92,56 @@ function chooseCurrentCandidate(current, candidate) {
     return statusDifference > 0 ? candidate : current;
   }
 
-  const candidateUpdatedAt = Date.parse(candidate.updatedAt || candidate.committedAt) || 0;
-  const currentUpdatedAt = Date.parse(current.updatedAt || current.committedAt) || 0;
+  const candidateUpdatedAt = Date.parse(candidate.updatedAt || candidate.modifiedAt) || 0;
+  const currentUpdatedAt = Date.parse(current.updatedAt || current.modifiedAt) || 0;
   if (candidateUpdatedAt !== currentUpdatedAt) {
     return candidateUpdatedAt > currentUpdatedAt ? candidate : current;
   }
 
-  const sourceDifference = sourcePriority(candidate.ref) - sourcePriority(current.ref);
-  if (sourceDifference !== 0) {
-    return sourceDifference > 0 ? candidate : current;
-  }
-
-  return candidate.ref.localeCompare(current.ref) < 0 ? candidate : current;
+  return candidate.worktree.localeCompare(current.worktree) < 0 ? candidate : current;
 }
 
-export function collectHandoffs({ cwd = process.cwd() } = {}) {
+/**
+ * @param {{ cwd?: string, worktrees?: string[] }} [options]
+ */
+export function collectHandoffs(options = {}) {
+  const cwd = options.cwd ?? process.cwd();
+  const worktrees = options.worktrees ?? listWorktreeRoots(cwd);
   const byId = new Map();
 
-  for (const ref of listRefs(cwd)) {
-    for (const file of listHandoffPaths(ref, cwd)) {
-      const parsed = parseHandoff(runGit(['show', `${ref}:${file}`], cwd));
+  for (const root of [...new Set(worktrees.map((item) => path.resolve(item)))]) {
+    const source = worktreeSource(root);
+    for (const absoluteFile of listHandoffFiles(root)) {
+      const parsed = parseHandoff(fs.readFileSync(absoluteFile, 'utf8'));
       if (!parsed) continue;
 
-      const [commit, committedAt] = getFileCommit(ref, file, cwd).split('\t');
       const candidate = {
         ...parsed,
-        file,
-        ref,
-        source: displayRef(ref),
-        commit,
-        committedAt,
+        file: path.relative(root, absoluteFile),
+        worktree: root,
+        source,
+        modifiedAt: fs.statSync(absoluteFile).mtime.toISOString(),
       };
       byId.set(parsed.id, chooseCurrentCandidate(byId.get(parsed.id), candidate));
     }
   }
 
   return [...byId.values()].sort((left, right) => {
-    const leftTime = Date.parse(left.updatedAt || left.committedAt) || 0;
-    const rightTime = Date.parse(right.updatedAt || right.committedAt) || 0;
+    const leftTime = Date.parse(left.updatedAt || left.modifiedAt) || 0;
+    const rightTime = Date.parse(right.updatedAt || right.modifiedAt) || 0;
     return rightTime - leftTime || left.id.localeCompare(right.id);
   });
 }
 
-export function getInbox({ role, all = false, cwd = process.cwd() }) {
-  return collectHandoffs({ cwd }).filter(
+/**
+ * @param {{ role?: string, all?: boolean, cwd?: string, worktrees?: string[] }} [options]
+ */
+export function getInbox(options = {}) {
+  const role = options.role;
+  const all = options.all ?? false;
+  const cwd = options.cwd ?? process.cwd();
+  const worktrees = options.worktrees;
+  return collectHandoffs({ cwd, worktrees }).filter(
     (handoff) =>
       handoff.to === role &&
       (all ? handoff.status !== 'integrated' : handoff.status === 'requested'),
@@ -174,7 +173,7 @@ function formatInbox(handoffs, role) {
       (handoff) =>
         `[${handoff.status}] ${handoff.title}\n` +
         `source: ${handoff.source}\n` +
-        `commit: ${handoff.commit.slice(0, 7)}\n` +
+        `worktree: ${handoff.worktree}\n` +
         `file: ${handoff.file}`,
     )
     .join('\n\n');
@@ -193,6 +192,4 @@ function main() {
 
 const isDirectExecution =
   process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-if (isDirectExecution) {
-  main();
-}
+if (isDirectExecution) main();

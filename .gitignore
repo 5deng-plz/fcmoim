@@ -58,3 +58,8 @@ supabase/.branches/
 
 # firebase
 .firebase/
+
+# local Agent handoff instances
+docs/handoff/*.md
+!docs/handoff/README.md
+!docs/handoff/TEMPLATE.md

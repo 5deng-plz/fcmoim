@@ -75,6 +75,6 @@ This file starts clean for `prototype v0.1`.
 
 ### Cross-Agent Handoff Discovery
 
-- Handoff documents remain the durable cross-agent contract, while shared Git refs provide discovery before integration.
-- Each role starts by reading its inbox from `main`, local `agent/*`, and fetched `origin/agent/*` refs without checkout, merge, or worktree mutation.
-- Handoff identity and status progression suppress duplicate or stale requests across inherited branches; `main` remains reserved for reviewed integration.
+- Handoff instances are ignored local coordination state and are not committed to Git; only the template and inbox instructions remain tracked.
+- Each role starts by reading its inbox across registered local worktrees without checkout, merge, or worktree mutation.
+- Handoff identity, status progression, and `updatedAt` suppress duplicate or stale requests; cross-machine transfer requires a separate collaboration channel.
