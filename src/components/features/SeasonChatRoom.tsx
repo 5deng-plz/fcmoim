@@ -7,10 +7,13 @@ import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
 import { useAppStore } from '@/stores/useAppStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useRecordsStore } from '@/stores/useRecordsStore';
-import { createEventComment, fetchEventComments, type EventComment, type EventCommentTargetType } from '@/stores/commentsClient';
+import { createEventComment, fetchEventComments, type EventComment } from '@/stores/commentsClient';
 import { fetchFeedPosts, createFeedPost, type FeedPost } from '@/stores/feedClient';
 import { supabase } from '@/lib/supabase';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import {
+  subscribeToCommentCreated,
+  type CommentRealtimeSubscription,
+} from '@/lib/comment-realtime-transport';
 
 interface SeasonChatRoomProps {
   clubId: string;
@@ -36,6 +39,8 @@ export default function SeasonChatRoom({
   const [isNearBottom, setIsNearBottom] = useState(true);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const isNearBottomRef = useRef(isNearBottom);
+  const myMembershipIdRef = useRef<string | undefined>(undefined);
   const rows = useMemo(() => records?.rankingRows ?? [], [records?.rankingRows]);
   const myMembershipId = memberProfile?.id;
 
@@ -58,7 +63,7 @@ export default function SeasonChatRoom({
   }, [rows, getAuthorName]);
 
   // Helper to scroll to bottom
-  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     if (scrollRef.current) {
       scrollRef.current.scrollTo({
         top: scrollRef.current.scrollHeight,
@@ -66,7 +71,14 @@ export default function SeasonChatRoom({
       });
       setHasNewMessage(false);
     }
-  };
+  }, []);
+
+  const getAuthorNameRef = useRef(getAuthorName);
+  useEffect(() => {
+    getAuthorNameRef.current = getAuthorName;
+    isNearBottomRef.current = isNearBottom;
+    myMembershipIdRef.current = myMembershipId;
+  }, [getAuthorName, isNearBottom, myMembershipId]);
 
   // Scroll event handler to track if user has scrolled up
   const handleScroll = () => {
@@ -118,87 +130,88 @@ export default function SeasonChatRoom({
 
     const postId = chatPost.id;
     let ignore = false;
-    let channel: RealtimeChannel;
+    let subscription: CommentRealtimeSubscription | undefined;
 
     async function setupRealtime() {
       setIsLoadingComments(true);
 
-      // setAuth before subscription
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      if (token) {
-        supabase.realtime.setAuth(token);
-      }
+      if (!token) throw new Error('Authenticated session is required for season comments.');
 
-      if (ignore) return;
-
-      channel = supabase
-        .channel(`comments:feed_post:${postId}`, {
-          config: {
-            private: true,
-          },
-        })
-        .on(
-          'broadcast',
-          { event: 'comment.created.v1' },
-          (payload) => {
-            if (ignore) return;
-            const broadcastComment = payload.payload as EventComment;
-            if (!broadcastComment) return;
-
-            const resolvedComment: EventComment = {
-              ...broadcastComment,
-              authorName: getAuthorName(broadcastComment.membershipId, broadcastComment.authorName),
-            };
-
-            setComments((prev) => {
-              if (prev.some((c) => c.id === resolvedComment.id)) {
-                return prev;
-              }
-              return [...prev, resolvedComment];
-            });
-
-            // Scroll manager
-            if (isNearBottom || resolvedComment.membershipId === myMembershipId) {
-              setTimeout(() => scrollToBottom('smooth'), 50);
-            } else {
-              setHasNewMessage(true);
-            }
-          }
-        )
-        .subscribe(async (status) => {
+      const nextSubscription = await subscribeToCommentCreated({
+        client: supabase,
+        accessToken: token,
+        postId,
+        onComment: (broadcastComment) => {
           if (ignore) return;
+          const resolvedComment: EventComment = {
+            ...broadcastComment,
+            authorName: getAuthorNameRef.current(
+              broadcastComment.membershipId,
+              broadcastComment.authorName,
+            ),
+          };
 
-          // Fetch or sync comments on subscription (initial and reconnection)
-          if (status === 'SUBSCRIBED') {
-            try {
-              const items = await fetchEventComments({
-                clubId,
-                targetType: 'feed_post',
-                targetId: postId,
-              });
-              if (!ignore) {
-                setComments(items);
-                setTimeout(() => scrollToBottom('auto'), 100);
-              }
-            } catch (err) {
-              console.error('[FC Moim] SeasonChatRoom: Fetch comments failed:', err);
-            } finally {
-              if (!ignore) setIsLoadingComments(false);
-            }
+          setComments((previous) => (
+            previous.some((comment) => comment.id === resolvedComment.id)
+              ? previous
+              : [...previous, resolvedComment]
+          ));
+
+          if (
+            isNearBottomRef.current ||
+            resolvedComment.membershipId === myMembershipIdRef.current
+          ) {
+            setTimeout(() => scrollToBottom('smooth'), 50);
+          } else {
+            setHasNewMessage(true);
           }
-        });
+        },
+        onSubscribed: () => {
+          void syncComments();
+        },
+        onError: (error) => {
+          console.error('[FC Moim] SeasonChatRoom: Realtime failed:', error);
+          if (!ignore) setIsLoadingComments(false);
+        },
+      });
+
+      if (ignore) {
+        await nextSubscription.unsubscribe();
+      } else {
+        subscription = nextSubscription;
+      }
     }
 
-    void setupRealtime();
+    async function syncComments() {
+      try {
+        const items = await fetchEventComments({
+          clubId,
+          targetType: 'feed_post',
+          targetId: postId,
+        });
+        if (!ignore) {
+          setComments(items);
+          setTimeout(() => scrollToBottom('auto'), 100);
+        }
+      } catch (error) {
+        console.error('[FC Moim] SeasonChatRoom: Fetch comments failed:', error);
+      } finally {
+        if (!ignore) setIsLoadingComments(false);
+      }
+    }
+
+    void setupRealtime().catch((error) => {
+      console.error('[FC Moim] SeasonChatRoom: Realtime setup failed:', error);
+      if (!ignore) setIsLoadingComments(false);
+    });
 
     return () => {
       ignore = true;
-      if (channel) {
-        void supabase.removeChannel(channel);
-      }
+      void subscription?.unsubscribe();
     };
-  }, [chatPost, clubId, isNearBottom, myMembershipId, rows, getAuthorName]);
+  }, [chatPost, clubId, scrollToBottom]);
 
   // Submit comment handler
   const handleSubmit = async (e?: React.FormEvent) => {
