@@ -4127,7 +4127,7 @@ describe('records and header polish UI', () => {
     expect(signOut).toHaveBeenCalledOnce();
   });
 
-  it('switches Community board and gallery tabs to clear preparing states', async () => {
+  it('renders CommunityPage unified feed timeline and composer toggle', async () => {
     const user = userEvent.setup();
     useAnnouncementStore.setState({
       announcementsStatus: 'ready',
@@ -4137,13 +4137,16 @@ describe('records and header polish UI', () => {
 
     render(<CommunityPage />);
 
-    await user.click(screen.getByRole('button', { name: '일반' }));
-    expect(screen.getByText('해당 카테고리에 등록된 피드가 없습니다.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '일반' })).toHaveAttribute('aria-pressed', 'true');
+    // Check header title is rendered
+    expect(screen.getByText('커뮤니티 피드')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: '미디어' }));
-    expect(screen.getByText('해당 카테고리에 등록된 피드가 없습니다.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '미디어' })).toHaveAttribute('aria-pressed', 'true');
+    // Toggle composer open
+    await user.click(screen.getByRole('button', { name: '커뮤니티 피드 작성' }));
+    expect(screen.getByPlaceholderText('무슨 이야기를 남길까요?')).toBeInTheDocument();
+
+    // Toggle composer close
+    await user.click(screen.getByRole('button', { name: '커뮤니티 피드 작성' }));
+    expect(screen.queryByPlaceholderText('무슨 이야기를 남길까요?')).not.toBeInTheDocument();
   });
 
   it.skip('uses inline feed compose, simple emoji reactions, 24h time, and live comment count', async () => {
