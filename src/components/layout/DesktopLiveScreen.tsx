@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo, Fragment } from 'react';
 import Image from 'next/image';
 import { useAppStore } from '@/stores/useAppStore';
 import { useRecordsStore } from '@/stores/useRecordsStore';
@@ -146,6 +146,7 @@ function DesktopRecordsPanel() {
   const { records, recordsStatus, loadRecords } = useRecordsStore();
   const { activeClubId } = useAppStore();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const memberProfile = useAuthStore((state) => state.memberProfile);
   
   const { 
     stadiumStats, 
@@ -167,6 +168,10 @@ function DesktopRecordsPanel() {
       void loadRecords(activeClubId);
     }
   }, [activeClubId, loadRecords, recordsStatus]);
+
+  const sortedRows = useMemo(() => {
+    return [...rows].sort((a, b) => b.winRate - a.winRate || b.leaguePoints - a.leaguePoints || b.ovr - a.ovr);
+  }, [rows]);
 
   const bestChemistry = chemistry.best.length > 0 ? chemistry.best : [
     { partner: '최광수 & 박영철', desc: '공수 전환의 마스터클래스', stats: '6경기 5승 1패', rate: 83 },
@@ -237,316 +242,291 @@ function DesktopRecordsPanel() {
         )}
       </div>
 
-      {/* 2. 명예의 전당 랭킹 테이블 (Full Width) */}
+      {/* 2. 25/26 시즌 기록 테이블 (Full Width - 매치 매트릭스 통합형) */}
       <div className="rounded-3xl border border-[#25283e] bg-black/60 p-5 shadow-lg backdrop-blur-md relative z-10 flex flex-col animate-fadeIn">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xs font-black tracking-wider text-gray-400 uppercase flex items-center gap-2">
-            <Trophy size={14} className="text-[#00ffa3]" />
-            25/26 시즌 명예의 전당 랭킹 (선수 선택 시 최근 전적 스트리밍)
-          </h3>
-          <span className="font-mono text-[10px] font-black text-gray-500">TOTAL: {rows.length} PLAYERS</span>
+          <div className="flex items-center gap-3">
+            <h3 className="text-xs font-black tracking-wider text-gray-400 uppercase flex items-center gap-2">
+              <Trophy size={14} className="text-[#00ffa3]" />
+              25/26 시즌 기록 (선수 선택 시 최근 전적 스트리밍)
+            </h3>
+            <span className="font-mono text-[10px] font-black text-gray-500">TOTAL: {rows.length} PLAYERS</span>
+          </div>
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-white/5">
-          {/* Header */}
-          <div className="grid grid-cols-12 bg-white/5 px-4 py-3 text-[10px] font-black uppercase text-gray-400 tracking-wider">
-            <div className="col-span-1 text-center">#</div>
-            <div className="col-span-1 text-center text-[#00ffa3]">OVR</div>
-            <div className="col-span-4 px-2">선수 프로필</div>
-            <div className="col-span-3 text-center">경기 전적</div>
-            <div className="col-span-1 text-center">승점</div>
-            <div className="col-span-2 text-center text-[#00ffa3]">승률</div>
-          </div>
-
-          {/* List */}
-          {recordsStatus === 'loading' ? (
-            <div className="py-20 text-center text-xs font-bold text-gray-500">데이터를 송출하는 중...</div>
-          ) : rows.length > 0 ? (
-            <div className="divide-y divide-white/5 bg-black/20">
-              {rows.slice(0, 8).map((row, index) => {
-                const isExpanded = expandedId === row.membershipId;
-                return (
-                  <div key={row.membershipId} className="border-b border-white/5 last:border-b-0">
-                    <div 
-                      onClick={() => setExpandedId(isExpanded ? null : row.membershipId)}
-                      className="grid grid-cols-12 items-center px-4 py-3.5 text-xs font-bold text-white hover:bg-white/5 transition-colors cursor-pointer"
-                    >
-                      <div className="col-span-1 text-center flex items-center justify-center">
-                        {index < 3 ? (
-                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black border ${
-                            index === 0 ? 'bg-amber-400/20 border-amber-400 text-amber-300' :
-                            index === 1 ? 'bg-slate-300/20 border-slate-300 text-slate-300' :
-                            'bg-amber-700/20 border-amber-700 text-amber-600'
-                          }`}>
-                            {index + 1}
-                          </span>
-                        ) : (
-                          <span className="text-gray-500 font-mono">{index + 1}</span>
-                        )}
-                      </div>
-                      <div className="col-span-1 text-center font-mono font-black italic text-[#00ffa3]">{row.ovr}</div>
-                      <div className="col-span-4 px-2 flex items-center gap-2.5">
-                        <Image
-                          src={row.photoUrl || getFallbackAvatar(row.nickname)}
-                          alt=""
-                          width={24}
-                          height={24}
-                          className="rounded-full bg-gray-800 object-cover ring-1 ring-white/10"
-                          unoptimized
-                        />
-                        <span className="truncate">{row.nickname}</span>
-                      </div>
-                      <div className="col-span-3 text-center font-mono text-[11px] text-gray-400">
-                        <span className="text-result-win font-bold">{row.wins}승</span>{' '}
-                        <span className="text-result-draw font-bold">{row.draws}무</span>{' '}
-                        <span className="text-result-loss font-bold">{row.losses}패</span>
-                      </div>
-                      <div className="col-span-1 text-center font-mono font-black text-white">{row.leaguePoints}</div>
-                      <div className="col-span-2 text-center font-mono font-black text-[#00ffa3]">{row.winRate}%</div>
-                    </div>
-
-                    {/* 아코디언 바 최근 경기 기록 */}
-                    {isExpanded && (
-                      <div className="bg-black/45 px-6 py-4 border-t border-white/5 flex flex-col gap-2.5 animate-fadeIn">
-                        <p className="text-[10px] font-black tracking-wider text-gray-400 uppercase flex items-center gap-1.5">
-                          <Activity size={12} className="text-[#00ffa3] animate-pulse" />
-                          최근 3경기 출전 기록 리포트
-                        </p>
-                        <div className="grid grid-cols-3 gap-3">
-                          {getMockPlayerRecentMatches(row).map((m, idx) => (
-                            <div key={idx} className="bg-white/5 border border-white/5 rounded-xl p-3 flex flex-col gap-1 hover:border-[#00ffa3]/30 transition-colors">
-                              <div className="flex justify-between items-center text-[10px] font-bold text-gray-400">
-                                <span>{m.date} · {m.opponent}</span>
-                                <span className="text-[#00ffa3] font-mono font-black">{m.score}</span>
-                              </div>
-                              <div className="flex justify-between items-baseline mt-1">
-                                <span className="text-[11px] font-black text-white">{m.stats}</span>
-                                <span className="text-[10px] font-mono font-bold text-gray-500">
-                                  평점 <strong className="text-white font-black">{m.rating}</strong>
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="py-20 text-center text-xs font-bold text-gray-500">시즌 전적 데이터가 아직 없습니다.</div>
-          )}
-        </div>
-      </div>
-
-      {/* 3. 경기장 승률 및 선수 케미 분석 통합 패널 (Bottom Grid) */}
-      <div className="grid grid-cols-2 gap-6 relative z-10 animate-fadeIn">
-        {/* Left Column: 경기장 승률 분석 */}
-        <div className="rounded-3xl border border-[#25283e] bg-black/60 p-5 shadow-lg backdrop-blur-md flex flex-col justify-between">
-          <div>
-            <h3 className="text-xs font-black tracking-wider text-gray-400 uppercase flex items-center gap-2 mb-3">
-              <Radio size={14} className="text-[#00ffa3]" /> 경기장별 누적 전적 & 승률 (Stadium Win Rate)
-            </h3>
-            <p className="text-[10px] text-gray-500 font-bold mb-4">
-              매치 위치에 따른 승률 변화 및 핏치 친화도 데이터입니다.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            {isLoadingStats ? (
-              <div className="py-10 text-center text-xs text-gray-500 font-bold">로딩 중...</div>
-            ) : stadiumStats.length > 0 ? (
-              stadiumStats.map((st, i) => (
-                <div key={i} className="space-y-1.5">
-                  <div className="flex justify-between items-baseline text-xs font-bold text-gray-300">
-                    <span>{st.name}</span>
-                    <span className="font-mono text-[11px] text-gray-400">
-                      {st.wins}승 {st.draws}무 {st.losses}패 (승률 <strong className="text-white">{st.rate}%</strong>)
-                    </span>
-                  </div>
-                  <div className="w-full bg-white/5 rounded-full h-2 overflow-hidden border border-white/5">
-                    <div className={`h-full rounded-full ${st.color}`} style={{ width: `${st.rate || 5}%` }} />
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-xs text-gray-500 font-bold py-6 text-center">출전 경기 데이터가 없습니다.</p>
-            )}
-          </div>
-        </div>
-
-        {/* Right Column: 선수단 상성 케미스트리 */}
-        <div className="rounded-3xl border border-[#25283e] bg-black/60 p-5 shadow-lg backdrop-blur-md space-y-5">
-          {/* Best Chemistry */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-black tracking-wider text-[#00ffa3] uppercase flex items-center gap-1.5">
-              🔥 최강 시너지 듀오 (Best Chemistry)
-            </h3>
-            <div className="grid grid-cols-1 gap-2.5">
-              {isLoadingStats ? (
-                <div className="py-10 text-center text-xs text-gray-500 font-bold">로딩 중...</div>
-              ) : bestChemistry.map((bc: ChemistryInfo, i: number) => (
-                <div key={i} className="bg-white/5 border border-white/5 rounded-2xl p-3 flex justify-between items-center">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-black text-white">
-                        {bc.partner.includes('&') ? bc.partner : `나 & ${bc.partner}`}
-                      </span>
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">Best</span>
-                    </div>
-                    <p className="text-[10px] text-gray-500 font-bold mt-1">{bc.desc}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-[11px] font-black text-[#00ffa3] font-mono">{bc.rate}% 승률</p>
-                    <p className="text-[9px] font-mono text-gray-500 font-bold mt-0.5">{bc.stats}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Worst Chemistry */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-black tracking-wider text-red-400 uppercase flex items-center gap-1.5">
-              ⚠️ 상성 보완 조합 (Chemistry Warning)
-            </h3>
-            <div className="grid grid-cols-1 gap-2.5">
-              {isLoadingStats ? (
-                <div className="py-10 text-center text-xs text-gray-500 font-bold">로딩 중...</div>
-              ) : worstChemistry.map((wc: ChemistryInfo, i: number) => (
-                <div key={i} className="bg-white/5 border border-white/5 rounded-2xl p-3 flex justify-between items-center">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-black text-white">
-                        {wc.partner.includes('&') ? wc.partner : `나 & ${wc.partner}`}
-                      </span>
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20 font-bold">Warning</span>
-                    </div>
-                    <p className="text-[10px] text-gray-500 font-bold mt-1">{wc.desc}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-[11px] font-black text-red-400 font-mono">{wc.rate}% 승률</p>
-                    <p className="text-[9px] font-mono text-gray-500 font-bold mt-0.5">{wc.stats}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. 선수별 통합 전적 현황판 (Player Match Matrix & Stadium Insights) */}
-      <div className="rounded-3xl border border-[#25283e] bg-[#141624]/60 p-5 shadow-lg backdrop-blur-md relative z-10 animate-fadeIn space-y-4">
-        <div className="flex justify-between items-center pb-2 border-b border-white/5">
-          <h3 className="text-xs font-black tracking-wider text-gray-400 uppercase flex items-center gap-2">
-            <LayoutGrid size={14} className="text-[#00ffa3]" />
-            선수별 통합 전적 현황판 (Player Match Matrix & Stadium Insights)
-          </h3>
-          <span className="font-mono text-[9px] font-black text-[#00ffa3] bg-[#00ffa3]/10 border border-[#00ffa3]/20 px-2 py-0.5 rounded">
-            경기장 상성 연동 완료
-          </span>
-        </div>
-
-        {isLoadingStats ? (
-          <div className="py-16 text-center text-xs font-bold text-gray-500 flex flex-col items-center justify-center gap-2">
-            <LoaderCircle size={20} className="animate-spin text-[#00ffa3]" />
-            <span>선수단 전적 매트릭스를 로드 중...</span>
-          </div>
-        ) : matches.length > 0 ? (
           <div
-            className="no-scrollbar rounded-2xl border border-white/5 bg-black/25"
+            className="no-scrollbar rounded-2xl bg-black/25"
             style={{ overflowX: 'auto' }}
-            data-exempt=":// design-exempt(reason: legacy layout overflow, expires: 2026-12-31)"
+            data-exempt=":// design-exempt(reason: unified records layout overflow, expires: 2026-12-31)"
           >
             <table className="w-full border-collapse text-center">
               <thead>
                 <tr className="bg-white/5 text-[9px] font-black text-gray-400 uppercase tracking-wider border-b border-white/5">
-                  <th className="py-3 px-3 text-left font-extrabold text-[10px] min-w-[80px]" data-exempt=":// design-exempt(reason: legacy layout min-width, expires: 2026-12-31)">구분</th>
+                  <th className="py-3.5 px-3 text-center" style={{ minWidth: 40 }} data-exempt=":// design-exempt(reason: unified records min-width, expires: 2026-12-31)">#</th>
+                  <th className="py-3.5 px-2 text-center text-[#00ffa3]" style={{ minWidth: 50 }} data-exempt=":// design-exempt(reason: unified records min-width, expires: 2026-12-31)">OVR</th>
+                  <th className="py-3.5 px-3 text-left font-extrabold text-[10px]" style={{ minWidth: 125 }} data-exempt=":// design-exempt(reason: unified records min-width, expires: 2026-12-31)">선수 프로필</th>
                   
+                  {/* 동적 매치 헤더 컬럼들 */}
                   {matches.map((match) => (
-                    <th key={match.id} className="py-2.5 px-2 border-l border-white/5 min-w-[75px]" data-exempt=":// design-exempt(reason: legacy layout min-width, expires: 2026-12-31)">
-                      <div className="text-[10px] font-black text-white font-mono">{formatHeaderDate(match.date)}</div>
-                      <div className="text-[8px] font-extrabold text-[#00ffa3] mt-0.5 tracking-tighter truncate max-w-[70px] mx-auto" title={match.location}>
+                    <th key={match.id} className="py-2.5 px-2 border-l border-white/5" style={{ minWidth: 70 }} data-exempt=":// design-exempt(reason: unified records min-width, expires: 2026-12-31)">
+                      <div className="text-[9px] font-black text-white font-mono">{formatHeaderDate(match.date)}</div>
+                      <div className="text-[8px] font-extrabold text-[#00ffa3] mt-0.5 tracking-tighter truncate max-w-[65px] mx-auto" title={match.location}>
                         {shrinkLocation(match.location)}
                       </div>
                     </th>
                   ))}
                   
-                  <th className="py-3 px-3.5 border-l border-white/10 text-emerald-400 font-bold min-w-[45px]" data-exempt=":// design-exempt(reason: legacy layout min-width, expires: 2026-12-31)">승</th>
-                  <th className="py-3 px-3.5 border-l border-white/5 text-red-400 font-bold min-w-[45px]" data-exempt=":// design-exempt(reason: legacy layout min-width, expires: 2026-12-31)">패</th>
-                  <th className="py-3 px-3.5 border-l border-white/5 text-[#00ffa3] font-black min-w-[55px]" data-exempt=":// design-exempt(reason: legacy layout min-width, expires: 2026-12-31)">승률</th>
+                  <th className="py-3.5 px-3 border-l border-white/10 text-center" style={{ minWidth: 110 }} data-exempt=":// design-exempt(reason: unified records min-width, expires: 2026-12-31)">경기 전적</th>
+                  <th className="py-3.5 px-3 border-l border-white/5 text-center" style={{ minWidth: 50 }} data-exempt=":// design-exempt(reason: unified records min-width, expires: 2026-12-31)">승점</th>
+                  <th className="py-3.5 px-3 border-l border-white/5 text-[#00ffa3] text-center" style={{ minWidth: 65 }} data-exempt=":// design-exempt(reason: unified records min-width, expires: 2026-12-31)">승률</th>
                 </tr>
               </thead>
+              
               <tbody className="divide-y divide-white/5 text-xs text-white">
-                {rows.map((player) => {
-                  const mStats = playerMatrixStats[player.membershipId] || { wins: 0, losses: 0, draws: 0, winRate: 0 };
-                  
-                  return (
-                    <tr key={player.membershipId} className="hover:bg-white/5 transition-colors">
-                      <td className="py-2.5 px-3 text-left font-black text-white flex items-center gap-2">
-                        <Image
-                          src={player.photoUrl || getFallbackAvatar(player.nickname)}
-                          alt=""
-                          width={20}
-                          height={20}
-                          className="h-5 w-5 rounded-full object-cover shrink-0 ring-1 ring-white/10"
-                          unoptimized
-                        />
-                        <span className="truncate max-w-[65px]">{player.nickname}</span>
-                      </td>
-
-                      {matches.map((match) => {
-                        const isWin = (match.ourScore ?? 0) > (match.oppScore ?? 0);
-                        const isDraw = (match.ourScore ?? 0) === (match.oppScore ?? 0);
-                        const lineup = matchLineupsMap[match.id] ?? [];
-                        const entry = lineup.find((e) => e.membershipId === player.membershipId);
-
-                        let resultLabel = '-';
-                        const hasAttended = !!entry;
-                        let cellClass = 'bg-white/5 text-gray-400 border border-white/10';
-
-                        if (entry) {
-                          if (isDraw) {
-                            resultLabel = '무';
-                            cellClass = 'bg-white/5 text-gray-400 border border-white/10';
-                          } else {
-                            const isTeam1 = entry.teamNumber === 1;
-                            const isPlayerWin = isWin ? isTeam1 : !isTeam1;
-                            resultLabel = isPlayerWin ? '승' : '패';
-                            cellClass = isPlayerWin
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                              : 'bg-red-500/10 text-red-400 border border-red-500/20';
-                          }
-                        }
-
-                        return (
-                          <td key={match.id} className="py-2.5 px-2 border-l border-white/5">
-                            {hasAttended ? (
-                              <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-black ${cellClass}`}>
-                                {resultLabel}
+                {recordsStatus === 'loading' ? (
+                  <tr>
+                    <td colSpan={matches.length + 6} className="py-20 text-center text-xs font-bold text-gray-500">
+                      데이터를 송출하는 중...
+                    </td>
+                  </tr>
+                ) : sortedRows.length > 0 ? (
+                  sortedRows.map((row, index) => {
+                    const isExpanded = expandedId === row.membershipId;
+                    const mStats = playerMatrixStats[row.membershipId] || { wins: 0, losses: 0, draws: 0, winRate: 0 };
+                    
+                    return (
+                      <Fragment key={row.membershipId}>
+                        <tr 
+                          onClick={() => setExpandedId(isExpanded ? null : row.membershipId)}
+                          className="hover:bg-white/5 transition-colors cursor-pointer border-b border-white/5 last:border-b-0"
+                        >
+                          <td className="py-3 px-3 text-center">
+                            {index < 3 ? (
+                              <span className={`inline-flex w-5 h-5 rounded-full items-center justify-center text-[9px] font-black border ${
+                                index === 0 ? 'bg-amber-400/20 border-amber-400 text-amber-300' :
+                                index === 1 ? 'bg-slate-300/20 border-slate-300 text-slate-300' :
+                                'bg-amber-700/20 border-amber-700 text-amber-600'
+                              }`}>
+                                {index + 1}
                               </span>
                             ) : (
-                              <span className="text-[10px] font-bold text-gray-700">-</span>
+                              <span className="text-gray-500 font-mono text-[10px]">{index + 1}</span>
                             )}
                           </td>
-                        );
-                      })}
+                          <td className="py-3 px-2 text-center font-mono font-black italic text-[#00ffa3]">{row.ovr}</td>
+                          <td className="py-3 px-3 text-left font-black text-white">
+                            <div className="flex items-center gap-2">
+                              <Image
+                                src={row.photoUrl || getFallbackAvatar(row.nickname)}
+                                alt=""
+                                width={22}
+                                height={22}
+                                className="h-5.5 w-5.5 rounded-full object-cover shrink-0 ring-1 ring-white/10"
+                                unoptimized
+                              />
+                              <span className="truncate max-w-[80px]" title={row.nickname}>{row.nickname}</span>
+                            </div>
+                          </td>
 
-                      <td className="py-2.5 px-3.5 border-l border-white/10 text-emerald-400 font-mono font-bold">{mStats.wins}</td>
-                      <td className="py-2.5 px-3.5 border-l border-white/5 text-red-400 font-mono font-bold">{mStats.losses}</td>
-                      <td className="py-2.5 px-3.5 border-l border-white/5 text-[#00ffa3] font-mono font-black">{mStats.winRate}%</td>
-                    </tr>
-                  );
-                })}
+                          {/* 경기별 결과 배지 */}
+                          {matches.map((match) => {
+                            const isWin = (match.ourScore ?? 0) > (match.oppScore ?? 0);
+                            const isDraw = (match.ourScore ?? 0) === (match.oppScore ?? 0);
+                            const lineup = matchLineupsMap[match.id] ?? [];
+                            const entry = lineup.find((e) => e.membershipId === row.membershipId);
+
+                            let resultLabel = '-';
+                            const hasAttended = !!entry;
+                            let cellClass = 'bg-white/5 text-gray-400 border border-white/10';
+
+                            if (entry) {
+                              if (isDraw) {
+                                resultLabel = '무';
+                                cellClass = 'bg-white/5 text-gray-400 border border-white/10';
+                              } else {
+                                const isTeam1 = entry.teamNumber === 1;
+                                const isPlayerWin = isWin ? isTeam1 : !isTeam1;
+                                resultLabel = isPlayerWin ? '승' : '패';
+                                cellClass = isPlayerWin
+                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                  : 'bg-red-500/10 text-red-400 border border-red-500/20';
+                              }
+                            }
+
+                            return (
+                              <td key={match.id} className="py-3 px-2 border-l border-white/5">
+                                {hasAttended ? (
+                                  <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-black ${cellClass}`}>
+                                    {resultLabel}
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-bold text-gray-700">-</span>
+                                )}
+                              </td>
+                            );
+                          })}
+
+                          <td className="py-3 px-3 border-l border-white/10 text-center font-mono text-[11px] text-gray-400">
+                            <span className="text-result-win font-bold">{row.wins}승</span>{' '}
+                            <span className="text-result-draw font-bold">{row.draws}무</span>{' '}
+                            <span className="text-result-loss font-bold">{row.losses}패</span>
+                          </td>
+                          <td className="py-3 px-3 border-l border-white/5 text-center font-mono font-black text-white">{row.leaguePoints}</td>
+                          <td className="py-3 px-3 border-l border-white/5 text-center font-mono font-black text-[#00ffa3]">{row.winRate}%</td>
+                        </tr>
+
+                        {/* 아코디언 바 최근 경기 기록 */}
+                        {isExpanded && (
+                          <tr className="bg-black/45">
+                            <td colSpan={matches.length + 6} className="px-6 py-4 border-t border-b border-white/5">
+                              <div className="flex flex-col gap-2.5 animate-fadeIn text-left">
+                                <p className="text-[10px] font-black tracking-wider text-gray-400 uppercase flex items-center gap-1.5">
+                                  <Activity size={12} className="text-[#00ffa3] animate-pulse" />
+                                  최근 3경기 출전 기록 리포트
+                                </p>
+                                <div className="grid grid-cols-3 gap-3">
+                                  {getMockPlayerRecentMatches(row).map((m, idx) => (
+                                    <div key={idx} className="bg-white/5 border border-white/5 rounded-xl p-3 flex flex-col gap-1 hover:border-[#00ffa3]/30 transition-colors">
+                                      <div className="flex justify-between items-center text-[10px] font-bold text-gray-400">
+                                        <span>{m.date} · {m.opponent}</span>
+                                        <span className="text-[#00ffa3] font-mono font-black">{m.score}</span>
+                                      </div>
+                                      <div className="flex justify-between items-baseline mt-1">
+                                        <span className="text-[11px] font-black text-white">{m.stats}</span>
+                                        <span className="text-[10px] font-mono font-bold text-gray-500">
+                                          평점 <strong className="text-white font-black">{m.rating}</strong>
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={matches.length + 6} className="py-20 text-center text-xs font-bold text-gray-500">
+                      시즌 전적 데이터가 아직 없습니다.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
-        ) : (
-          <div className="py-12 text-center text-xs font-bold text-gray-500 rounded-2xl border border-dashed border-white/5 bg-black/20">
-            아직 완료 공식 매치 기록이 없습니다.
+        </div>
+      </div>
+
+      {/* 3. 경기장 승률 및 선수 케미 분석 통합 패널 (개인화 분석 리포트) */}
+      <div className="rounded-3xl border border-[#25283e] bg-black/60 p-5 shadow-lg backdrop-blur-md relative z-10 animate-fadeIn space-y-4">
+        <div className="flex justify-between items-center pb-2 border-b border-white/5">
+          <h3 className="text-xs font-black tracking-wider text-gray-400 uppercase flex items-center gap-2">
+            <Radio size={14} className="text-[#00ffa3]" />
+            {memberProfile ? `${memberProfile.name} 형님의 25/26 시즌 데이터 분석` : '나의 25/26 시즌 데이터 분석'}
+          </h3>
+          <span className="font-mono text-[9px] font-black text-[#00ffa3] bg-[#00ffa3]/10 border border-[#00ffa3]/20 px-2 py-0.5 rounded">
+            개인 맞춤형 리포트
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-6 pt-2">
+          {/* Left: 경기장 승률 분석 */}
+          <div className="space-y-4 pr-3 border-r border-[#25283e]/50">
+            <div>
+              <h4 className="text-[11px] font-extrabold text-white flex items-center gap-1.5 mb-1">
+                🏟️ 경기장별 누적 전적 & 승률
+              </h4>
+              <p className="text-[10px] text-gray-500 font-bold">
+                매치 위치에 따른 형님의 승률 변화 및 핏치 친화도 데이터입니다.
+              </p>
+            </div>
+
+            <div className="space-y-3.5">
+              {isLoadingStats ? (
+                <div className="py-10 text-center text-xs text-gray-500 font-bold">로딩 중...</div>
+              ) : stadiumStats.length > 0 ? (
+                stadiumStats.slice(0, 4).map((st, i) => (
+                  <div key={i} className="space-y-1.5">
+                    <div className="flex justify-between items-baseline text-xs font-bold text-gray-300">
+                      <span>{st.name}</span>
+                      <span className="font-mono text-[11px] text-gray-400">
+                        {st.wins}승 {st.draws}무 {st.losses}패 (승률 <strong className="text-white">{st.rate}%</strong>)
+                      </span>
+                    </div>
+                    <div className="w-full bg-white/5 rounded-full h-2 overflow-hidden border border-white/5">
+                      <div className={`h-full rounded-full ${st.color}`} style={{ width: `${st.rate || 5}%` }} />
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-gray-500 font-bold py-6 text-center">형님의 출전 경기 데이터가 없습니다.</p>
+              )}
+            </div>
           </div>
-        )}
+
+          {/* Right: 동료 케미 및 상성 */}
+          <div className="space-y-4 pl-3 flex flex-col justify-between">
+            {/* Best Chemistry */}
+            <div className="space-y-2">
+              <h4 className="text-[11px] font-extrabold text-[#00ffa3] flex items-center gap-1.5">
+                🔥 베스트 시너지 듀오 (Best Chemistry)
+              </h4>
+              <div className="grid grid-cols-1 gap-2">
+                {isLoadingStats ? (
+                  <div className="py-6 text-center text-xs text-gray-500 font-bold">로딩 중...</div>
+                ) : bestChemistry.slice(0, 1).map((bc: ChemistryInfo, i: number) => (
+                  <div key={i} className="bg-white/5 border border-white/5 rounded-2xl p-3 flex justify-between items-center">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] font-black text-white">
+                          {bc.partner.includes('&') ? bc.partner : `나 & ${bc.partner}`}
+                        </span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">Best</span>
+                      </div>
+                      <p className="text-[10px] text-gray-500 font-bold mt-1">{bc.desc}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-[11px] font-black text-[#00ffa3] font-mono">{bc.rate}% 승률</p>
+                      <p className="text-[9px] font-mono text-gray-500 font-bold mt-0.5">{bc.stats}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Worst Chemistry */}
+            <div className="space-y-2">
+              <h4 className="text-[11px] font-extrabold text-red-400 flex items-center gap-1.5">
+                ⚠️ 상성 보완 조합 (Chemistry Warning)
+              </h4>
+              <div className="grid grid-cols-1 gap-2">
+                {isLoadingStats ? (
+                  <div className="py-6 text-center text-xs text-gray-500 font-bold">로딩 중...</div>
+                ) : worstChemistry.slice(0, 1).map((wc: ChemistryInfo, i: number) => (
+                  <div key={i} className="bg-white/5 border border-white/5 rounded-2xl p-3 flex justify-between items-center">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] font-black text-white">
+                          {wc.partner.includes('&') ? wc.partner : `나 & ${wc.partner}`}
+                        </span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20 font-bold">Warning</span>
+                      </div>
+                      <p className="text-[10px] text-gray-500 font-bold mt-1">{wc.desc}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-[11px] font-black text-red-400 font-mono">{wc.rate}% 승률</p>
+                      <p className="text-[9px] font-mono text-gray-500 font-bold mt-0.5">{wc.stats}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

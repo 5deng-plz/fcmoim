@@ -280,27 +280,13 @@ export default function CommunityPage({
     return { pinned, unpinned };
   }, [announcements, feedPosts]);
 
-  // Filter based on selected chip
   const filteredPinned = useMemo(() => {
-    if (filter !== 'all' && filter !== 'notice') return [];
     return unifiedItems.pinned;
-  }, [unifiedItems.pinned, filter]);
+  }, [unifiedItems.pinned]);
 
   const filteredUnpinned = useMemo(() => {
-    const list = unifiedItems.unpinned;
-    if (filter === 'notice') {
-      return list.filter((item) => item.type === 'announcement');
-    }
-    if (filter === 'text') {
-      return list.filter((item) => item.type === 'post' && item.data.contentType === 'text');
-    }
-    if (filter === 'media') {
-      return list.filter(
-        (item) => item.type === 'post' && (item.data.contentType === 'image' || item.data.contentType === 'video')
-      );
-    }
-    return list;
-  }, [unifiedItems.unpinned, filter]);
+    return unifiedItems.unpinned;
+  }, [unifiedItems.unpinned]);
 
   const handleChipClick = (key: FeedFilterType) => {
     setFilter(key);
@@ -318,52 +304,24 @@ export default function CommunityPage({
 
   return (
     <div className={`space-y-4 animate-fadeIn pb-20 ${hideHeaderTabs ? '' : '-mx-4 -mt-4'}`}>
-      
-      {/* Category Filter Chips instead of heavy tabs */}
-      <div className="px-4 py-3 flex gap-2 border-b border-border/60 bg-surface-card sticky top-0 z-10 overflow-x-auto no-scrollbar">
-        {filterOptions.map((opt) => {
-          const isActive = filter === opt.key;
-          const ChipIcon = opt.Icon;
-
-          return (
-            <button
-              key={opt.key}
-              type="button"
-              onClick={() => handleChipClick(opt.key)}
-              aria-pressed={isActive}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                isActive
-                  ? 'bg-brand-primary/10 border-brand-primary text-brand-primary shadow-[0_0_8px_rgba(0,255,163,0.15)]'
-                  : 'bg-surface-bg border-border/70 text-tertiary hover:text-secondary hover:border-border'
-              }`}
-            >
-              <ChipIcon size={12} className={isActive ? 'text-brand-primary' : 'text-tertiary'} />
-              <span>{opt.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
       <main className="px-4 space-y-3">
-        {/* Write Button & Composer (only visible for posts creation) */}
-        {filter !== 'notice' && (
-          <div className="space-y-3">
-            <FeedHeader title="커뮤니티 피드" icon={<MessageSquare size={18} />} onCompose={() => setIsComposeOpen((open) => !open)} />
-            {isComposeOpen && (
-              <FeedComposer
-                composeType={composeType}
-                composeText={composeText}
-                composeMediaUrl={composeMediaUrl}
-                isPosting={isPosting}
-                onComposeTypeChange={handleComposeTypeChange}
-                onComposeTextChange={setComposeText}
-                onComposeMediaUrlChange={setComposeMediaUrl}
-                onCreatePost={handleCreatePost}
-                onCancelCompose={handleCancelCompose}
-              />
-            )}
-          </div>
-        )}
+        {/* Write Button & Composer */}
+        <div className="space-y-3">
+          <FeedHeader title="커뮤니티 피드" icon={<MessageSquare size={18} />} onCompose={() => setIsComposeOpen((open) => !open)} />
+          {isComposeOpen && (
+            <FeedComposer
+              composeType={composeType}
+              composeText={composeText}
+              composeMediaUrl={composeMediaUrl}
+              isPosting={isPosting}
+              onComposeTypeChange={handleComposeTypeChange}
+              onComposeTextChange={setComposeText}
+              onComposeMediaUrlChange={setComposeMediaUrl}
+              onCreatePost={handleCreatePost}
+              onCancelCompose={handleCancelCompose}
+            />
+          )}
+        </div>
 
         {isTimelineLoading ? (
           <div className="rounded-xl border border-border bg-surface-card p-6 text-center text-xs font-bold text-tertiary">
@@ -473,163 +431,110 @@ export default function CommunityPage({
           );
         })}
 
-        {/* Regular Items (Unified Feed Timeline or Media Grid) */}
-        {filter === 'media' ? (
-          // Grid layout specifically for Media view
-          <div className="grid grid-cols-2 gap-2.5">
-            {filteredUnpinned.map((item) => {
-              if (item.type !== 'post') return null;
-              const post = item.data;
+        {/* Regular Items (Unified Feed Timeline) */}
+        <div className="space-y-3.5">
+          {filteredUnpinned.map((item) => {
+            if (item.type === 'announcement') {
+              const ann = item.data;
+              const isExpanded = expandedId === ann.id;
               return (
-                <div
-                  key={post.id}
+                <article
+                  key={ann.id}
                   onClick={() => {
                     if (window.innerWidth >= 1024) {
-                      setFocusedPostId(post.id);
+                      setFocusedPostId(ann.id);
                     }
                   }}
-                  className="overflow-hidden rounded-2xl border border-border/80 bg-surface-card cursor-pointer lg:hover:border-brand-primary transition-all shadow-sm flex flex-col justify-between"
+                  className="overflow-hidden rounded-2xl border border-border bg-surface-card shadow-sm transition-all duration-200 cursor-pointer lg:hover:border-brand-primary"
                 >
-                  <FeedMedia post={post} compact />
-                  <div className="p-2.5" onClick={(e) => e.stopPropagation()}>
-                    <FeedReactions post={post} onReaction={handleReaction} />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (window.innerWidth >= 1024) {
-                          setFocusedPostId(post.id);
-                        } else {
-                          setCommentsPostId(commentsPostId === post.id ? null : post.id);
-                        }
-                      }}
-                      className="mt-2.5 inline-flex items-center gap-1.5 text-[11px] font-black text-secondary"
-                    >
-                      <MessageCircle size={13} />
-                      {post.commentCount}
-                    </button>
-                    {commentsPostId === post.id && (
-                      <div className="lg:hidden mt-2 border-t border-border/40 pt-2">
-                        <EventComments
-                          clubId={activeClubId}
-                          targetType="feed_post"
-                          targetId={post.id}
-                          showPhase={false}
-                          embedded
-                          onCommentCountChange={(count) => updateFeedPostCommentCount(post.id, count)}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          // Timeline list layout for general feed
-          <div className="space-y-3.5">
-            {filteredUnpinned.map((item) => {
-              if (item.type === 'announcement') {
-                const ann = item.data;
-                const isExpanded = expandedId === ann.id;
-                return (
-                  <article
-                    key={ann.id}
-                    onClick={() => {
+                  <button
+                    type="button"
+                    onClick={(e) => {
                       if (window.innerWidth >= 1024) {
+                        e.stopPropagation();
                         setFocusedPostId(ann.id);
+                      } else {
+                        setExpandedId(isExpanded ? null : ann.id);
                       }
                     }}
-                    className="overflow-hidden rounded-2xl border border-border bg-surface-card shadow-sm transition-all duration-200 cursor-pointer lg:hover:border-brand-primary"
+                    aria-expanded={isExpanded}
+                    className="flex w-full items-center gap-3 p-4 text-left hover:shadow-md active:scale-[0.98] transition-all duration-200"
                   >
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        if (window.innerWidth >= 1024) {
-                          e.stopPropagation();
-                          setFocusedPostId(ann.id);
-                        } else {
-                          setExpandedId(isExpanded ? null : ann.id);
-                        }
-                      }}
-                      aria-expanded={isExpanded}
-                      className="flex w-full items-center gap-3 p-4 text-left hover:shadow-md active:scale-[0.98] transition-all duration-200"
-                    >
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-surface-bg text-secondary">
-                        <Megaphone size={18} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-primary truncate">
-                          {ann.title}
-                        </p>
-                        <p className="text-[11px] text-tertiary mt-0.5 font-bold">
-                          공지사항 · {formatRelativeDate(ann.createdAt)}
-                        </p>
-                      </div>
-                      {isExpanded ? <ChevronUp size={18} className="text-tertiary lg:hidden" /> : <ChevronDown size={18} className="text-tertiary lg:hidden" />}
-                    </button>
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-surface-bg text-secondary">
+                      <Megaphone size={18} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-primary truncate">
+                        {ann.title}
+                      </p>
+                      <p className="text-[11px] text-tertiary mt-0.5 font-bold">
+                        공지사항 · {formatRelativeDate(ann.createdAt)}
+                      </p>
+                    </div>
+                    {isExpanded ? <ChevronUp size={18} className="text-tertiary lg:hidden" /> : <ChevronDown size={18} className="text-tertiary lg:hidden" />}
+                  </button>
 
-                    {isExpanded && (
-                      <div className="border-t border-border px-4 py-3 lg:hidden" onClick={(e) => e.stopPropagation()}>
-                        <p className="whitespace-pre-wrap text-sm font-semibold leading-relaxed text-secondary">
-                          {ann.content}
-                        </p>
-                        {canManageAnnouncements && (
-                          <div className="mt-3 flex items-center justify-end gap-2 border-t border-border pt-3">
-                            {confirmingDeleteId === ann.id && (
-                              <button
-                                type="button"
-                                disabled={deletingId === ann.id}
-                                onClick={() => setConfirmingDeleteId(null)}
-                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface-bg text-secondary transition-all hover:bg-surface-hover active:scale-95 disabled:opacity-50"
-                              >
-                                <X size={15} />
-                              </button>
-                            )}
+                  {isExpanded && (
+                    <div className="border-t border-border px-4 py-3 lg:hidden" onClick={(e) => e.stopPropagation()}>
+                      <p className="whitespace-pre-wrap text-sm font-semibold leading-relaxed text-secondary">
+                        {ann.content}
+                      </p>
+                      {canManageAnnouncements && (
+                        <div className="mt-3 flex items-center justify-end gap-2 border-t border-border pt-3">
+                          {confirmingDeleteId === ann.id && (
                             <button
                               type="button"
                               disabled={deletingId === ann.id}
-                              onClick={() => openEditModal(ann)}
+                              onClick={() => setConfirmingDeleteId(null)}
                               className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface-bg text-secondary transition-all hover:bg-surface-hover active:scale-95 disabled:opacity-50"
                             >
-                              <Pencil size={15} />
+                              <X size={15} />
                             </button>
-                            <button
-                              type="button"
-                              disabled={deletingId === ann.id}
-                              onClick={() => void handleDelete(ann)}
-                              className={`flex h-8 items-center justify-center rounded-lg border px-2 text-xs font-black transition-all active:scale-95 disabled:opacity-50 ${
-                                confirmingDeleteId === ann.id
-                                  ? 'border-feedback-error-border bg-feedback-error-bg text-feedback-error'
-                                  : 'border-border bg-surface-bg text-secondary'
-                              }`}
-                            >
-                              {confirmingDeleteId === ann.id ? '삭제 확인' : <Trash2 size={15} />}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </article>
-                );
-              }
-
-              // Render normal feed post card
-              const post = item.data;
-              return (
-                <FeedPostCard
-                  key={post.id}
-                  post={post}
-                  onReaction={handleReaction}
-                  onDelete={handleDeletePost}
-                  commentsOpen={commentsPostId === post.id}
-                  setCommentsOpen={(open) => setCommentsPostId(open ? post.id : null)}
-                  onCommentCountChange={(count) => updateFeedPostCommentCount(post.id, count)}
-                  clubId={activeClubId}
-                />
+                          )}
+                          <button
+                            type="button"
+                            disabled={deletingId === ann.id}
+                            onClick={() => openEditModal(ann)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface-bg text-secondary transition-all hover:bg-surface-hover active:scale-95 disabled:opacity-50"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={deletingId === ann.id}
+                            onClick={() => void handleDelete(ann)}
+                            className={`flex h-8 items-center justify-center rounded-lg border px-2 text-xs font-black transition-all active:scale-95 disabled:opacity-50 ${
+                              confirmingDeleteId === ann.id
+                                ? 'border-feedback-error-border bg-feedback-error-bg text-feedback-error'
+                                : 'border-border bg-surface-bg text-secondary'
+                            }`}
+                          >
+                            {confirmingDeleteId === ann.id ? '삭제 확인' : <Trash2 size={15} />}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </article>
               );
-            })}
-          </div>
-        )}
+            }
+
+            // Render normal feed post card
+            const post = item.data;
+            return (
+              <FeedPostCard
+                key={post.id}
+                post={post}
+                onReaction={handleReaction}
+                onDelete={handleDeletePost}
+                commentsOpen={commentsPostId === post.id}
+                setCommentsOpen={(open) => setCommentsPostId(open ? post.id : null)}
+                onCommentCountChange={(count) => updateFeedPostCommentCount(post.id, count)}
+                clubId={activeClubId}
+              />
+            );
+          })}
+        </div>
       </main>
 
       {/* Edit Announcement Modal */}

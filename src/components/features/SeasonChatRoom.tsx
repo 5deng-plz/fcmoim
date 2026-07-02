@@ -13,9 +13,15 @@ import { supabase } from '@/lib/supabase';
 
 interface SeasonChatRoomProps {
   clubId: string;
+  hideHeader?: boolean;
+  flatLayout?: boolean;
 }
 
-export default function SeasonChatRoom({ clubId }: SeasonChatRoomProps) {
+export default function SeasonChatRoom({
+  clubId,
+  hideHeader = false,
+  flatLayout = false,
+}: SeasonChatRoomProps) {
   const { records } = useRecordsStore();
   const { memberProfile } = useAuthStore();
   const [chatPost, setChatPost] = useState<FeedPost | null>(null);
@@ -227,19 +233,26 @@ export default function SeasonChatRoom({ clubId }: SeasonChatRoomProps) {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-var(--header-height)-var(--bottom-nav-height)-5rem)] min-h-[350px] bg-[#070914] border border-[#25283e]/60 rounded-3xl overflow-hidden shadow-2xl relative">
-      
+    <div
+      className={`flex flex-col bg-[#070914] border-[#25283e]/60 rounded-3xl overflow-hidden shadow-2xl relative ${
+        flatLayout
+          ? 'flex-1 h-full min-h-0 border-0 rounded-none shadow-none'
+          : 'h-[calc(100vh-var(--header-height)-var(--bottom-nav-height)-5rem)] min-h-[350px] border'
+      }`}
+    >
       {/* Chat Room Header */}
-      <div className="bg-[#0b0c16]/95 border-b border-[#25283e]/55 px-4 py-3 shrink-0 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#00ffa3] animate-pulse" />
-          <h4 className="text-xs font-black text-white tracking-wide">🏟️ 시즌 공식 채팅방</h4>
+      {!hideHeader && (
+        <div className="bg-[#0b0c16]/95 border-b border-[#25283e]/55 px-4 py-3 shrink-0 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-[#00ffa3] animate-pulse" />
+            <h4 className="text-xs font-black text-white tracking-wide">🏟️ 시즌 공식 채팅방</h4>
+          </div>
+          <span className="text-[10px] font-mono font-black text-gray-500">LIVE CHAT</span>
         </div>
-        <span className="text-[10px] font-mono font-black text-gray-500">LIVE CHAT</span>
-      </div>
+      )}
 
       {/* Chat messages list */}
-      <div 
+      <div
         ref={scrollRef}
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-3.5 bg-gradient-to-b from-[#070914] to-[#0a0b18]"
@@ -255,14 +268,48 @@ export default function SeasonChatRoom({ clubId }: SeasonChatRoomProps) {
             const isMe = comment.membershipId === myMembershipId;
             const authorName = getAuthorName(comment.membershipId, comment.authorName);
             const authorPhoto = getAuthorPhoto(comment.membershipId);
+            const isRank1 = rows[0]?.membershipId === comment.membershipId;
+
+            if (flatLayout) {
+              return (
+                <div
+                  key={comment.id}
+                  className={`px-3 py-1.5 rounded-lg text-xs transition-colors flex items-start gap-2 leading-relaxed ${
+                    isMe
+                      ? 'bg-[#00ffa3]/8 border-l-2 border-[#00ffa3] text-white'
+                      : 'hover:bg-white/5 text-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 shrink-0 select-none">
+                    {isRank1 && <span className="text-xs" title="시즌 1위">👑</span>}
+                    <span
+                      className="font-extrabold text-[11px] hover:underline cursor-pointer"
+                      style={{ color: getNicknameColor(authorName) }}
+                    >
+                      {authorName}
+                    </span>
+                  </div>
+                  <div className="flex-1 break-all min-w-0 font-medium">
+                    <span className="text-white whitespace-pre-wrap">{comment.content}</span>
+                  </div>
+                  <span className="text-[9px] font-mono text-gray-600 shrink-0 self-center select-none">
+                    {new Date(comment.createdAt).toLocaleTimeString('ko-KR', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false,
+                    })}
+                  </span>
+                </div>
+              );
+            }
 
             return (
-              <div 
+              <div
                 key={comment.id}
                 className={`flex gap-2.5 items-start text-xs ${isMe ? 'justify-end' : 'justify-start'}`}
               >
                 {!isMe && (
-                  <Image 
+                  <Image
                     src={authorPhoto}
                     alt=""
                     width={28}
@@ -271,10 +318,10 @@ export default function SeasonChatRoom({ clubId }: SeasonChatRoomProps) {
                     unoptimized
                   />
                 )}
-                
+
                 <div className={`flex flex-col max-w-[75%] gap-1 ${isMe ? 'items-end' : 'items-start'}`}>
                   {!isMe && (
-                    <span 
+                    <span
                       className="font-extrabold text-[11px] select-none"
                       style={{ color: getNicknameColor(authorName) }}
                     >
@@ -284,14 +331,18 @@ export default function SeasonChatRoom({ clubId }: SeasonChatRoomProps) {
                   <div className="flex gap-1.5 items-end">
                     {isMe && (
                       <span className="text-[9px] font-mono text-gray-600 mb-0.5 select-none">
-                        {new Date(comment.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                        {new Date(comment.createdAt).toLocaleTimeString('ko-KR', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: false,
+                        })}
                       </span>
                     )}
-                    
-                    <div 
+
+                    <div
                       className={`px-3 py-2 rounded-2xl break-words text-white font-medium shadow-md leading-relaxed ${
-                        isMe 
-                          ? 'bg-[#00ffa3] text-black font-bold rounded-tr-none shadow-[0_0_8px_rgba(0,255,163,0.15)]' 
+                        isMe
+                          ? 'bg-[#00ffa3] text-black font-bold rounded-tr-none shadow-[0_0_8px_rgba(0,255,163,0.15)]'
                           : 'bg-[#181a2e]/85 border border-[#25283e]/40 rounded-tl-none'
                       }`}
                     >
@@ -300,7 +351,11 @@ export default function SeasonChatRoom({ clubId }: SeasonChatRoomProps) {
 
                     {!isMe && (
                       <span className="text-[9px] font-mono text-gray-600 mb-0.5 select-none">
-                        {new Date(comment.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                        {new Date(comment.createdAt).toLocaleTimeString('ko-KR', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: false,
+                        })}
                       </span>
                     )}
                   </div>
@@ -323,7 +378,7 @@ export default function SeasonChatRoom({ clubId }: SeasonChatRoomProps) {
       )}
 
       {/* Input composition area */}
-      <form 
+      <form
         onSubmit={handleSubmit}
         className="p-3 bg-[#0b0c16]/95 border-t border-[#25283e]/55 shrink-0 flex items-center gap-2"
       >

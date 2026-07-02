@@ -211,6 +211,7 @@ function AppShell() {
     setShowJoinForm,
     setShowTeamBrowse,
     setTeamBrowseJoinStatus,
+    recordsSubTab,
   } = useAppStore();
   const { switchClub } = useAuthStore();
   const mainRef = useRef<HTMLElement | null>(null);
@@ -268,13 +269,18 @@ function AppShell() {
   return (
     <>
       <Header />
-      <main ref={mainRef} className="flex-1 overflow-y-auto no-scrollbar relative">
-        <div className="min-h-full p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+      <main ref={mainRef} className={`flex-1 min-h-0 no-scrollbar relative ${
+        activeTab === 'records' && recordsSubTab === 'chat' ? 'overflow-hidden' : 'overflow-y-auto'
+      }`}>
+        <div className={activeTab === 'records' && recordsSubTab === 'chat' 
+          ? "h-full flex flex-col overflow-hidden" 
+          : "min-h-full p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]"
+        }>
           {renderContent()}
         </div>
         <ScrollPositionRail containerRef={mainRef} />
       </main>
-      <BottomNav />
+      {!(activeTab === 'records' && recordsSubTab === 'chat') && <BottomNav />}
 
       <NotificationPanel />
       <PushPermissionPrompt />

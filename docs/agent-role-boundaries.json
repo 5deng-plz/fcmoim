@@ -36,7 +36,8 @@
         "tests/match-result-transaction.test.ts"
       ],
       "allowedExceptions": [
-        "docs/handoff/**"
+        "docs/handoff/**",
+        ".agents/rules/agy-frontend-design.md"
       ]
     }
   }
