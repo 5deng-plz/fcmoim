@@ -1,7 +1,11 @@
 // @vitest-environment node
 
-import { createClient, type RealtimeChannel, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient, type RealtimeChannel } from '@supabase/supabase-js';
 import { describe, expect, it, vi } from 'vitest';
+import {
+  subscribeToCommentCreated,
+  type CommentRealtimeSubscription,
+} from '../src/lib/comment-realtime-transport';
 
 const teamId = '00000000-0000-0000-0000-000000000001';
 const describeLocal =
@@ -24,7 +28,7 @@ describeLocal('local Supabase comment realtime integration', () => {
     const admin = createAdminClient();
     const feedRoute = await import('../src/app/api/feed-posts/route');
     const commentsRoute = await import('../src/app/api/comments/route');
-    let approvedChannel: RealtimeChannel | null = null;
+    let approvedSubscription: CommentRealtimeSubscription | null = null;
     let nonMemberChannel: RealtimeChannel | null = null;
     let postId = '';
 
@@ -42,11 +46,37 @@ describeLocal('local Supabase comment realtime integration', () => {
       expect(createPostResponse.status, JSON.stringify(post)).toBe(201);
       postId = post.id;
 
-      const topic = `comments:feed_post:${post.id}`;
-      const receivedComment = createCommentEventPromise(receiver.client, topic);
-      approvedChannel = receivedComment.channel;
-      expect(await waitForChannelStatus(approvedChannel, ['SUBSCRIBED'])).toBe('SUBSCRIBED');
+      let resolveComment!: (comment: Record<string, unknown>) => void;
+      let rejectComment!: (error: Error) => void;
+      const receivedComment = new Promise<Record<string, unknown>>((resolve, reject) => {
+        const timeout = setTimeout(
+          () => reject(new Error('Timed out waiting for comment.created.v1')),
+          8_000,
+        );
+        resolveComment = (comment) => {
+          clearTimeout(timeout);
+          resolve(comment);
+        };
+        rejectComment = (error) => {
+          clearTimeout(timeout);
+          reject(error);
+        };
+      });
+      let resolveSubscribed!: () => void;
+      const subscribed = new Promise<void>((resolve) => {
+        resolveSubscribed = resolve;
+      });
+      approvedSubscription = await subscribeToCommentCreated({
+        client: receiver.client,
+        accessToken: receiver.accessToken,
+        postId: post.id,
+        onComment: resolveComment,
+        onSubscribed: resolveSubscribed,
+        onError: rejectComment,
+      });
+      await subscribed;
 
+      const topic = `comments:feed_post:${post.id}`;
       nonMemberChannel = nonMember.client.channel(topic, { config: { private: true } });
       expect(await waitForChannelStatus(nonMemberChannel, ['CHANNEL_ERROR', 'TIMED_OUT'])).toBe('CHANNEL_ERROR');
 
@@ -62,14 +92,14 @@ describeLocal('local Supabase comment realtime integration', () => {
       const createdComment = await createCommentResponse.json();
 
       expect(createCommentResponse.status, JSON.stringify(createdComment)).toBe(201);
-      await expect(receivedComment.event).resolves.toEqual(expect.objectContaining({
+      await expect(receivedComment).resolves.toEqual(expect.objectContaining({
         id: createdComment.id,
         targetType: 'feed_post',
         targetId: post.id,
         content: 'private broadcast smoke',
       }));
     } finally {
-      if (approvedChannel) await receiver.client.removeChannel(approvedChannel);
+      if (approvedSubscription) await approvedSubscription.unsubscribe();
       if (nonMemberChannel) await nonMember.client.removeChannel(nonMemberChannel);
       await Promise.all([
         sender.client.auth.signOut(),
@@ -109,21 +139,6 @@ function createAdminClient() {
   return createClient(supabaseUrl, secretKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-}
-
-function createCommentEventPromise(client: SupabaseClient, topic: string) {
-  let channel: RealtimeChannel;
-  const event = new Promise<Record<string, unknown>>((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('Timed out waiting for comment.created.v1')), 8_000);
-    channel = client
-      .channel(topic, { config: { private: true } })
-      .on('broadcast', { event: 'comment.created.v1' }, (message) => {
-        clearTimeout(timeout);
-        resolve((message.payload ?? message) as Record<string, unknown>);
-      });
-  });
-
-  return { channel: channel!, event };
 }
 
 function waitForChannelStatus(
