@@ -21,3 +21,5 @@
 - Keep harness durable: 하네스에는 장기 유지할 변경 경계, 공유 토큰/컴포넌트, 접근성 계약만 고정합니다. 특정 화면의 최신 기획 디테일은 작업별 테스트와 evidence로 검증하고, 이후 변경을 막는 고정 규칙으로 승격하지 않습니다.
 - Do not encode volatile specs in harness: 색상, 아이콘, 문구, 배치, 특정 URL처럼 현재 기획/리뷰 코멘트에 종속된 UI 세부사항은 사용자가 명시적으로 영구 정책화를 요청하지 않는 한 하네스 규칙이나 semantic slot에 추가하지 않습니다.
 - Reusable harness feedback only: 특정 기능 구현에서 유효한 코드 패턴을 하네스 개선으로 승격하지 않습니다. 여러 프로젝트와 Agent 작업에 재사용 가능한 판단 기준으로 일반화되는 실패만 기록합니다.
+- Strict branch and worktree scoping: 작업 세션이 시작될 때 항상 현재 Git 브랜치 상태를 확인합니다. 사용자의 명시적인 요청이 없는 한 `main` 브랜치에 직접 커밋하거나 푸시하지 않으며, 반드시 `agent/<role>/<task>` 규격 브랜치를 생성하여 작업하고 Git worktree를 사용해 격리를 보장합니다.
+
