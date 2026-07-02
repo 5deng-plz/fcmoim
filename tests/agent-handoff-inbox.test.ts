@@ -66,6 +66,18 @@ afterEach(() => {
 });
 
 describe('agent handoff inbox', () => {
+  it('ignores legacy reference documents without handoff metadata', () => {
+    const root = createRepository();
+    fs.mkdirSync(path.join(root, 'docs/handoff'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'docs/handoff/legacy-frontend-reference.md'),
+      '# Legacy Frontend Reference\n\nThis is not a requested handoff.\n',
+    );
+    commitAll(root, 'legacy reference');
+
+    expect(getInbox({ role: 'agy', cwd: root })).toEqual([]);
+  });
+
   it('finds a requested handoff on another agent branch without changing the worktree', () => {
     const root = createRepository();
     git(root, ['switch', '-c', 'agent/codex/realtime']);
