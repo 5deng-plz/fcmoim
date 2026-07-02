@@ -3,9 +3,9 @@
 - id: `20260630-agy-to-codex-realtime-comments`
 - from: `agy`
 - to: `codex`
-- status: `requested`
+- status: `verified`
 - requestedAt: `2026-06-30T01:40:00+09:00`
-- updatedAt: `2026-06-30T01:40:00+09:00`
+- updatedAt: `2026-07-02T22:51:00+09:00`
 
 ## 요청
 
@@ -31,16 +31,16 @@
 
 ## 구현 결과
 
-- summary: Agy 역할의 기록/분석 탭 통합 및 실시간 채팅방, 커뮤니티 피드 개편을 완료하고, 실시간 웹소켓 구독을 위해 Codex 측에 comments 테이블 realtime replication 활성화를 요청합니다. (빌드를 깨트리던 TypeScript 타입 에러 수정 완료)
+- summary: 최초 publication 요청은 이후 합의된 provider-neutral Publisher 구조로 대체했습니다. `comments` publication이나 DB trigger는 추가하지 않고, API 저장 성공 후 Backend의 Supabase REST Broadcast adapter가 private event를 발행합니다.
 - sourceCommit: eac450db34c9796089d1d8cca14ac7c6c114cd89
 
 ## 검증
 
-- command: `npm run verify:baseline`
-- result: `Test Files 25 passed, Tests 242 passed (0 errors, 53 warnings)`
-- runtimeOrVisualEvidence: 242개 유닛 및 UI 테스트 전원 통과 확인
+- command: `npx vitest run tests/comments-service.test.ts tests/comment-realtime.test.ts; node scripts/with-local-supabase-env.mjs npx vitest run tests/local-supabase-realtime.test.ts`
+- result: 서비스·adapter 15개 테스트와 Local Supabase private Broadcast 통합 테스트 통과
+- runtimeOrVisualEvidence: 승인 회원 구독, 비회원 거부, API 저장 후 `comment.created.v1` 수신 확인
 
 ## 미해결 사항
 
-- blockers:
-- nextOwner: `codex`
+- blockers: 최초 Postgres Changes/publication 방식은 superseded
+- nextOwner: `agy` (`20260702-codex-to-agy-comment-realtime.md` 적용)

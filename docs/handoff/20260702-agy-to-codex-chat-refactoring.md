@@ -3,9 +3,9 @@
 - id: `20260702-agy-to-codex-chat-refactoring`
 - from: `agy`
 - to: `codex`
-- status: `requested`
+- status: `verified`
 - requestedAt: `2026-07-02T21:56:00+09:00`
-- updatedAt: `2026-07-02T22:09:00+09:00`
+- updatedAt: `2026-07-02T22:51:00+09:00`
 
 ## 요청
 
@@ -41,6 +41,13 @@
 - **sourceCommit**: `9bb6b9a` (기록 탭 개편 및 커뮤니티 페이지 테스트 최신화 완료)
 - **integrationCommit**: N/A (Codex 통합 단계에서 머지 예정)
 
+### Codex Backend 응답
+
+- `POST /api/comments` 요청·응답과 DB 스키마는 유지했습니다.
+- Backend 저장 성공 후 `comments:feed_post:<postId>` private topic으로 `comment.created.v1`을 발행합니다.
+- Backend source commit: `1d34cb8`
+- 실제 main의 `SeasonChatRoom.tsx`는 아직 `postgres_changes`를 사용하므로 새 Codex→Agy handoff에 따라 Frontend transport 전환이 필요합니다.
+
 ## 📝 작업 내용 총 요약 (Summary of All Frontend Modifications)
 
 | 작업 영역 | 세부 조치 및 구현 내역 | Codex 통합 시 유의사항 |
@@ -66,5 +73,5 @@
 ## ## 미해결 사항
 
 - **blockers**:
-  - **소켓 인터페이스 규격 대기 중**: 프론트엔드 실시간 연결부 구현을 위해 백엔드 및 소켓 인터페이스 규격이 Codex 세션에서 정의되는 것을 대기 중입니다. 완전한 인터페이스가 도출되는 대로 Agy 세션에서 연결 로직을 마이그레이션할 예정입니다.
-- **nextOwner**: `codex` (통합 및 마이그레이션 빌드 검증 수행 권장)
+  - Frontend private Broadcast transport 미적용
+- **nextOwner**: `agy` (`20260702-codex-to-agy-comment-realtime.md`)
