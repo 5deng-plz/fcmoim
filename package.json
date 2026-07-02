@@ -26,6 +26,7 @@
     "guard:role:codex": "node .agents/scripts/guard-role.mjs --role=codex",
     "guard:role:agy": "node .agents/scripts/guard-role.mjs --role=agy",
     "agents:worktree:create": "node scripts/setup-agent-worktree.mjs",
+    "agents:handoff:inbox": "node scripts/agent-handoff-inbox.mjs",
     "qa:seed-auth": "node scripts/seed-qa-auth-users.mjs",
     "qa:seed-auth:local": "node scripts/with-local-supabase-env.mjs node scripts/seed-qa-auth-users.mjs",
     "prod:backup": "node scripts/prod-supabase-ops.mjs backup",

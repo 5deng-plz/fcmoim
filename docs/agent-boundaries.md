@@ -67,6 +67,11 @@ npm run guard:role:agy
 - 파일명: `YYYYMMDD-<from>-to-<to>-<topic>.md`
 - 상태: `requested`, `accepted`, `implemented`, `verified`, `integrated`
 - 요청·결과·검증 명령·commit SHA·공유 파일을 단일 문서에서 갱신합니다.
+- 각 세션은 `npm run agents:handoff:inbox -- --role=codex|agy`로 시작합니다.
+- Inbox는 shared Git의 `main`, `agent/*`, `origin/agent/*` refs를 직접 읽으며 checkout, merge 또는 worktree 파일 변경을 하지 않습니다.
+- 동일 handoff는 가장 진행된 상태를 우선하므로 다른 branch에 남은 오래된 `requested` 항목을 다시 표시하지 않습니다.
+- 같은 장비에서는 commit만으로 공유됩니다. 다른 장비의 Agent에게 전달할 때만 source branch를 push하고 상대가 fetch합니다.
+- `main`은 최종 통합 branch이며 handoff 전달용 message bus로 사용하지 않습니다.
 
 ## 통합
 

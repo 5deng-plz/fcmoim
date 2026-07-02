@@ -4,6 +4,7 @@
 
 - 항상 사용자를 `형님`이라고 호칭합니다.
 - 작업 전 `AGENT.md`, `docs/agent-boundaries.md`와 현재 Harness 상태를 읽습니다.
+- 작업 시작 시 `npm run agents:handoff:inbox -- --role=<role>`로 다른 Agent branch의 새 handoff를 확인합니다.
 - Agent별 Git worktree와 `agent/<role>/<task>` branch를 사용합니다.
 - 상대 Agent 소유 영역은 직접 수정하지 않고 `docs/handoff/`에 요청을 남깁니다.
 - 변경은 관련 범위로 제한하고 검증 결과와 한글 커밋 SHA를 handoff에 기록합니다.

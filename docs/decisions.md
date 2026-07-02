@@ -72,3 +72,9 @@ This file starts clean for `prototype v0.1`.
 - Persisted `comments` rows are the source of truth; realtime delivery is a best-effort convenience recovered by the comments GET API.
 - The API publishes `feed_post` comment events through a provider-neutral service contract after persistence. Supabase Realtime REST Broadcast is the current adapter; database triggers and Postgres Changes are not used.
 - Realtime provider code stays behind Backend publisher and Frontend transport boundaries so the comments API and database schema remain portable.
+
+### Cross-Agent Handoff Discovery
+
+- Handoff documents remain the durable cross-agent contract, while shared Git refs provide discovery before integration.
+- Each role starts by reading its inbox from `main`, local `agent/*`, and fetched `origin/agent/*` refs without checkout, merge, or worktree mutation.
+- Handoff identity and status progression suppress duplicate or stale requests across inherited branches; `main` remains reserved for reviewed integration.

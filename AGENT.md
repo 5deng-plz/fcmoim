@@ -23,7 +23,7 @@
 
 ## Session Loop
 
-1. **Orient**: read `AGENT.md`, `docs/agent-rules.json`, `docs/agent-feedback.md`, `docs/user/design-harness-workflow.md`, and the relevant role prompt. Read `docs/project-context.json` when the task is standard/full.
+1. **Orient**: read `AGENT.md`, `docs/agent-rules.json`, `docs/agent-feedback.md`, `docs/user/design-harness-workflow.md`, and the relevant role prompt. Run `npm run agents:handoff:inbox -- --role=<role>` before planning. Read `docs/project-context.json` when the task is standard/full.
 2. **Plan & Scope**: choose a work level. For standard/full, list expected changed files and confirm they fall within `allowedPaths`; quick work does not update project state by default.
    Run the current session role guard (`npm run guard:role:codex` or `npm run guard:role:agy`) before implementation and commit.
 3. **Implement & Verify**: implement the task and run deterministic checks (`lint`, `typecheck`, `test`). Retry up to `loopPolicy.maxGuardRetries` times on guard failures, then escalate to user.
