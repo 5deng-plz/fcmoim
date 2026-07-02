@@ -1,8 +1,8 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 123,
-  "updatedAt": "2026-07-02T23:44:29+09:00",
+  "updateVersion": 124,
+  "updatedAt": "2026-07-02T23:46:16+09:00",
   "updatedBy": "codex",
   "currentPhase": "main-backend-integration",
   "activeWork": {
@@ -127,6 +127,12 @@
   },
   "workstreams": [
     {
+      "id": "comment-realtime-and-handoff-inbox-integration",
+      "status": "complete",
+      "completedAt": "2026-07-02T23:46:16+09:00",
+      "commit": "8a37d01"
+    },
+    {
       "id": "agent-handoff-inbox",
       "status": "complete",
       "completedAt": "2026-07-02T23:30:22+09:00",
@@ -202,7 +208,7 @@
   ],
   "blockers": [],
   "nextActions": [
-    "bootstrap으로 agent/codex/handoff-inbox를 main에 통합한 뒤 각 역할 세션에서 inbox 명령을 기본 사용합니다.",
+    "각 역할 세션은 main에 통합된 handoff inbox 명령을 기본 사용합니다.",
     "Agy가 npm run agents:handoff:inbox -- --role=agy로 comment realtime handoff를 발견하고 Frontend private Broadcast transport를 적용합니다.",
     "Backend/Infra 작업은 fcmoim-codex, Frontend/Design 작업은 fcmoim-agy worktree에서 시작합니다.",
     "교차 요구사항은 docs/handoff/TEMPLATE.md로 전달하고 Codex 통합 단계에서 project context를 갱신합니다.",
