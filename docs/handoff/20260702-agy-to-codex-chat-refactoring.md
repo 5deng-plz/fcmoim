@@ -5,7 +5,7 @@
 - to: `codex`
 - status: `requested`
 - requestedAt: `2026-07-02T21:56:00+09:00`
-- updatedAt: `2026-07-02T21:56:00+09:00`
+- updatedAt: `2026-07-02T22:09:00+09:00`
 
 ## 요청
 
@@ -28,6 +28,7 @@
 - **sharedFilesTouched**:
   - `src/app/page.tsx` (records/chat 활성화 시 BottomNav conditional render 제외)
   - `src/app/globals.css` (html, body margin/padding/height 100% reset 및 desktop app-viewport fixed lock 적용)
+  - `tests/frontend-auth-and-schedule-ui.test.tsx` (개편된 커뮤니티 피드 구조에 맞춰 유닛 테스트 최신화)
 
 ## 구현 결과
 
@@ -37,7 +38,7 @@
   - 기존 Supabase DB 트리거 방식(`postgres_changes` 테이블 감시)이 아닌, **순수 웹소켓 브로드캐스트 소켓(`broadcast` 채널)**을 연동하여 다른 클라이언트로의 채팅 전파 속도를 극대화했습니다.
   - 인풋 포커스 시 발생하던 `setIsInputFocused is not defined` ReferenceError를 완치하고, `BottomNav` 조건부 렌더링 배제로 키보드 팝업 시 모바일 탭바 솟구침을 해결했습니다.
   - 데스크톱 뷰포트에서 `100dvh`로 인해 전체 높이가 40px~60px 쪼그라들던 붕 뜸 버그를 정석적인 `html, body { height: 100%; }` 리셋 및 `.app-viewport` fixed 락 기법으로 완치했습니다.
-- **sourceCommit**: Local branch `agent/agy/records-revamp` 상에 커밋되지 않은 수정본으로 보존 중 (직전 커밋: `69bbe1837971599e7a6f5414512b74a876b0bd6e`)
+- **sourceCommit**: `9bb6b9a` (기록 탭 개편 및 커뮤니티 페이지 테스트 최신화 완료)
 - **integrationCommit**: N/A (Codex 통합 단계에서 머지 예정)
 
 ## 📝 작업 내용 총 요약 (Summary of All Frontend Modifications)
@@ -56,7 +57,8 @@
 - **command**:
   - `npm run guard:role:agy`
   - `npm run harness:guard:quick`
-- **result**: All checks passed successfully (디자인 가드 및 린트 가드 전원 통과).
+  - `npm run test`
+- **result**: All checks and unit tests passed successfully (242 tests passed).
 - **runtimeOrVisualEvidence**:
   - 인앱브라우저를 활용한 데스크톱 3001 포트 구동 및 input 포커스 활성화 상태 스크린샷 검증 완료:
     - [media_chat_focused_fixed_goal.png](file:///Users/5deng/.gemini/antigravity/brain/c17d36ef-25aa-4ab0-91e3-4d6903a000e4/media_chat_focused_fixed_goal.png)
