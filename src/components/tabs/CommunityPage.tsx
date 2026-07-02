@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo, useRef, type ReactNode } from 'react';
-import { ChevronDown, ChevronUp, Megaphone, Pin, MessageSquare, Image as ImageIcon, Pencil, Trash2, X, Plus, MessageCircle, Paperclip, Video, Send, Heart, LayoutGrid, LayoutList, Play } from 'lucide-react';
+import { ChevronDown, ChevronUp, Megaphone, Pin, MessageSquare, Image as ImageIcon, Pencil, Trash2, X, Plus, MessageCircle, Video, Send, Heart, LayoutGrid, LayoutList, Play, Upload, LoaderCircle } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import { useAnnouncementStore } from '@/stores/useAnnouncementStore';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -722,7 +722,60 @@ function FeedComposer({
   onCancelCompose: () => void;
   authorName: string;
 }) {
-  const canSubmit = !isPosting && (
+  const { showToast } = useToastStore();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isReadingFile, setIsReadingFile] = useState(false);
+  const [mediaFileName, setMediaFileName] = useState('');
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+
+    if (!file) return;
+
+    if (composeType === 'image') {
+      if (!file.type.startsWith('image/')) {
+        showToast('이미지 파일만 업로드할 수 있어요.');
+        return;
+      }
+    } else if (composeType === 'video') {
+      if (!file.type.startsWith('video/')) {
+        showToast('동영상 파일만 업로드할 수 있어요.');
+        return;
+      }
+      const maxSize = 10 * 1024 * 1024;
+      if (file.size > maxSize) {
+        showToast('동영상 파일은 최대 10MB까지만 가능해요.');
+        return;
+      }
+    }
+
+    setIsReadingFile(true);
+    setMediaFileName(file.name);
+
+    try {
+      if (composeType === 'image') {
+        const dataUrl = await createFeedImageDataUrl(file);
+        onComposeMediaUrlChange(dataUrl);
+      } else {
+        const dataUrl = await createFeedVideoDataUrl(file);
+        onComposeMediaUrlChange(dataUrl);
+      }
+    } catch (error) {
+      console.error('[FC Moim] Media file reading failed:', error);
+      showToast('미디어 파일을 읽지 못했어요.');
+      setMediaFileName('');
+    } finally {
+      setIsReadingFile(false);
+    }
+  };
+
+  const handleRemoveMedia = () => {
+    onComposeMediaUrlChange('');
+    setMediaFileName('');
+  };
+
+  const canSubmit = !isPosting && !isReadingFile && (
     composeType === 'text'
       ? composeText.trim().length > 0
       : composeMediaUrl.trim().length > 0
@@ -730,11 +783,12 @@ function FeedComposer({
 
   return (
     <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4" data-testid="feed-inline-composer">
-      <div className="w-full max-w-4xl bg-surface-elevated border border-border rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row h-[90vh] md:h-[600px] max-h-[800px] animate-fadeIn">
+      <div className="w-full max-w-[420px] bg-surface-elevated border border-border rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[85vh] max-h-[720px] animate-fadeIn">
         
-        {/* Left: Input Form */}
-        <div className="flex-1 flex flex-col p-6 border-b md:border-b-0 md:border-r border-border/50 overflow-y-auto">
-          <div className="flex justify-between items-center pb-4 border-b border-border/30 mb-5">
+        {/* Scrollable container for Form & Preview */}
+        <div className="flex-1 flex flex-col p-5 overflow-y-auto no-scrollbar">
+          {/* Header */}
+          <div className="flex justify-between items-center pb-4 border-b border-border/30 mb-4 shrink-0">
             <h3 className="text-sm font-black text-white">새 피드 만들기</h3>
             <button
               type="button"
@@ -746,7 +800,7 @@ function FeedComposer({
             </button>
           </div>
 
-          <div className="space-y-5 flex-1">
+          <div className="space-y-4 flex-1">
             {/* Post Type Selector */}
             <div className="space-y-1.5">
               <span className="block text-[11px] font-black text-gray-400 uppercase">콘텐츠 유형</span>
@@ -774,90 +828,148 @@ function FeedComposer({
               <textarea
                 value={composeText}
                 onChange={(event) => onComposeTextChange(event.target.value)}
-                rows={4}
+                rows={3}
                 maxLength={500}
                 placeholder={composeType === 'text' ? '무슨 이야기를 남길까요?' : '미디어와 함께 남길 말을 적어주세요...'}
-                className="w-full resize-none rounded-xl border border-border/80 bg-white/5 px-3.5 py-3 text-xs font-bold text-white placeholder:text-gray-500 focus:border-brand-primary/50 focus:outline-none transition-colors"
+                className="w-full resize-none rounded-xl border border-border/80 bg-white/5 px-3 py-2 text-xs font-bold text-white placeholder:text-gray-500 focus:border-brand-primary/50 focus:outline-none transition-colors"
               />
               <div className="text-right text-[10px] text-gray-500 font-bold">
                 {composeText.length}/500자
               </div>
             </div>
 
-            {/* Media URL link */}
+            {/* Media File Upload Area */}
             {composeType !== 'text' && (
-              <div className="space-y-1.5">
-                <span className="block text-[11px] font-black text-gray-400 uppercase">미디어 파일 주소 (URL)</span>
-                <div className="flex items-center gap-2 rounded-xl border border-border/80 bg-white/5 px-3.5 py-2">
-                  <Paperclip size={14} className="shrink-0 text-gray-500" />
-                  <input
-                    value={composeMediaUrl}
-                    onChange={(event) => onComposeMediaUrlChange(event.target.value)}
-                    placeholder="https://example.com/photo.jpg"
-                    className="min-w-0 flex-1 bg-transparent text-xs font-bold text-white placeholder:text-gray-600 focus:outline-none"
-                  />
-                </div>
+              <div className="space-y-2">
+                <span className="block text-[11px] font-black text-gray-400 uppercase">
+                  {composeType === 'image' ? '사진 업로드' : '동영상 업로드'}
+                </span>
+                
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={composeType === 'image' ? 'image/*' : 'video/*'}
+                  className="sr-only"
+                  onChange={handleFileChange}
+                />
+
+                {composeMediaUrl ? (
+                  <div className="flex items-center justify-between rounded-xl border border-border/80 bg-white/5 px-3.5 py-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {composeType === 'image' ? (
+                        <ImageIcon size={16} className="text-brand-primary shrink-0" />
+                      ) : (
+                        <Video size={16} className="text-brand-primary shrink-0" />
+                      )}
+                      <span className="text-xs font-bold text-white truncate max-w-[200px]">
+                        {mediaFileName || (composeType === 'image' ? '업로드된 사진' : '업로드된 동영상')}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="text-[10px] font-black text-gray-400 hover:text-white bg-white/5 border border-white/10 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+                      >
+                        변경
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleRemoveMedia}
+                        className="text-[10px] font-black text-result-loss hover:brightness-110 bg-result-loss/10 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isReadingFile}
+                    className="w-full flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/80 hover:border-brand-primary/50 bg-white/5 py-6 px-4 transition-all active:scale-[0.99] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isReadingFile ? (
+                      <LoaderCircle size={20} className="animate-spin text-brand-primary" />
+                    ) : composeType === 'image' ? (
+                      <Upload size={18} className="text-gray-400" />
+                    ) : (
+                      <Video size={18} className="text-gray-400" />
+                    )}
+                    <span className="text-xs font-bold text-gray-400">
+                      {isReadingFile 
+                        ? '파일 읽는 중...' 
+                        : composeType === 'image' 
+                          ? '사진 파일 선택하기' 
+                          : '동영상 파일 선택하기'}
+                    </span>
+                    <span className="text-[10px] text-gray-500 font-bold">
+                      {composeType === 'image' ? 'JPEG, PNG 지원 (정사각 크롭)' : 'MP4, WebM 지원 (최대 10MB)'}
+                    </span>
+                  </button>
+                )}
               </div>
             )}
-          </div>
 
-          <div className="pt-4 border-t border-border/30 flex justify-end gap-3 mt-4 shrink-0">
-            <button
-              type="button"
-              onClick={onCancelCompose}
-              className="px-4 py-2 text-xs font-bold text-gray-400 hover:text-white transition-colors cursor-pointer"
-            >
-              취소
-            </button>
-            <button
-              type="button"
-              disabled={!canSubmit}
-              onClick={onCreatePost}
-              className="inline-flex h-9 min-w-24 items-center justify-center gap-1.5 rounded-xl bg-brand-primary text-black px-4 text-xs font-black transition-all hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:bg-white/5 disabled:text-gray-500 cursor-pointer"
-            >
-              <Send size={13} />
-              {isPosting ? '공유 중...' : '공유하기'}
-            </button>
+            {/* Live Preview Panel */}
+            <div className="pt-4 border-t border-border/30 flex flex-col items-center">
+              <span className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3.5">실시간 피드 미리보기</span>
+              
+              <div className="w-full max-w-[260px] bg-surface-card border border-border/50 rounded-2xl overflow-hidden shadow-xl p-3 space-y-3 text-left">
+                {/* Header */}
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center text-[10px] text-gray-400 font-bold select-none">
+                    {authorName.slice(0, 1)}
+                  </div>
+                  <span className="text-[10px] font-black text-white">{authorName}</span>
+                </div>
+
+                {/* Media Area Preview */}
+                <div className="w-full aspect-square rounded-xl overflow-hidden bg-black/30 border border-white/5 flex items-center justify-center relative">
+                  {composeType === 'image' && composeMediaUrl.trim() ? (
+                    <img src={composeMediaUrl} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                  ) : composeType === 'video' && composeMediaUrl.trim() ? (
+                    <video src={composeMediaUrl} muted className="w-full h-full object-cover" />
+                  ) : (
+                    /* Text Gradient Card Preview */
+                    <div className="w-full h-full bg-gradient-to-tr from-surface-card via-brand-primary/15 to-surface-bg flex items-center justify-center p-3 text-center">
+                      <p className="text-[11px] font-extrabold text-white leading-relaxed line-clamp-5 max-w-full">
+                        {composeText.trim() || '내용을 작성하면 이곳에 카드뉴스로 표시됩니다.'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Caption Preview */}
+                {composeType !== 'text' && composeText.trim() && (
+                  <p className="text-[10px] font-medium text-gray-400 line-clamp-2">
+                    <strong className="text-white mr-1.5">{authorName}</strong>
+                    {composeText}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Right: Live Preview Panel */}
-        <div className="hidden md:flex flex-col w-[360px] bg-surface-bg p-6 justify-center items-center shrink-0">
-          <span className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">실시간 피드 미리보기</span>
-          
-          <div className="w-full max-w-[280px] bg-surface-card border border-border/50 rounded-2xl overflow-hidden shadow-xl p-3 space-y-3 text-left">
-            {/* Header */}
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center text-[10px] text-gray-400 font-bold select-none">
-                {authorName.slice(0, 1)}
-              </div>
-              <span className="text-[10px] font-black text-white">{authorName}</span>
-            </div>
-
-            {/* Media Area Preview */}
-            <div className="w-full aspect-square rounded-xl overflow-hidden bg-black/30 border border-white/5 flex items-center justify-center relative">
-              {composeType === 'image' && composeMediaUrl.trim() ? (
-                <img src={composeMediaUrl} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-              ) : composeType === 'video' && composeMediaUrl.trim() ? (
-                <video src={composeMediaUrl} muted className="w-full h-full object-cover" />
-              ) : (
-                /* Text Gradient Card Preview */
-                <div className="w-full h-full bg-gradient-to-tr from-surface-card via-brand-primary/15 to-surface-bg flex items-center justify-center p-3 text-center">
-                  <p className="text-[11px] font-extrabold text-white leading-relaxed line-clamp-5 max-w-full">
-                    {composeText.trim() || '내용을 작성하면 이곳에 카드뉴스로 표시됩니다.'}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Caption Preview */}
-            {composeType !== 'text' && composeText.trim() && (
-              <p className="text-[10px] font-medium text-gray-400 line-clamp-2">
-                <strong className="text-white mr-1.5">{authorName}</strong>
-                {composeText}
-              </p>
-            )}
-          </div>
+        {/* Bottom Actions Area */}
+        <div className="p-4 border-t border-border/30 bg-surface-elevated flex justify-end gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={onCancelCompose}
+            className="px-4 py-2 text-xs font-bold text-gray-400 hover:text-white transition-colors cursor-pointer"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            disabled={!canSubmit}
+            onClick={onCreatePost}
+            className="inline-flex h-9 min-w-24 items-center justify-center gap-1.5 rounded-xl bg-brand-primary text-black px-4 text-xs font-black transition-all hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:bg-white/5 disabled:text-gray-500 cursor-pointer"
+          >
+            <Send size={13} />
+            {isPosting ? '공유 중...' : '공유하기'}
+          </button>
         </div>
 
       </div>
@@ -1207,4 +1319,45 @@ function formatFeedDateTime(value: string) {
   const hours = `${date.getHours()}`.padStart(2, '0');
   const minutes = `${date.getMinutes()}`.padStart(2, '0');
   return `${date.getMonth() + 1}월 ${date.getDate()}일 ${hours}:${minutes}`;
+}
+
+async function createFeedImageDataUrl(file: File) {
+  const imageUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new window.Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('Image load error'));
+      img.src = imageUrl;
+    });
+
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Canvas context error');
+
+    // Instagram square size (e.g., 800x800)
+    const size = 800;
+    canvas.width = size;
+    canvas.height = size;
+
+    const minDim = Math.min(image.width, image.height);
+    const sx = (image.width - minDim) / 2;
+    const sy = (image.height - minDim) / 2;
+
+    context.drawImage(image, sx, sy, minDim, minDim, 0, 0, size, size);
+    return canvas.toDataURL('image/jpeg', 0.85);
+  } finally {
+    URL.revokeObjectURL(imageUrl);
+  }
+}
+
+async function createFeedVideoDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      resolve(reader.result as string);
+    };
+    reader.onerror = () => reject(new Error('Video read error'));
+    reader.readAsDataURL(file);
+  });
 }
