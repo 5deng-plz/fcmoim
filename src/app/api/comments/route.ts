@@ -1,6 +1,7 @@
 import { appErrorResponse } from '../../../types/api';
 import { getServerTeamContext } from '@/config/server-team';
 import { createSupabaseServerClient, getRequiredServerAuthContext } from '../../../lib/supabase-server';
+import { createCommentRealtimePublisher } from '../../../lib/supabase-comment-realtime';
 import { createCommentService } from '../../../services/comments';
 import { createSupabaseCommentRepositories } from '../../../services/repositories';
 
@@ -38,7 +39,11 @@ export async function POST(request: Request) {
 
     const supabase = await createSupabaseServerClient();
     const auth = await getRequiredServerAuthContext(supabase);
-    const service = createCommentService(createSupabaseCommentRepositories(supabase), getServerTeamContext());
+    const service = createCommentService(
+      createSupabaseCommentRepositories(supabase),
+      getServerTeamContext(),
+      createCommentRealtimePublisher(),
+    );
 
     return Response.json(await service.createComment({
       auth,

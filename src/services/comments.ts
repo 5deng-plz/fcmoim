@@ -6,6 +6,10 @@ import type {
   EventCommentTargetType,
   TeamMembershipRow,
 } from '../types/domain';
+import {
+  disabledCommentRealtimePublisher,
+  type CommentRealtimePublisher,
+} from './comment-realtime';
 
 const MAX_COMMENT_CONTENT_LENGTH = 1000;
 
@@ -35,6 +39,7 @@ export type CommentRepositories = {
 export function createCommentService(
   repositories: CommentRepositories,
   teamContext: TeamContext,
+  realtimePublisher: CommentRealtimePublisher = disabledCommentRealtimePublisher,
 ) {
   const teamId = teamContext.teamId;
 
@@ -66,12 +71,27 @@ export function createCommentService(
       assertApprovedMember(membership);
       await assertTargetInClub(repositories, targetType, input.targetId, teamId);
 
-      return repositories.comments.create({
+      const comment = await repositories.comments.create({
         targetType,
         targetId: normalizeRequiredText(input.targetId, 'targetId is required.'),
         membershipId: membership.id,
         content: normalizeCommentContent(input.content),
       });
+
+      if (comment.targetType === 'feed_post') {
+        try {
+          await realtimePublisher.publishCreated(comment);
+        } catch (error) {
+          console.error('[FC Moim] Comment realtime publish failed.', {
+            commentId: comment.id,
+            targetType: comment.targetType,
+            targetId: comment.targetId,
+            error: error instanceof Error ? error.message : 'Unknown realtime publish error.',
+          });
+        }
+      }
+
+      return comment;
     },
   };
 }

@@ -11,13 +11,19 @@ async function loadService(repositories: {
     listForTarget: ReturnType<typeof vi.fn>;
     create: ReturnType<typeof vi.fn>;
   };
+}, realtimePublisher = {
+  publishCreated: vi.fn(async () => {}),
 }) {
   const { createCommentService } = await import('../src/services/comments');
 
-  return createCommentService(
-    repositories as unknown as Parameters<typeof createCommentService>[0],
-    { teamId: 'club-1' },
-  );
+  return {
+    service: createCommentService(
+      repositories as unknown as Parameters<typeof createCommentService>[0],
+      { teamId: 'club-1' },
+      realtimePublisher,
+    ),
+    realtimePublisher,
+  };
 }
 
 function createRepositories(options?: {
@@ -56,7 +62,7 @@ function createRepositories(options?: {
 describe('event comment service', () => {
   it('creates generic match comments with target type and target id', async () => {
     const repositories = createRepositories();
-    const service = await loadService(repositories);
+    const { service, realtimePublisher } = await loadService(repositories);
 
     await expect(
       service.createComment({
@@ -77,11 +83,12 @@ describe('event comment service', () => {
       membershipId: 'operator-membership',
       content: '결과 확인 완료',
     });
+    expect(realtimePublisher.publishCreated).not.toHaveBeenCalled();
   });
 
   it('lists poll option comments without mixing target ids', async () => {
     const repositories = createRepositories();
-    const service = await loadService(repositories);
+    const { service } = await loadService(repositories);
 
     await service.listComments({
       auth: { user: { id: 'operator-auth-user', email: 'operator@example.com' } },
@@ -97,7 +104,7 @@ describe('event comment service', () => {
 
   it('creates feed post comments through the shared comment service', async () => {
     const repositories = createRepositories();
-    const service = await loadService(repositories);
+    const { service, realtimePublisher } = await loadService(repositories);
 
     await expect(
       service.createComment({
@@ -118,11 +125,17 @@ describe('event comment service', () => {
       membershipId: 'operator-membership',
       content: '사진 좋다',
     });
+    expect(realtimePublisher.publishCreated).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'comment-1',
+      targetType: 'feed_post',
+      targetId: 'post-1',
+      content: '사진 좋다',
+    }));
   });
 
   it('rejects targets outside the active club', async () => {
     const repositories = createRepositories({ targetClubId: 'club-2' });
-    const service = await loadService(repositories);
+    const { service } = await loadService(repositories);
 
     await expect(
       service.listComments({
@@ -135,7 +148,7 @@ describe('event comment service', () => {
 
   it('rejects pending memberships before listing comments', async () => {
     const repositories = createRepositories({ membershipStatus: 'pending' });
-    const service = await loadService(repositories);
+    const { service } = await loadService(repositories);
 
     await expect(
       service.listComments({
@@ -151,7 +164,7 @@ describe('event comment service', () => {
 
   it('rejects missing memberships before creating comments', async () => {
     const repositories = createRepositories({ membershipStatus: null });
-    const service = await loadService(repositories);
+    const { service } = await loadService(repositories);
 
     await expect(
       service.createComment({
@@ -168,7 +181,7 @@ describe('event comment service', () => {
 
   it('rejects invalid target types as bad requests', async () => {
     const repositories = createRepositories();
-    const service = await loadService(repositories);
+    const { service } = await loadService(repositories);
 
     await expect(
       service.listComments({
@@ -184,7 +197,7 @@ describe('event comment service', () => {
 
   it('rejects blank target ids as bad requests', async () => {
     const repositories = createRepositories();
-    const service = await loadService(repositories);
+    const { service } = await loadService(repositories);
 
     await expect(
       service.listComments({
@@ -200,7 +213,7 @@ describe('event comment service', () => {
 
   it('rejects blank comment content as a bad request', async () => {
     const repositories = createRepositories();
-    const service = await loadService(repositories);
+    const { service } = await loadService(repositories);
 
     await expect(
       service.createComment({
@@ -216,7 +229,7 @@ describe('event comment service', () => {
 
   it('rejects comment content longer than the database limit as a bad request', async () => {
     const repositories = createRepositories();
-    const service = await loadService(repositories);
+    const { service } = await loadService(repositories);
 
     await expect(
       service.createComment({
@@ -228,5 +241,39 @@ describe('event comment service', () => {
     ).rejects.toMatchObject({ code: 'bad_request', status: 400 });
 
     expect(repositories.comments.create).not.toHaveBeenCalled();
+  });
+
+  it('keeps a persisted feed comment when realtime publishing fails', async () => {
+    const repositories = createRepositories();
+    const realtimePublisher = {
+      publishCreated: vi.fn(async () => {
+        throw new Error('realtime unavailable');
+      }),
+    };
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { service } = await loadService(repositories, realtimePublisher);
+
+    await expect(
+      service.createComment({
+        auth: { user: { id: 'operator-auth-user', email: 'operator@example.com' } },
+        targetType: 'feed_post',
+        targetId: 'post-1',
+        content: '저장은 유지',
+      }),
+    ).resolves.toMatchObject({
+      id: 'comment-1',
+      content: '저장은 유지',
+    });
+
+    expect(realtimePublisher.publishCreated).toHaveBeenCalledOnce();
+    expect(consoleError).toHaveBeenCalledWith(
+      '[FC Moim] Comment realtime publish failed.',
+      expect.objectContaining({
+        commentId: 'comment-1',
+        targetId: 'post-1',
+        error: 'realtime unavailable',
+      }),
+    );
+    consoleError.mockRestore();
   });
 });

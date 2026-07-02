@@ -66,3 +66,9 @@ This file starts clean for `prototype v0.1`.
 - Legacy `clubId` request fields and club-shaped response fields are compatibility adapters only and must not influence authorization or repository scope.
 - Club creation RPC remains service-role only, and its API surface returns 404 while the multi-club feature flag is disabled.
 - `clubs`, `club_id`, slug, visibility, and creator metadata are durable tenant boundaries.
+
+### Comment Realtime Delivery
+
+- Persisted `comments` rows are the source of truth; realtime delivery is a best-effort convenience recovered by the comments GET API.
+- The API publishes `feed_post` comment events through a provider-neutral service contract after persistence. Supabase Realtime REST Broadcast is the current adapter; database triggers and Postgres Changes are not used.
+- Realtime provider code stays behind Backend publisher and Frontend transport boundaries so the comments API and database schema remain portable.

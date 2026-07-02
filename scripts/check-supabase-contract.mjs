@@ -157,8 +157,9 @@ if (sqlFiles.length === 0) {
   assertSqlFilesAreTracked(sqlFiles);
 }
 
-if (migrationFiles.length !== 1) {
-  errors.push(`Expected exactly one executable migration baseline, found ${migrationFiles.length}.`);
+const baselineMigration = `supabase${path.sep}migrations${path.sep}20260629000427_prepare_multi_club_launch.sql`;
+if (!migrationFiles.includes(baselineMigration)) {
+  errors.push(`Missing executable migration baseline: ${baselineMigration}`);
 }
 if (exists('supabase/stage1_init.sql')) {
   errors.push('Remove duplicate supabase/stage1_init.sql; migrations are the only schema entrypoint.');

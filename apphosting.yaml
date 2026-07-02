@@ -45,6 +45,11 @@ env:
     availability:
       - RUNTIME
 
+  - variable: COMMENT_REALTIME_PROVIDER
+    value: supabase
+    availability:
+      - RUNTIME
+
   - variable: KAKAO_OAUTH_CONFIG
     secret: kakao-oauth-config
     availability:
