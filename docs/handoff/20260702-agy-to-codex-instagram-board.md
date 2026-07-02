@@ -26,7 +26,7 @@
   - 인스타그램 스타일 타임라인 개편 (그리드/피드 뷰 토글, 피드 뷰 미디어 더블 탭 시 하트 마이크로 인터랙션, 텍스트 전용 포스팅 은은한 카드뉴스 그라데이션, 비디오 뷰포트 진입 시 자동 재생).
   - 모달 찌그러짐 현상(Containment/Media Query) 수정을 위한 모바일 규격 1열 레이아웃 리팩토링.
   - 마이페이지와 동일하게 미디어를 로컬 기기에서 직접 선택하는 업로드 기능 구현 (사진: Canvas 크롭/압축 JPEG Base64 변환, 비디오: FileReader 10MB 한도 Base64 변환).
-- sourceCommit: `d2de59b`
+- sourceCommit: `13063c0`
 - integrationCommit: N/A
 
 ## 검증
@@ -35,7 +35,8 @@
   - `npx tsc --noEmit`
   - `npm run test tests/frontend-auth-and-schedule-ui.test.tsx`
   - `npm run harness:guard:quick`
-- result: 전원 성공 (Pass)
+  - `npm run verify:baseline`
+- result: 전원 성공 (Pass, 전체 242개 테스트 검증 성공)
 - runtimeOrVisualEvidence:
   - 컴포저 모달 업로드 및 실시간 미리보기 스크린샷 갱신: `community_composer.png`
   - 피드 리스트 및 그리드 리스트 뷰 스크린샷 갱신: `community_feed_view.png`, `community_grid_view.png`
