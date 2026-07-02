@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { Send, MessageSquareText, ShieldAlert, LoaderCircle } from 'lucide-react';
 import { getFallbackAvatar } from '@/components/ui/fallbackAvatars';
@@ -10,6 +10,7 @@ import { useRecordsStore } from '@/stores/useRecordsStore';
 import { createEventComment, fetchEventComments, type EventComment, type EventCommentTargetType } from '@/stores/commentsClient';
 import { fetchFeedPosts, createFeedPost, type FeedPost } from '@/stores/feedClient';
 import { supabase } from '@/lib/supabase';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface SeasonChatRoomProps {
   clubId: string;
@@ -35,11 +36,11 @@ export default function SeasonChatRoom({
   const [isNearBottom, setIsNearBottom] = useState(true);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const rows = records?.rankingRows ?? [];
+  const rows = useMemo(() => records?.rankingRows ?? [], [records?.rankingRows]);
   const myMembershipId = memberProfile?.id;
 
   // 1. Resolve authorName based on membershipId
-  const getAuthorName = (membershipId: string, authorNameFromApi?: string) => {
+  const getAuthorName = useCallback((membershipId: string, authorNameFromApi?: string) => {
     if (authorNameFromApi && authorNameFromApi !== '알 수 없는 멤버') {
       return authorNameFromApi;
     }
@@ -48,13 +49,13 @@ export default function SeasonChatRoom({
     }
     const match = rows.find((r) => r.membershipId === membershipId);
     return match ? match.nickname : '알 수 없는 멤버';
-  };
+  }, [myMembershipId, memberProfile?.name, rows]);
 
   // 2. Resolve authorPhoto based on membershipId
-  const getAuthorPhoto = (membershipId: string) => {
+  const getAuthorPhoto = useCallback((membershipId: string) => {
     const match = rows.find((r) => r.membershipId === membershipId);
     return match?.photoUrl || getFallbackAvatar(getAuthorName(membershipId));
-  };
+  }, [rows, getAuthorName]);
 
   // Helper to scroll to bottom
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
@@ -111,84 +112,93 @@ export default function SeasonChatRoom({
     };
   }, [clubId]);
 
-  // 4. Fetch comments & Subscribe to Realtime Postgres Changes
+  // 4. Fetch comments & Subscribe to Realtime Private Broadcast Channel
   useEffect(() => {
     if (!chatPost) return;
 
+    const postId = chatPost.id;
     let ignore = false;
-    setIsLoadingComments(true);
+    let channel: RealtimeChannel;
 
-    // Fetch initial comment list
-    fetchEventComments({ clubId, targetType: 'feed_post', targetId: chatPost.id })
-      .then((items) => {
-        if (ignore) return;
-        setComments(items);
-        setTimeout(() => scrollToBottom('auto'), 100);
-      })
-      .catch((err) => {
-        console.error('[FC Moim] SeasonChatRoom: Fetch comments failed:', err);
-      })
-      .finally(() => {
-        if (!ignore) setIsLoadingComments(false);
-      });
+    async function setupRealtime() {
+      setIsLoadingComments(true);
 
-    // Subscribe to Supabase Postgres Realtime insertion
-    interface RawComment {
-      id: string;
-      target_type: EventCommentTargetType;
-      target_id: string;
-      membership_id: string;
-      content: string;
-      created_at: string;
+      // setAuth before subscription
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (token) {
+        supabase.realtime.setAuth(token);
+      }
+
+      if (ignore) return;
+
+      channel = supabase
+        .channel(`comments:feed_post:${postId}`, {
+          config: {
+            private: true,
+          },
+        })
+        .on(
+          'broadcast',
+          { event: 'comment.created.v1' },
+          (payload) => {
+            if (ignore) return;
+            const broadcastComment = payload.payload as EventComment;
+            if (!broadcastComment) return;
+
+            const resolvedComment: EventComment = {
+              ...broadcastComment,
+              authorName: getAuthorName(broadcastComment.membershipId, broadcastComment.authorName),
+            };
+
+            setComments((prev) => {
+              if (prev.some((c) => c.id === resolvedComment.id)) {
+                return prev;
+              }
+              return [...prev, resolvedComment];
+            });
+
+            // Scroll manager
+            if (isNearBottom || resolvedComment.membershipId === myMembershipId) {
+              setTimeout(() => scrollToBottom('smooth'), 50);
+            } else {
+              setHasNewMessage(true);
+            }
+          }
+        )
+        .subscribe(async (status) => {
+          if (ignore) return;
+
+          // Fetch or sync comments on subscription (initial and reconnection)
+          if (status === 'SUBSCRIBED') {
+            try {
+              const items = await fetchEventComments({
+                clubId,
+                targetType: 'feed_post',
+                targetId: postId,
+              });
+              if (!ignore) {
+                setComments(items);
+                setTimeout(() => scrollToBottom('auto'), 100);
+              }
+            } catch (err) {
+              console.error('[FC Moim] SeasonChatRoom: Fetch comments failed:', err);
+            } finally {
+              if (!ignore) setIsLoadingComments(false);
+            }
+          }
+        });
     }
 
-    const channel = supabase
-      .channel(`comments_room:${chatPost.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'comments',
-          filter: `target_id=eq.${chatPost.id}`,
-        },
-        (payload) => {
-          if (ignore) return;
-          const rawComment = payload.new as RawComment;
-          
-          const newComment: EventComment = {
-            id: rawComment.id,
-            targetType: rawComment.target_type,
-            targetId: rawComment.target_id,
-            membershipId: rawComment.membership_id,
-            content: rawComment.content,
-            createdAt: rawComment.created_at,
-            authorName: getAuthorName(rawComment.membership_id),
-          };
-
-          setComments((prev) => {
-            // Avoid duplicate additions
-            if (prev.some((c) => c.id === newComment.id)) {
-              return prev;
-            }
-            return [...prev, newComment];
-          });
-
-          // Scroll manager
-          if (isNearBottom || newComment.membershipId === myMembershipId) {
-            setTimeout(() => scrollToBottom('smooth'), 50);
-          } else {
-            setHasNewMessage(true);
-          }
-        }
-      )
-      .subscribe();
+    void setupRealtime();
 
     return () => {
       ignore = true;
-      void supabase.removeChannel(channel);
+      if (channel) {
+        void supabase.removeChannel(channel);
+      }
     };
-  }, [chatPost, clubId, isNearBottom, myMembershipId, rows]);
+  }, [chatPost, clubId, isNearBottom, myMembershipId, rows, getAuthorName]);
 
   // Submit comment handler
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -198,13 +208,28 @@ export default function SeasonChatRoom({
 
     setIsSubmitting(true);
     try {
-      await createEventComment({
+      const created = await createEventComment({
         clubId,
         targetType: 'feed_post',
         targetId: chatPost.id,
         content,
       });
       setNewComment('');
+
+      // Add to local state immediately
+      setComments((prev) => {
+        if (prev.some((c) => c.id === created.id)) {
+          return prev;
+        }
+        const resolved = {
+          ...created,
+          authorName: getAuthorName(created.membershipId, created.authorName),
+        };
+        return [...prev, resolved];
+      });
+
+      // Scroll manager
+      setTimeout(() => scrollToBottom('smooth'), 50);
     } catch (err) {
       console.error('[FC Moim] SeasonChatRoom: Submit comment failed:', err);
     } finally {
