@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState, useMemo, type ReactNode } from 'react';
-import { ChevronDown, ChevronUp, Megaphone, Pin, MessageSquare, Image as ImageIcon, Pencil, Trash2, X, Plus, MessageCircle, Paperclip, Video, Send } from 'lucide-react';
+import { useEffect, useState, useMemo, useRef, type ReactNode } from 'react';
+import { ChevronDown, ChevronUp, Megaphone, Pin, MessageSquare, Image as ImageIcon, Pencil, Trash2, X, Plus, MessageCircle, Paperclip, Video, Send, Heart, LayoutGrid, LayoutList, Play } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import { useAnnouncementStore } from '@/stores/useAnnouncementStore';
+import { useAuthStore } from '@/stores/useAuthStore';
 import type { Announcement } from '@/stores/announcementClient';
 import { useAppStore } from '@/stores/useAppStore';
 import { useToastStore } from '@/stores/useToastStore';
@@ -37,7 +38,10 @@ export default function CommunityPage({
   hideHeaderTabs?: boolean;
 }) {
   const { activeClubId, userRole, setFocusedPostId } = useAppStore();
+  const { memberProfile } = useAuthStore();
   const { showToast } = useToastStore();
+  const authorName = memberProfile?.name || '나';
+
   const {
     announcements,
     announcementsStatus,
@@ -49,6 +53,8 @@ export default function CommunityPage({
 
   const [feedPosts, setFeedPosts] = useState<FeedPost[]>([]);
   const [feedStatus, setFeedStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [viewMode, setViewMode] = useState<'feed' | 'grid'>('feed');
+  const [activePostDetail, setActivePostDetail] = useState<FeedPost | null>(null);
 
   // Convert backward compatibility activeTab to filter type
   const initialFilter = useMemo(() => {
@@ -302,12 +308,25 @@ export default function CommunityPage({
   const isTimelineError = announcementsStatus === 'error' || feedStatus === 'error';
   const hasNoItems = filteredPinned.length === 0 && filteredUnpinned.length === 0;
 
+  // Memoize unpinned posts specifically for grid view
+  const filteredUnpinnedPosts = useMemo(() => {
+    return filteredUnpinned
+      .filter((item) => item.type === 'post')
+      .map((item) => item.data as FeedPost);
+  }, [filteredUnpinned]);
+
   return (
     <div className={`space-y-4 animate-fadeIn pb-20 ${hideHeaderTabs ? '' : '-mx-4 -mt-4'}`}>
       <main className="px-4 space-y-3">
         {/* Write Button & Composer */}
         <div className="space-y-3">
-          <FeedHeader title="커뮤니티 피드" icon={<MessageSquare size={18} />} onCompose={() => setIsComposeOpen((open) => !open)} />
+          <FeedHeader
+            title="커뮤니티 피드"
+            icon={<MessageSquare size={18} />}
+            onCompose={() => setIsComposeOpen((open) => !open)}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+          />
           {isComposeOpen && (
             <FeedComposer
               composeType={composeType}
@@ -319,6 +338,7 @@ export default function CommunityPage({
               onComposeMediaUrlChange={setComposeMediaUrl}
               onCreatePost={handleCreatePost}
               onCancelCompose={handleCancelCompose}
+              authorName={authorName}
             />
           )}
         </div>
@@ -341,101 +361,21 @@ export default function CommunityPage({
           </div>
         ) : null}
 
-        {/* Pinned Announcements Render */}
-        {filteredPinned.map((item) => {
-          const ann = item.data as Announcement;
-          const isExpanded = expandedId === ann.id;
-          return (
-            <article
-              key={ann.id}
-              onClick={() => {
-                if (window.innerWidth >= 1024) {
-                  setFocusedPostId(ann.id);
-                }
-              }}
-              className="overflow-hidden rounded-2xl border-2 border-highlight-rose bg-surface-card shadow-md transition-all duration-200 cursor-pointer lg:hover:border-highlight-rose/80"
-            >
-              <button
-                type="button"
-                onClick={(e) => {
-                  if (window.innerWidth >= 1024) {
-                    e.stopPropagation();
-                    setFocusedPostId(ann.id);
-                  } else {
-                    setExpandedId(isExpanded ? null : ann.id);
-                  }
-                }}
-                aria-expanded={isExpanded}
-                aria-controls={`announcement-${ann.id}`}
-                className="flex w-full items-center gap-3 p-4 text-left hover:shadow-md active:scale-[0.98] transition-all duration-200"
-              >
-                <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-highlight-rose-bg text-highlight-rose">
-                  <Megaphone size={18} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <Pin size={12} className="text-highlight-rose shrink-0" />
-                    <p className="text-sm font-black text-primary truncate">
-                      {ann.title}
-                    </p>
-                  </div>
-                  <p className="text-[11px] text-tertiary mt-0.5 font-bold">
-                    중요 공지사항 · {formatRelativeDate(ann.createdAt)}
-                  </p>
-                </div>
-                {isExpanded ? <ChevronUp size={18} className="text-tertiary lg:hidden" /> : <ChevronDown size={18} className="text-tertiary lg:hidden" />}
-              </button>
-
-              {isExpanded && (
-                <div id={`announcement-${ann.id}`} className="border-t border-border px-4 py-3 lg:hidden" onClick={(e) => e.stopPropagation()}>
-                  <p className="whitespace-pre-wrap text-sm font-semibold leading-relaxed text-secondary">
-                    {ann.content}
-                  </p>
-                  {canManageAnnouncements && (
-                    <div className="mt-3 flex items-center justify-end gap-2 border-t border-border pt-3">
-                      {confirmingDeleteId === ann.id && (
-                        <button
-                          type="button"
-                          disabled={deletingId === ann.id}
-                          onClick={() => setConfirmingDeleteId(null)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface-bg text-secondary transition-all hover:bg-surface-hover active:scale-95 disabled:opacity-50"
-                        >
-                          <X size={15} />
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        disabled={deletingId === ann.id}
-                        onClick={() => openEditModal(ann)}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface-bg text-secondary transition-all hover:bg-surface-hover active:scale-95 disabled:opacity-50"
-                      >
-                        <Pencil size={15} />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={deletingId === ann.id}
-                        onClick={() => void handleDelete(ann)}
-                        className={`flex h-8 items-center justify-center rounded-lg border px-2 text-xs font-black transition-all active:scale-95 disabled:opacity-50 ${
-                          confirmingDeleteId === ann.id
-                            ? 'border-feedback-error-border bg-feedback-error-bg text-feedback-error'
-                            : 'border-border bg-surface-bg text-secondary'
-                        }`}
-                      >
-                        {confirmingDeleteId === ann.id ? '삭제 확인' : <Trash2 size={15} />}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </article>
-          );
-        })}
-
-        {/* Regular Items (Unified Feed Timeline) */}
-        <div className="space-y-3.5">
-          {filteredUnpinned.map((item) => {
-            if (item.type === 'announcement') {
-              const ann = item.data;
+        {viewMode === 'grid' ? (
+          <div className="grid grid-cols-3 gap-1.5 lg:gap-2.5">
+            {filteredUnpinnedPosts.map((post) => (
+              <FeedGridItem
+                key={post.id}
+                post={post}
+                onClick={() => setActivePostDetail(post)}
+              />
+            ))}
+          </div>
+        ) : (
+          <>
+            {/* Pinned Announcements Render */}
+            {filteredPinned.map((item) => {
+              const ann = item.data as Announcement;
               const isExpanded = expandedId === ann.id;
               return (
                 <article
@@ -445,7 +385,7 @@ export default function CommunityPage({
                       setFocusedPostId(ann.id);
                     }
                   }}
-                  className="overflow-hidden rounded-2xl border border-border bg-surface-card shadow-sm transition-all duration-200 cursor-pointer lg:hover:border-brand-primary"
+                  className="overflow-hidden rounded-2xl border-2 border-highlight-rose bg-surface-card shadow-md transition-all duration-200 cursor-pointer lg:hover:border-highlight-rose/80"
                 >
                   <button
                     type="button"
@@ -458,24 +398,28 @@ export default function CommunityPage({
                       }
                     }}
                     aria-expanded={isExpanded}
+                    aria-controls={`announcement-${ann.id}`}
                     className="flex w-full items-center gap-3 p-4 text-left hover:shadow-md active:scale-[0.98] transition-all duration-200"
                   >
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-surface-bg text-secondary">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-highlight-rose-bg text-highlight-rose">
                       <Megaphone size={18} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-primary truncate">
-                        {ann.title}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <Pin size={12} className="text-highlight-rose shrink-0" />
+                        <p className="text-sm font-black text-primary truncate">
+                          {ann.title}
+                        </p>
+                      </div>
                       <p className="text-[11px] text-tertiary mt-0.5 font-bold">
-                        공지사항 · {formatRelativeDate(ann.createdAt)}
+                        중요 공지사항 · {formatRelativeDate(ann.createdAt)}
                       </p>
                     </div>
                     {isExpanded ? <ChevronUp size={18} className="text-tertiary lg:hidden" /> : <ChevronDown size={18} className="text-tertiary lg:hidden" />}
                   </button>
 
                   {isExpanded && (
-                    <div className="border-t border-border px-4 py-3 lg:hidden" onClick={(e) => e.stopPropagation()}>
+                    <div id={`announcement-${ann.id}`} className="border-t border-border px-4 py-3 lg:hidden" onClick={(e) => e.stopPropagation()}>
                       <p className="whitespace-pre-wrap text-sm font-semibold leading-relaxed text-secondary">
                         {ann.content}
                       </p>
@@ -517,24 +461,114 @@ export default function CommunityPage({
                   )}
                 </article>
               );
-            }
+            })}
 
-            // Render normal feed post card
-            const post = item.data;
-            return (
-              <FeedPostCard
-                key={post.id}
-                post={post}
-                onReaction={handleReaction}
-                onDelete={handleDeletePost}
-                commentsOpen={commentsPostId === post.id}
-                setCommentsOpen={(open) => setCommentsPostId(open ? post.id : null)}
-                onCommentCountChange={(count) => updateFeedPostCommentCount(post.id, count)}
-                clubId={activeClubId}
-              />
-            );
-          })}
-        </div>
+            {/* Regular Items (Unified Feed Timeline) */}
+            <div className="space-y-3.5">
+              {filteredUnpinned.map((item) => {
+                if (item.type === 'announcement') {
+                  const ann = item.data;
+                  const isExpanded = expandedId === ann.id;
+                  return (
+                    <article
+                      key={ann.id}
+                      onClick={() => {
+                        if (window.innerWidth >= 1024) {
+                          setFocusedPostId(ann.id);
+                        }
+                      }}
+                      className="overflow-hidden rounded-2xl border border-border bg-surface-card shadow-sm transition-all duration-200 cursor-pointer lg:hover:border-brand-primary"
+                    >
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          if (window.innerWidth >= 1024) {
+                            e.stopPropagation();
+                            setFocusedPostId(ann.id);
+                          } else {
+                            setExpandedId(isExpanded ? null : ann.id);
+                          }
+                        }}
+                        aria-expanded={isExpanded}
+                        className="flex w-full items-center gap-3 p-4 text-left hover:shadow-md active:scale-[0.98] transition-all duration-200"
+                      >
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-surface-bg text-secondary">
+                          <Megaphone size={18} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-primary truncate">
+                            {ann.title}
+                          </p>
+                          <p className="text-[11px] text-tertiary mt-0.5 font-bold">
+                            공지사항 · {formatRelativeDate(ann.createdAt)}
+                          </p>
+                        </div>
+                        {isExpanded ? <ChevronUp size={18} className="text-tertiary lg:hidden" /> : <ChevronDown size={18} className="text-tertiary lg:hidden" />}
+                      </button>
+
+                      {isExpanded && (
+                        <div className="border-t border-border px-4 py-3 lg:hidden" onClick={(e) => e.stopPropagation()}>
+                          <p className="whitespace-pre-wrap text-sm font-semibold leading-relaxed text-secondary">
+                            {ann.content}
+                          </p>
+                          {canManageAnnouncements && (
+                            <div className="mt-3 flex items-center justify-end gap-2 border-t border-border pt-3">
+                              {confirmingDeleteId === ann.id && (
+                                <button
+                                  type="button"
+                                  disabled={deletingId === ann.id}
+                                  onClick={() => setConfirmingDeleteId(null)}
+                                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface-bg text-secondary transition-all hover:bg-surface-hover active:scale-95 disabled:opacity-50"
+                                >
+                                  <X size={15} />
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                disabled={deletingId === ann.id}
+                                onClick={() => openEditModal(ann)}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface-bg text-secondary transition-all hover:bg-surface-hover active:scale-95 disabled:opacity-50"
+                              >
+                                <Pencil size={15} />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={deletingId === ann.id}
+                                onClick={() => void handleDelete(ann)}
+                                className={`flex h-8 items-center justify-center rounded-lg border px-2 text-xs font-black transition-all active:scale-95 disabled:opacity-50 ${
+                                  confirmingDeleteId === ann.id
+                                    ? 'border-feedback-error-border bg-feedback-error-bg text-feedback-error'
+                                    : 'border-border bg-surface-bg text-secondary'
+                                }`}
+                              >
+                                {confirmingDeleteId === ann.id ? '삭제 확인' : <Trash2 size={15} />}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </article>
+                  );
+                }
+
+                // Render normal feed post card
+                const post = item.data;
+                return (
+                  <FeedPostCard
+                    key={post.id}
+                    post={post}
+                    onReaction={handleReaction}
+                    onDelete={handleDeletePost}
+                    commentsOpen={commentsPostId === post.id}
+                    setCommentsOpen={(open) => setCommentsPostId(open ? post.id : null)}
+                    onCommentCountChange={(count) => updateFeedPostCommentCount(post.id, count)}
+                    clubId={activeClubId}
+                  />
+                );
+              })}
+            </div>
+          </>
+        )}
       </main>
 
       {/* Edit Announcement Modal */}
@@ -577,33 +611,90 @@ export default function CommunityPage({
           </button>
         </div>
       </Modal>
+
+      {/* Grid Detail Post Modal */}
+      {activePostDetail && (
+        <Modal
+          title="게시물 상세"
+          isOpen={activePostDetail !== null}
+          onClose={() => setActivePostDetail(null)}
+        >
+          <div className="-mx-4 -my-4 max-h-[85vh] overflow-y-auto">
+            <FeedPostCard
+              post={activePostDetail}
+              onReaction={handleReaction}
+              onDelete={(p) => {
+                void handleDeletePost(p);
+                setActivePostDetail(null);
+              }}
+              commentsOpen={true}
+              setCommentsOpen={() => {}}
+              onCommentCountChange={(count) => {
+                updateFeedPostCommentCount(activePostDetail.id, count);
+                setActivePostDetail({ ...activePostDetail, commentCount: count });
+              }}
+              clubId={activeClubId}
+            />
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
 
-const FEED_REACTIONS: Array<{ type: FeedReactionType; label: string; emoji: string }> = [
-  { type: 'up', label: '좋아요', emoji: '👍' },
-  { type: 'down', label: '별로예요', emoji: '👎' },
-  { type: 'check', label: '확인', emoji: '✅' },
-  { type: 'smile', label: '웃어요', emoji: '🙂' },
-  { type: 'sad', label: '아쉬워요', emoji: '😢' },
-];
-
-function FeedHeader({ title, icon, onCompose }: { title: string; icon: ReactNode; onCompose: () => void }) {
+function FeedHeader({
+  title,
+  icon,
+  onCompose,
+  viewMode,
+  onViewModeChange,
+}: {
+  title: string;
+  icon: ReactNode;
+  onCompose: () => void;
+  viewMode: 'feed' | 'grid';
+  onViewModeChange: (mode: 'feed' | 'grid') => void;
+}) {
   return (
     <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-card px-4 py-3">
       <h2 className="flex items-center gap-2 text-sm font-black text-primary">
         <span className="text-social-like">{icon}</span>
         {title}
       </h2>
-      <button
-        type="button"
-        onClick={onCompose}
-        className="flex h-9 w-9 items-center justify-center rounded-xl bg-action-primary text-white transition-all hover:brightness-110 active:scale-95"
-        aria-label={`${title} 작성`}
-      >
-        <Plus size={17} aria-hidden="true" />
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onViewModeChange('feed')}
+          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+            viewMode === 'feed'
+              ? 'bg-brand-primary/10 text-brand-primary border border-brand-primary/20'
+              : 'text-tertiary hover:text-secondary border border-transparent'
+          }`}
+          aria-label="피드 뷰"
+        >
+          <LayoutList size={15} />
+        </button>
+        <button
+          type="button"
+          onClick={() => onViewModeChange('grid')}
+          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+            viewMode === 'grid'
+              ? 'bg-brand-primary/10 text-brand-primary border border-brand-primary/20'
+              : 'text-tertiary hover:text-secondary border border-transparent'
+          }`}
+          aria-label="그리드 뷰"
+        >
+          <LayoutGrid size={15} />
+        </button>
+        <button
+          type="button"
+          onClick={onCompose}
+          className="flex h-9 w-9 items-center justify-center rounded-xl bg-action-primary text-white transition-all hover:brightness-110 active:scale-95 cursor-pointer"
+          aria-label={`${title} 작성`}
+        >
+          <Plus size={17} aria-hidden="true" />
+        </button>
+      </div>
     </div>
   );
 }
@@ -618,6 +709,7 @@ function FeedComposer({
   onComposeMediaUrlChange,
   onCreatePost,
   onCancelCompose,
+  authorName,
 }: {
   composeType: FeedContentType;
   composeText: string;
@@ -628,6 +720,7 @@ function FeedComposer({
   onComposeMediaUrlChange: (url: string) => void;
   onCreatePost: () => void;
   onCancelCompose: () => void;
+  authorName: string;
 }) {
   const canSubmit = !isPosting && (
     composeType === 'text'
@@ -636,66 +729,248 @@ function FeedComposer({
   );
 
   return (
-    <div className="rounded-xl border border-glass-border bg-glass-bg p-3 shadow-glass-shadow backdrop-blur-md" data-testid="feed-inline-composer">
-      <div className="mb-2 flex items-center justify-between">
-        <div className="flex gap-2">
-          {(['text', 'image', 'video'] as const).map((type) => (
+    <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4" data-testid="feed-inline-composer">
+      <div className="w-full max-w-4xl bg-surface-elevated border border-border rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row h-[90vh] md:h-[600px] max-h-[800px] animate-fadeIn">
+        
+        {/* Left: Input Form */}
+        <div className="flex-1 flex flex-col p-6 border-b md:border-b-0 md:border-r border-border/50 overflow-y-auto">
+          <div className="flex justify-between items-center pb-4 border-b border-border/30 mb-5">
+            <h3 className="text-sm font-black text-white">새 피드 만들기</h3>
             <button
-              key={type}
               type="button"
-              onClick={() => onComposeTypeChange(type)}
-              className={`px-3 py-1 rounded-full text-[10px] font-black transition-all ${
-                composeType === type
-                  ? 'bg-brand-primary text-black'
-                  : 'bg-white/5 border border-white/10 text-tertiary hover:text-secondary'
-              }`}
+              onClick={onCancelCompose}
+              className="text-tertiary hover:text-secondary cursor-pointer"
+              aria-label="피드 작성 닫기"
             >
-              {type === 'text' ? '텍스트' : type === 'image' ? '사진' : '비디오'}
+              <X size={20} />
             </button>
-          ))}
+          </div>
+
+          <div className="space-y-5 flex-1">
+            {/* Post Type Selector */}
+            <div className="space-y-1.5">
+              <span className="block text-[11px] font-black text-gray-400 uppercase">콘텐츠 유형</span>
+              <div className="flex gap-2">
+                {(['text', 'image', 'video'] as const).map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => onComposeTypeChange(type)}
+                    className={`flex-1 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                      composeType === type
+                        ? 'bg-brand-primary text-black shadow-md shadow-brand-primary/20'
+                        : 'bg-white/5 border border-white/10 text-tertiary hover:text-secondary'
+                    }`}
+                  >
+                    {type === 'text' ? '글 전용' : type === 'image' ? '사진 피드' : '비디오 피드'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Content text */}
+            <div className="space-y-1.5">
+              <span className="block text-[11px] font-black text-gray-400 uppercase">설명 및 문구</span>
+              <textarea
+                value={composeText}
+                onChange={(event) => onComposeTextChange(event.target.value)}
+                rows={4}
+                maxLength={500}
+                placeholder={composeType === 'text' ? '무슨 이야기를 남길까요?' : '미디어와 함께 남길 말을 적어주세요...'}
+                className="w-full resize-none rounded-xl border border-border/80 bg-white/5 px-3.5 py-3 text-xs font-bold text-white placeholder:text-gray-500 focus:border-brand-primary/50 focus:outline-none transition-colors"
+              />
+              <div className="text-right text-[10px] text-gray-500 font-bold">
+                {composeText.length}/500자
+              </div>
+            </div>
+
+            {/* Media URL link */}
+            {composeType !== 'text' && (
+              <div className="space-y-1.5">
+                <span className="block text-[11px] font-black text-gray-400 uppercase">미디어 파일 주소 (URL)</span>
+                <div className="flex items-center gap-2 rounded-xl border border-border/80 bg-white/5 px-3.5 py-2">
+                  <Paperclip size={14} className="shrink-0 text-gray-500" />
+                  <input
+                    value={composeMediaUrl}
+                    onChange={(event) => onComposeMediaUrlChange(event.target.value)}
+                    placeholder="https://example.com/photo.jpg"
+                    className="min-w-0 flex-1 bg-transparent text-xs font-bold text-white placeholder:text-gray-600 focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="pt-4 border-t border-border/30 flex justify-end gap-3 mt-4 shrink-0">
+            <button
+              type="button"
+              onClick={onCancelCompose}
+              className="px-4 py-2 text-xs font-bold text-gray-400 hover:text-white transition-colors cursor-pointer"
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              disabled={!canSubmit}
+              onClick={onCreatePost}
+              className="inline-flex h-9 min-w-24 items-center justify-center gap-1.5 rounded-xl bg-brand-primary text-black px-4 text-xs font-black transition-all hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:bg-white/5 disabled:text-gray-500 cursor-pointer"
+            >
+              <Send size={13} />
+              {isPosting ? '공유 중...' : '공유하기'}
+            </button>
+          </div>
         </div>
+
+        {/* Right: Live Preview Panel */}
+        <div className="hidden md:flex flex-col w-[360px] bg-surface-bg p-6 justify-center items-center shrink-0">
+          <span className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">실시간 피드 미리보기</span>
+          
+          <div className="w-full max-w-[280px] bg-surface-card border border-border/50 rounded-2xl overflow-hidden shadow-xl p-3 space-y-3 text-left">
+            {/* Header */}
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center text-[10px] text-gray-400 font-bold select-none">
+                {authorName.slice(0, 1)}
+              </div>
+              <span className="text-[10px] font-black text-white">{authorName}</span>
+            </div>
+
+            {/* Media Area Preview */}
+            <div className="w-full aspect-square rounded-xl overflow-hidden bg-black/30 border border-white/5 flex items-center justify-center relative">
+              {composeType === 'image' && composeMediaUrl.trim() ? (
+                <img src={composeMediaUrl} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              ) : composeType === 'video' && composeMediaUrl.trim() ? (
+                <video src={composeMediaUrl} muted className="w-full h-full object-cover" />
+              ) : (
+                /* Text Gradient Card Preview */
+                <div className="w-full h-full bg-gradient-to-tr from-surface-card via-brand-primary/15 to-surface-bg flex items-center justify-center p-3 text-center">
+                  <p className="text-[11px] font-extrabold text-white leading-relaxed line-clamp-5 max-w-full">
+                    {composeText.trim() || '내용을 작성하면 이곳에 카드뉴스로 표시됩니다.'}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Caption Preview */}
+            {composeType !== 'text' && composeText.trim() && (
+              <p className="text-[10px] font-medium text-gray-400 line-clamp-2">
+                <strong className="text-white mr-1.5">{authorName}</strong>
+                {composeText}
+              </p>
+            )}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+function FeedVideo({ src }: { src: string }) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          void video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      },
+      { threshold: 0.6 } // 60% visibility triggers autoplay
+    );
+
+    observer.observe(video);
+
+    return () => {
+      observer.unobserve(video);
+    };
+  }, []);
+
+  return (
+    <video
+      ref={videoRef}
+      src={src}
+      muted
+      playsInline
+      loop
+      controls
+      className="w-full h-full object-cover rounded-2xl bg-black"
+    />
+  );
+}
+
+function FeedCaption({ authorName, content }: { authorName: string; content: string }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const shouldCollapse = content.length > 120;
+  
+  const displayText = isExpanded || !shouldCollapse 
+    ? content 
+    : `${content.slice(0, 120)}...`;
+
+  return (
+    <div className="text-xs font-medium leading-relaxed text-primary mb-3">
+      <span className="font-extrabold text-[12px] mr-2 select-none">{authorName}</span>
+      <span className="whitespace-pre-wrap">{displayText}</span>
+      {shouldCollapse && !isExpanded && (
         <button
           type="button"
-          onClick={onCancelCompose}
-          disabled={isPosting}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface-bg text-secondary transition-all hover:bg-surface-hover active:scale-95 disabled:opacity-50"
-          aria-label="피드 작성 닫기"
+          onClick={() => setIsExpanded(true)}
+          className="text-tertiary font-bold hover:text-secondary ml-1 cursor-pointer"
         >
-          <X size={14} aria-hidden="true" />
+          더 보기
         </button>
-      </div>
+      )}
+    </div>
+  );
+}
 
-      <textarea
-        value={composeText}
-        onChange={(event) => onComposeTextChange(event.target.value)}
-        rows={2}
-        maxLength={500}
-        placeholder={composeType === 'text' ? '무슨 이야기를 남길까요?' : '미디어와 함께 남길 말'}
-        className="w-full resize-none rounded-xl border border-border bg-surface-bg px-3 py-2 text-xs font-bold text-primary placeholder:text-tertiary focus:border-brand-primary focus:outline-none"
-      />
+function FeedGridItem({
+  post,
+  onClick,
+}: {
+  post: FeedPost;
+  onClick: () => void;
+}) {
+  const hasMedia = !!post.mediaUrl;
+  const isVideo = post.contentType === 'video';
 
-      {composeType !== 'text' && (
-        <label className="mt-2 flex items-center gap-2 rounded-xl border border-border bg-surface-bg px-3 py-2">
-          <Paperclip size={14} className="shrink-0 text-secondary" aria-hidden="true" />
-          <input
-            value={composeMediaUrl}
-            onChange={(event) => onComposeMediaUrlChange(event.target.value)}
-            placeholder="미디어 URL"
-            className="min-w-0 flex-1 bg-transparent text-xs font-bold text-primary placeholder:text-tertiary focus:outline-none"
-          />
-        </label>
+  return (
+    <div
+      onClick={onClick}
+      className="relative aspect-square w-full rounded-xl overflow-hidden cursor-pointer bg-surface-card border border-border/40 group hover:opacity-95 transition-all"
+    >
+      {hasMedia ? (
+        isVideo ? (
+          <div className="relative w-full h-full">
+            <video src={post.mediaUrl || undefined} muted className="w-full h-full object-cover" />
+            <div className="absolute top-2 right-2 bg-black/60 text-white p-1 rounded-full z-10">
+              <Play size={10} fill="currentColor" />
+            </div>
+          </div>
+        ) : (
+          <img src={post.mediaUrl || undefined} alt="" className="w-full h-full object-cover" />
+        )
+      ) : (
+        /* Gradient card for text-only */
+        <div className="w-full h-full bg-gradient-to-tr from-surface-card via-brand-primary/10 to-surface-bg flex items-center justify-center p-3 text-center">
+          <p className="text-[10px] md:text-xs font-bold text-gray-300 line-clamp-4 leading-normal">
+            {post.textContent}
+          </p>
+        </div>
       )}
 
-      <div className="mt-2 flex justify-end">
-        <button
-          type="button"
-          disabled={!canSubmit}
-          onClick={() => void onCreatePost()}
-          className="inline-flex h-9 min-w-20 items-center justify-center gap-1.5 rounded-xl bg-action-primary px-3 text-xs font-black text-white transition-all hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-tertiary"
-        >
-          <Send size={13} aria-hidden="true" />
-          {isPosting ? '등록 중' : '등록'}
-        </button>
+      {/* Hover Overlay */}
+      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white text-xs font-black z-10 select-none">
+        <span className="flex items-center gap-1">
+          <Heart size={14} fill="currentColor" /> {post.reactionCounts['up'] ?? 0}
+        </span>
+        <span className="flex items-center gap-1">
+          <MessageCircle size={14} fill="currentColor" /> {post.commentCount}
+        </span>
       </div>
     </div>
   );
@@ -719,6 +994,20 @@ function FeedPostCard({
   clubId: string;
 }) {
   const { setFocusedPostId } = useAppStore();
+  const [showHeartPop, setShowHeartPop] = useState(false);
+  const lastTap = useRef(0);
+
+  const handleDoubleTap = () => {
+    const now = Date.now();
+    if (now - lastTap.current < 300) {
+      if (!post.myReactions.includes('up')) {
+        void onReaction(post, 'up');
+      }
+      setShowHeartPop(true);
+      setTimeout(() => setShowHeartPop(false), 700);
+    }
+    lastTap.current = now;
+  };
 
   const handleCardClick = () => {
     if (window.innerWidth >= 1024) {
@@ -726,15 +1015,23 @@ function FeedPostCard({
     }
   };
 
+  const hasMedia = !!post.mediaUrl;
+
   return (
-    <article 
+    <article
       onClick={handleCardClick}
-      className="rounded-xl border border-border bg-surface-card p-4 shadow-sm cursor-pointer lg:hover:border-[#00ffa3] transition-all"
+      className="rounded-2xl border border-border bg-surface-card p-4 shadow-sm cursor-pointer lg:hover:border-brand-primary transition-all relative overflow-hidden"
     >
+      {/* Header */}
       <div className="mb-3 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-black text-primary">{post.authorName}</p>
-          <p className="text-[11px] font-bold text-tertiary">{formatFeedDateTime(post.createdAt)}</p>
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-400 select-none">
+            {post.authorName.slice(0, 1)}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-xs font-extrabold text-primary leading-tight">{post.authorName}</p>
+            <p className="text-[10px] font-bold text-tertiary mt-0.5">{formatFeedDateTime(post.createdAt)}</p>
+          </div>
         </div>
         <button
           type="button"
@@ -742,14 +1039,55 @@ function FeedPostCard({
             e.stopPropagation();
             onDelete(post);
           }}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-feedback-error-border bg-feedback-error-bg text-feedback-error relative z-10"
+          className="flex h-7 w-7 items-center justify-center rounded-lg border border-feedback-error-border bg-feedback-error-bg text-feedback-error relative z-10 hover:bg-feedback-error-bg/80 cursor-pointer transition-colors"
           aria-label="피드 삭제"
         >
-          <Trash2 size={14} aria-hidden="true" />
+          <Trash2 size={13} aria-hidden="true" />
         </button>
       </div>
-      {post.textContent ? <p className="mb-3 whitespace-pre-wrap text-sm font-medium leading-relaxed text-primary">{post.textContent}</p> : null}
-      <FeedMedia post={post} />
+
+      {/* Media or Text Gradient Card */}
+      <div className="mb-3">
+        {hasMedia ? (
+          <div
+            onClick={handleDoubleTap}
+            className="relative w-full aspect-square bg-surface-bg flex items-center justify-center overflow-hidden border border-border rounded-2xl select-none"
+          >
+            {post.contentType === 'video' ? (
+              <FeedVideo src={post.mediaUrl || ''} />
+            ) : (
+              <img
+                src={post.mediaUrl || undefined}
+                alt=""
+                className="w-full h-full object-cover rounded-2xl"
+              />
+            )}
+            {showHeartPop && (
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-social-like animate-heart-pop pointer-events-none z-20">
+                <Heart size={64} fill="currentColor" />
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Q1: Gradient background for text-only posts */
+          <div
+            onClick={handleDoubleTap}
+            className="relative w-full aspect-square bg-gradient-to-tr from-surface-card via-brand-primary/15 to-surface-bg border border-border rounded-2xl flex flex-col items-center justify-center p-6 text-center select-none cursor-pointer overflow-hidden"
+          >
+            <span className="text-gray-500/10 absolute -bottom-10 -right-10 text-[180px] font-black select-none pointer-events-none">FC</span>
+            <p className="text-sm md:text-base font-extrabold text-white leading-relaxed whitespace-pre-wrap max-w-full drop-shadow-md z-10 px-2">
+              {post.textContent}
+            </p>
+            {showHeartPop && (
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-social-like animate-heart-pop pointer-events-none z-20">
+                <Heart size={64} fill="currentColor" />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Action Bar */}
       <div className="mt-3 flex items-center justify-between gap-3" onClick={(e) => e.stopPropagation()}>
         <FeedReactions post={post} onReaction={onReaction} />
         <button
@@ -761,15 +1099,29 @@ function FeedPostCard({
               setCommentsOpen(!commentsOpen);
             }
           }}
-          className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-bg px-2 py-1 text-[11px] font-black text-secondary"
+          className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-bg px-2.5 py-1 text-[10px] font-black text-secondary hover:text-primary transition-colors cursor-pointer"
           aria-label={`댓글 ${post.commentCount}개`}
         >
           <MessageCircle size={13} aria-hidden="true" />
           {post.commentCount}
         </button>
       </div>
-      {commentsOpen ? (
-        <div className="lg:hidden mt-3" onClick={(e) => e.stopPropagation()}>
+
+      {/* Instagram Stats (Likes & Captions) */}
+      <div className="mt-3 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+        <div className="text-[11px] font-extrabold text-primary">
+          좋아요 {post.reactionCounts['up'] ?? 0}개
+        </div>
+        
+        {/* Caption */}
+        {hasMedia && post.textContent && (
+          <FeedCaption authorName={post.authorName} content={post.textContent} />
+        )}
+      </div>
+
+      {/* Inline Comments Drawer Toggle for Mobile */}
+      {commentsOpen && (
+        <div className="lg:hidden mt-3 pt-3 border-t border-border" onClick={(e) => e.stopPropagation()}>
           <EventComments
             clubId={clubId}
             targetType="feed_post"
@@ -779,54 +1131,50 @@ function FeedPostCard({
             onCommentCountChange={onCommentCountChange}
           />
         </div>
-      ) : null}
+      )}
     </article>
   );
 }
 
-function FeedMedia({ post, compact = false }: { post: FeedPost; compact?: boolean }) {
-  if (!post.mediaUrl) return null;
-  if (post.contentType === 'video') {
-    return (
-      <video
-        src={post.mediaUrl}
-        muted
-        playsInline
-        loop
-        controls
-        className={`${compact ? 'aspect-square' : 'max-h-[320px]'} w-full rounded-xl bg-black object-cover`}
-      />
-    );
-  }
-  return (
-    <img
-      src={post.mediaUrl}
-      alt=""
-      className={`${compact ? 'aspect-square' : 'max-h-[320px]'} w-full rounded-xl bg-surface-bg object-cover`}
-    />
-  );
-}
+function FeedReactions({
+  post,
+  onReaction,
+}: {
+  post: FeedPost;
+  onReaction: (post: FeedPost, reactionType: FeedReactionType) => void;
+}) {
+  const liked = post.myReactions.includes('up');
 
-function FeedReactions({ post, onReaction }: { post: FeedPost; onReaction: (post: FeedPost, reactionType: FeedReactionType) => void }) {
   return (
-    <div className="flex flex-wrap gap-1">
-      {FEED_REACTIONS.map(({ type, label, emoji }) => {
+    <div className="flex items-center gap-3">
+      <button
+        type="button"
+        onClick={() => onReaction(post, 'up')}
+        className={`flex items-center justify-center p-1 rounded-full hover:bg-white/5 active:scale-90 transition-all cursor-pointer ${
+          liked ? 'text-social-like' : 'text-secondary hover:text-primary'
+        }`}
+        aria-label="좋아요"
+      >
+        <Heart size={18} fill={liked ? 'currentColor' : 'none'} className={liked ? 'animate-bounce' : ''} />
+      </button>
+
+      {/* Supplementary reactions (smile, check) if counts exist */}
+      {(['smile', 'check'] as const).map((type) => {
         const selected = post.myReactions.includes(type);
         const count = post.reactionCounts[type] ?? 0;
-        
         if (count === 0 && !selected) return null;
 
+        const emoji = type === 'smile' ? '🙂' : '✅';
         return (
           <button
             key={type}
             type="button"
             onClick={() => onReaction(post, type)}
-            className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-black transition-all ${
+            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-black transition-all cursor-pointer ${
               selected
-                ? 'border-social-like bg-social-like/10 text-social-like'
+                ? 'border-brand-primary bg-brand-primary/10 text-brand-primary'
                 : 'border-border bg-surface-bg text-secondary'
             }`}
-            aria-label={label}
           >
             <span aria-hidden="true">{emoji}</span>
             {count}
