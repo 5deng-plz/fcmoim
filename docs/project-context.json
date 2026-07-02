@@ -1,8 +1,8 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 127,
-  "updatedAt": "2026-07-03T08:23:44+09:00",
+  "updateVersion": 128,
+  "updatedAt": "2026-07-03T08:25:52+09:00",
   "updatedBy": "codex",
   "currentPhase": "local-handoff-coordination",
   "activeWork": {
@@ -89,6 +89,12 @@
     }
   },
   "workstreams": [
+    {
+      "id": "untracked-local-handoffs",
+      "status": "complete",
+      "completedAt": "2026-07-03T08:25:52+09:00",
+      "commit": "29bfc68"
+    },
     {
       "id": "comment-realtime-client-transport",
       "status": "complete",
@@ -178,7 +184,7 @@
   "blockers": [],
   "nextActions": [
     "각 역할 세션은 main에 통합된 handoff inbox 명령을 기본 사용합니다.",
-    "Agy가 comment-realtime-ui-qa handoff에 따라 코드 변경 없이 두 클라이언트 visual interaction만 확인합니다.",
+    "Agy의 comment-realtime-ui-qa는 local handoff에서 verified 상태이며 새 requested 작업은 없습니다.",
     "Backend/Infra 작업은 fcmoim-codex, Frontend/Design 작업은 fcmoim-agy worktree에서 시작합니다.",
     "교차 요구사항은 docs/handoff/TEMPLATE.md로 전달하고 Codex 통합 단계에서 project context를 갱신합니다.",
     "운영 Supabase project identity와 link를 별도 확인합니다.",
