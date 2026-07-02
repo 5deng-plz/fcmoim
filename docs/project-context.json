@@ -1,72 +1,41 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 124,
-  "updatedAt": "2026-07-02T23:46:16+09:00",
+  "updateVersion": 125,
+  "updatedAt": "2026-07-03T00:07:35+09:00",
   "updatedBy": "codex",
-  "currentPhase": "main-backend-integration",
+  "currentPhase": "comment-realtime-client-transport",
   "activeWork": {
-    "taskId": "comment-realtime-and-handoff-inbox-integration",
+    "taskId": "comment-realtime-client-transport",
     "status": "ready",
     "designMode": "maintenance",
-    "baselineCommit": "9c9f436",
+    "baselineCommit": "8fc64b7",
     "changedFiles": [
-      ".agents/rules/agy-frontend-design.md",
-      ".env.local.example",
-      "AGENT.md",
       "AGENTS.md",
-      "apphosting.yaml",
       "docs/agent-boundaries.md",
-      "docs/decisions.md",
-      "docs/handoff/20260630-agy-to-codex-realtime-comments.md",
-      "docs/handoff/20260702-agy-to-codex-chat-refactoring.md",
       "docs/handoff/20260702-codex-to-agy-comment-realtime.md",
+      "docs/handoff/20260703-codex-to-agy-comment-realtime-ui-qa.md",
       "docs/project-context.json",
-      "package.json",
-      "scripts/agent-handoff-inbox.mjs",
-      "scripts/check-supabase-contract.mjs",
-      "scripts/load-comment-realtime.mjs",
-      "src/app/api/comments/route.ts",
-      "src/lib/supabase-comment-realtime.ts",
-      "src/services/comment-realtime.ts",
-      "src/services/comments.ts",
-      "supabase/migrations/20260702134410_authorize_private_comment_broadcast.sql",
-      "tests/agent-handoff-inbox.test.ts",
-      "tests/comment-realtime.test.ts",
-      "tests/comments-service.test.ts",
+      "src/components/features/SeasonChatRoom.tsx",
+      "src/lib/comment-realtime-transport.ts",
+      "tests/comment-realtime-transport.test.ts",
       "tests/local-supabase-realtime.test.ts"
     ],
     "changedSurfaces": [
-      "tests",
-      "infra",
-      "docs",
+      "ui",
       "api",
-      "data"
+      "docs",
+      "tests"
     ],
     "allowedPaths": [
-      ".agents/rules/agy-frontend-design.md",
-      ".env.local.example",
-      "AGENT.md",
       "AGENTS.md",
-      "apphosting.yaml",
       "docs/agent-boundaries.md",
-      "docs/decisions.md",
-      "docs/handoff/20260630-agy-to-codex-realtime-comments.md",
-      "docs/handoff/20260702-agy-to-codex-chat-refactoring.md",
       "docs/handoff/20260702-codex-to-agy-comment-realtime.md",
+      "docs/handoff/20260703-codex-to-agy-comment-realtime-ui-qa.md",
       "docs/project-context.json",
-      "package.json",
-      "scripts/agent-handoff-inbox.mjs",
-      "scripts/check-supabase-contract.mjs",
-      "scripts/load-comment-realtime.mjs",
-      "src/app/api/comments/route.ts",
-      "src/lib/supabase-comment-realtime.ts",
-      "src/services/comment-realtime.ts",
-      "src/services/comments.ts",
-      "supabase/migrations/20260702134410_authorize_private_comment_broadcast.sql",
-      "tests/agent-handoff-inbox.test.ts",
-      "tests/comment-realtime.test.ts",
-      "tests/comments-service.test.ts",
+      "src/components/features/SeasonChatRoom.tsx",
+      "src/lib/comment-realtime-transport.ts",
+      "tests/comment-realtime-transport.test.ts",
       "tests/local-supabase-realtime.test.ts"
     ],
     "evidence": {
@@ -74,32 +43,32 @@
         "status": "passed",
         "provider": "Codex role guard",
         "command": "npm run guard:role:codex",
-        "summary": "Infra, 공용 운영 문서와 Backend 성격의 Git contract 테스트 경로만 변경."
+        "summary": "Component wiring은 Agy guard, transport·통합 테스트·handoff는 Codex guard로 분리 검증."
       },
       "baseline": {
         "status": "passed",
         "provider": "Harness, ESLint, TypeScript, Vitest",
         "command": "npm run verify:baseline",
-        "summary": "Harness validation, lint 0 errors, typecheck, 30 files 중 27 passed·3 skipped, 251 tests 통과."
+        "summary": "Harness validation, lint 0 errors, typecheck, 31 files 중 28 passed·3 skipped, 255 tests 통과."
       },
-      "inboxContract": {
+      "clientTransport": {
         "status": "passed",
-        "provider": "Vitest, shared Git refs",
-        "command": "npx vitest run tests/agent-handoff-inbox.test.ts; npm run agents:handoff:inbox -- --role=agy",
-        "summary": "타 branch 요청 발견, main 우선순위, recipient 필터, 상태 우선 중복 제거와 dirty worktree 무변경을 검증."
+        "provider": "Vitest, Local Supabase Realtime",
+        "command": "npx vitest run tests/comment-realtime-transport.test.ts; node scripts/with-local-supabase-env.mjs npx vitest run tests/local-supabase-realtime.test.ts",
+        "summary": "auth 선행, private topic, payload 검증, 오류·해제 처리 3개 단위 테스트와 API 저장→client transport 수신 통과."
       },
       "localDatabase": {
         "status": "passed",
         "type": "database",
         "provider": "Local Supabase CLI, Vitest",
         "command": "npm run verify:db:local",
-        "summary": "DB reset, QA Auth와 demo seed 후 API·multi-club·private Broadcast 3개 파일 22개 테스트 통과."
+        "summary": "직전 DB reset·QA seed 통과 상태에서 실제 API 저장→private Broadcast→client transport 수신 통과."
       },
       "browserRuntime": {
         "status": "passed",
         "provider": "npm run dev, in-app browser, server log",
         "command": "npm run dev; open http://localhost:3000/",
-        "summary": "dev server ready, FC Guppy first screen 렌더, browser console error/warn 0건, server log GET / 및 /api/dev-test 200. package 변경은 handoff inbox와 Local Realtime 검증·부하 명령 추가이며 production startup과 runtime dependency는 변경하지 않음."
+        "summary": "dev server ready, 로그인 first screen과 둘러보기 guest dashboard 렌더, browser console error/warn 0건, server log GET /·/api/dev-test·/api/team 200."
       },
       "harnessFull": {
         "status": "passed",
@@ -110,19 +79,19 @@
     },
     "retrospective": {
       "issuesObserved": [
-        "Agy 재사용 rule에 프로젝트 npm 명령을 직접 넣어 Harness purity가 한 차례 차단했고, rule에는 원칙만 남기고 실제 명령은 프로젝트 문서로 이동.",
-        "Agy가 main에 직접 반영한 변경 위에 Codex 커밋을 다시 적용해 SHA를 handoff에 재기록.",
-        "동일 handoff가 main과 feature branch에 함께 있을 때 main을 우선하도록 inbox source 정렬을 보강."
+        "Agy 구현이 provider transport를 UI component에 직접 결합하고 scroll state 변경마다 channel 재구독 가능성을 만들었음.",
+        "Codex transport adapter와 stable ref wiring으로 provider 경계와 subscription lifecycle을 분리.",
+        "Agy 작업 브랜치를 제거하고 visual interaction QA만 별도 handoff로 축소."
       ],
       "missedEvidence": [],
       "harnessImprovementProposal": [],
       "promotionRecommendation": "none",
-      "reason": "통합 과정의 문제는 프로젝트 Git 운영과 inbox 구현에서 해결됐으며 추가 재사용 Harness 변경은 필요하지 않음."
+      "reason": "client protocol transport를 Codex 소유로 명시해 동일 유형의 역할 오분류를 프로젝트 경계에서 해결."
     },
     "reviewStatus": "ready",
     "loopCounters": {
       "reviewRounds": 1,
-      "guardRetries": 3
+      "guardRetries": 0
     }
   },
   "workstreams": [

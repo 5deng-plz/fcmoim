@@ -12,16 +12,16 @@
 
 ## Codex 역할
 
-- Backend, API, service/repository, Auth/RLS, Supabase, migration, Infra, CI/CD와 통합을 담당합니다.
+- Backend, API, service/repository, Auth/RLS, Supabase, migration, client protocol transport, Infra, CI/CD와 통합을 담당합니다.
 - `src/app/api/**`, `src/config/**`, `src/lib/**`, `src/services/**`, `supabase/**`, `.github/**`, `scripts/**`를 주 소유 영역으로 봅니다.
 - `src/components/**`, `src/stores/**`, UI 중심 `src/app/**`, `public/**`, Frontend 전용 테스트를 수정하지 않습니다.
-- Frontend 요구사항은 `docs/handoff/`에 전달합니다.
+- UI/UX와 visual state 요구사항은 `docs/handoff/`에 전달하되 `src/lib/**`의 client protocol transport는 직접 담당합니다.
 - Local Supabase start/reset/seed/migration과 production 작업은 Codex만 수행합니다.
 - Agy 커밋을 검토·통합한 뒤 전체 `verify`, runtime smoke와 Harness full을 실행합니다.
 
 ## Agy 역할
 
-- Frontend, client state, UI/UX, 디자인, visual asset과 Frontend 테스트를 담당합니다.
+- Frontend component, visual client state, UI/UX, 디자인, visual asset과 Frontend 테스트를 담당합니다.
 - `src/components/**`, `src/stores/**`, UI 중심 `src/app/**`, `public/**`를 주 소유 영역으로 봅니다.
 - Backend, Supabase, migration, Infra와 production 설정을 직접 수정하지 않습니다.
 - Backend 계약이나 fixture 변경은 `docs/handoff/`로 Codex에 요청합니다.
