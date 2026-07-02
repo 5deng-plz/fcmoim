@@ -120,4 +120,18 @@ describe('agent handoff inbox', () => {
     expect(getInbox({ role: 'codex', cwd: root })).toEqual([]);
     expect(getInbox({ role: 'codex', all: true, cwd: root })).toHaveLength(1);
   });
+
+  it('prefers main after the same handoff is integrated without a status change', () => {
+    const root = createRepository();
+    git(root, ['switch', '-c', 'agent/codex/request']);
+    writeHandoff(root, { id: '20260702-codex-to-agy-contract' });
+    commitAll(root, 'request');
+    git(root, ['switch', 'main']);
+    git(root, ['merge', '--ff-only', 'agent/codex/request']);
+
+    expect(getInbox({ role: 'agy', cwd: root })[0]).toMatchObject({
+      source: 'main',
+      status: 'requested',
+    });
+  });
 });

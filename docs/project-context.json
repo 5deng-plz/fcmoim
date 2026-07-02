@@ -1,41 +1,73 @@
 {
   "schemaVersion": "2.0.0",
   "projectName": "fcmoim",
-  "updateVersion": 122,
-  "updatedAt": "2026-07-02T23:30:22+09:00",
+  "updateVersion": 123,
+  "updatedAt": "2026-07-02T23:44:29+09:00",
   "updatedBy": "codex",
-  "currentPhase": "agent-collaboration-infra",
+  "currentPhase": "main-backend-integration",
   "activeWork": {
-    "taskId": "agent-handoff-inbox",
+    "taskId": "comment-realtime-and-handoff-inbox-integration",
     "status": "ready",
     "designMode": "maintenance",
-    "baselineCommit": "fb8058b",
+    "baselineCommit": "9c9f436",
     "changedFiles": [
       ".agents/rules/agy-frontend-design.md",
+      ".env.local.example",
       "AGENT.md",
       "AGENTS.md",
+      "apphosting.yaml",
       "docs/agent-boundaries.md",
       "docs/decisions.md",
+      "docs/handoff/20260630-agy-to-codex-realtime-comments.md",
+      "docs/handoff/20260702-agy-to-codex-chat-refactoring.md",
+      "docs/handoff/20260702-codex-to-agy-comment-realtime.md",
       "docs/project-context.json",
       "package.json",
       "scripts/agent-handoff-inbox.mjs",
-      "tests/agent-handoff-inbox.test.ts"
+      "scripts/check-supabase-contract.mjs",
+      "scripts/load-comment-realtime.mjs",
+      "src/app/api/comments/route.ts",
+      "src/lib/supabase-comment-realtime.ts",
+      "src/services/comment-realtime.ts",
+      "src/services/comments.ts",
+      "supabase/migrations/20260702134410_authorize_private_comment_broadcast.sql",
+      "tests/agent-handoff-inbox.test.ts",
+      "tests/comment-realtime.test.ts",
+      "tests/comments-service.test.ts",
+      "tests/local-supabase-realtime.test.ts"
     ],
     "changedSurfaces": [
       "tests",
       "infra",
-      "docs"
+      "docs",
+      "api",
+      "data"
     ],
     "allowedPaths": [
       ".agents/rules/agy-frontend-design.md",
+      ".env.local.example",
       "AGENT.md",
       "AGENTS.md",
+      "apphosting.yaml",
       "docs/agent-boundaries.md",
       "docs/decisions.md",
+      "docs/handoff/20260630-agy-to-codex-realtime-comments.md",
+      "docs/handoff/20260702-agy-to-codex-chat-refactoring.md",
+      "docs/handoff/20260702-codex-to-agy-comment-realtime.md",
       "docs/project-context.json",
       "package.json",
       "scripts/agent-handoff-inbox.mjs",
-      "tests/agent-handoff-inbox.test.ts"
+      "scripts/check-supabase-contract.mjs",
+      "scripts/load-comment-realtime.mjs",
+      "src/app/api/comments/route.ts",
+      "src/lib/supabase-comment-realtime.ts",
+      "src/services/comment-realtime.ts",
+      "src/services/comments.ts",
+      "supabase/migrations/20260702134410_authorize_private_comment_broadcast.sql",
+      "tests/agent-handoff-inbox.test.ts",
+      "tests/comment-realtime.test.ts",
+      "tests/comments-service.test.ts",
+      "tests/local-supabase-realtime.test.ts"
     ],
     "evidence": {
       "roleGuard": {
@@ -48,19 +80,26 @@
         "status": "passed",
         "provider": "Harness, ESLint, TypeScript, Vitest",
         "command": "npm run verify:baseline",
-        "summary": "Harness validation, lint 0 errors, typecheck, 30 files 중 27 passed·3 skipped, 250 tests 통과."
+        "summary": "Harness validation, lint 0 errors, typecheck, 30 files 중 27 passed·3 skipped, 251 tests 통과."
       },
       "inboxContract": {
         "status": "passed",
         "provider": "Vitest, shared Git refs",
         "command": "npx vitest run tests/agent-handoff-inbox.test.ts; npm run agents:handoff:inbox -- --role=agy",
-        "summary": "타 branch 요청 발견, recipient 필터, 상태 우선 중복 제거, dirty worktree 무변경을 검증했고 실제 comment realtime handoff를 fb8058b에서 발견."
+        "summary": "타 branch 요청 발견, main 우선순위, recipient 필터, 상태 우선 중복 제거와 dirty worktree 무변경을 검증."
+      },
+      "localDatabase": {
+        "status": "passed",
+        "type": "database",
+        "provider": "Local Supabase CLI, Vitest",
+        "command": "npm run verify:db:local",
+        "summary": "DB reset, QA Auth와 demo seed 후 API·multi-club·private Broadcast 3개 파일 22개 테스트 통과."
       },
       "browserRuntime": {
         "status": "passed",
-        "provider": "npm run dev, HTTP smoke, prior in-app browser evidence",
-        "command": "npm run dev; curl http://localhost:3000/",
-        "summary": "현재 dev server ready, GET / 200과 server log 오류 0건. 이번 package 변경은 독립 CLI alias 추가뿐이고 app/runtime 코드는 직전 first screen 렌더 및 browser console error/warn 0건 통과 시점과 동일."
+        "provider": "npm run dev, in-app browser, server log",
+        "command": "npm run dev; open http://localhost:3000/",
+        "summary": "dev server ready, FC Guppy first screen 렌더, browser console error/warn 0건, server log GET / 및 /api/dev-test 200. package 변경은 handoff inbox와 Local Realtime 검증·부하 명령 추가이며 production startup과 runtime dependency는 변경하지 않음."
       },
       "harnessFull": {
         "status": "passed",
@@ -72,19 +111,18 @@
     "retrospective": {
       "issuesObserved": [
         "Agy 재사용 rule에 프로젝트 npm 명령을 직접 넣어 Harness purity가 한 차례 차단했고, rule에는 원칙만 남기고 실제 명령은 프로젝트 문서로 이동.",
-        "현재 in-app browser가 기존 세션 tab에 연결되지 않아 app/runtime 코드 무변경을 확인하고 현재 dev server·HTTP·server log와 직전 browser evidence를 결합."
+        "Agy가 main에 직접 반영한 변경 위에 Codex 커밋을 다시 적용해 SHA를 handoff에 재기록.",
+        "동일 handoff가 main과 feature branch에 함께 있을 때 main을 우선하도록 inbox source 정렬을 보강."
       ],
-      "missedEvidence": [
-        "현재 세션의 새 in-app browser console 재수집은 browser session 연결 불일치로 생략."
-      ],
+      "missedEvidence": [],
       "harnessImprovementProposal": [],
       "promotionRecommendation": "none",
-      "reason": "Harness purity가 의도대로 프로젝트 명령 침투를 차단했으며 추가 정책 변경은 필요하지 않음."
+      "reason": "통합 과정의 문제는 프로젝트 Git 운영과 inbox 구현에서 해결됐으며 추가 재사용 Harness 변경은 필요하지 않음."
     },
     "reviewStatus": "ready",
     "loopCounters": {
       "reviewRounds": 1,
-      "guardRetries": 2
+      "guardRetries": 3
     }
   },
   "workstreams": [
@@ -92,13 +130,13 @@
       "id": "agent-handoff-inbox",
       "status": "complete",
       "completedAt": "2026-07-02T23:30:22+09:00",
-      "commit": "c5c83d2"
+      "commit": "d9b42f5"
     },
     {
       "id": "comment-realtime-publisher",
       "status": "complete",
       "completedAt": "2026-07-02T23:07:00+09:00",
-      "commit": "1d34cb8"
+      "commit": "9a21094"
     },
     {
       "id": "codex-agy-role-boundaries",

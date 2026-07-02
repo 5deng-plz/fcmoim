@@ -39,13 +39,13 @@
   - 인풋 포커스 시 발생하던 `setIsInputFocused is not defined` ReferenceError를 완치하고, `BottomNav` 조건부 렌더링 배제로 키보드 팝업 시 모바일 탭바 솟구침을 해결했습니다.
   - 데스크톱 뷰포트에서 `100dvh`로 인해 전체 높이가 40px~60px 쪼그라들던 붕 뜸 버그를 정석적인 `html, body { height: 100%; }` 리셋 및 `.app-viewport` fixed 락 기법으로 완치했습니다.
 - **sourceCommit**: `9bb6b9a` (기록 탭 개편 및 커뮤니티 페이지 테스트 최신화 완료)
-- **integrationCommit**: N/A (Codex 통합 단계에서 머지 예정)
+- **integrationCommit**: `9a21094` (Backend Realtime Publisher)
 
 ### Codex Backend 응답
 
 - `POST /api/comments` 요청·응답과 DB 스키마는 유지했습니다.
 - Backend 저장 성공 후 `comments:feed_post:<postId>` private topic으로 `comment.created.v1`을 발행합니다.
-- Backend source commit: `1d34cb8`
+- Backend source commit: `9a21094`
 - 실제 main의 `SeasonChatRoom.tsx`는 아직 `postgres_changes`를 사용하므로 새 Codex→Agy handoff에 따라 Frontend transport 전환이 필요합니다.
 
 ## 📝 작업 내용 총 요약 (Summary of All Frontend Modifications)

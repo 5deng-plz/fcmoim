@@ -84,6 +84,13 @@ function candidatePriority(candidate) {
   return STATUS_PRIORITY.get(candidate.status) ?? -1;
 }
 
+function sourcePriority(ref) {
+  if (ref === 'refs/heads/main') return 4;
+  if (ref.startsWith('refs/heads/agent/')) return 3;
+  if (ref === 'refs/remotes/origin/main') return 2;
+  return 1;
+}
+
 function chooseCurrentCandidate(current, candidate) {
   if (!current) return candidate;
 
@@ -98,10 +105,9 @@ function chooseCurrentCandidate(current, candidate) {
     return candidateUpdatedAt > currentUpdatedAt ? candidate : current;
   }
 
-  const candidateIsLocal = candidate.ref.startsWith('refs/heads/');
-  const currentIsLocal = current.ref.startsWith('refs/heads/');
-  if (candidateIsLocal !== currentIsLocal) {
-    return candidateIsLocal ? candidate : current;
+  const sourceDifference = sourcePriority(candidate.ref) - sourcePriority(current.ref);
+  if (sourceDifference !== 0) {
+    return sourceDifference > 0 ? candidate : current;
   }
 
   return candidate.ref.localeCompare(current.ref) < 0 ? candidate : current;

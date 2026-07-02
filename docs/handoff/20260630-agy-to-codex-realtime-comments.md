@@ -33,6 +33,7 @@
 
 - summary: 최초 publication 요청은 이후 합의된 provider-neutral Publisher 구조로 대체했습니다. `comments` publication이나 DB trigger는 추가하지 않고, API 저장 성공 후 Backend의 Supabase REST Broadcast adapter가 private event를 발행합니다.
 - sourceCommit: eac450db34c9796089d1d8cca14ac7c6c114cd89
+- integrationCommit: 9a21094
 
 ## 검증
 

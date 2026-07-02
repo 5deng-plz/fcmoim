@@ -28,8 +28,8 @@
 ## 구현 결과
 
 - summary: Backend publisher와 private channel RLS 구현 및 Local Supabase 통합 검증 완료
-- sourceCommit: `1d34cb8`
-- integrationCommit:
+- sourceCommit: `9a21094`
+- integrationCommit: `9a21094`
 
 ## 검증
 
