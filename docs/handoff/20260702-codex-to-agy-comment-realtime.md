@@ -3,9 +3,9 @@
 - id: `20260702-codex-to-agy-comment-realtime`
 - from: `codex`
 - to: `agy`
-- status: `implemented`
+- status: `verified`
 - requestedAt: `2026-07-02T22:51:00+09:00`
-- updatedAt: `2026-07-03T00:05:00+09:00`
+- updatedAt: `2026-07-03T00:09:02+09:00`
 
 ## 요청
 
@@ -33,7 +33,7 @@
   - payload 검증, auth 선행, channel 오류 처리와 id 중복 제거 계약 적용
   - `SeasonChatRoom`은 최신 UI 상태를 ref로 읽어 스크롤 변경 시 재구독하지 않도록 연결
 - sourceCommit: `df3b9f9` (transport), `464368a` (component wiring)
-- integrationCommit:
+- integrationCommit: `df3b9f9`
 
 ## 검증
 
